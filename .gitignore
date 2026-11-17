@@ -1,0 +1,11 @@
+# Read-only UI/UX reference prototype (kept locally, not part of the repo)
+frontend-prototype/
+
+# Build logs / temp
+android-build.log
+*.log
+
+# Dependencies and OS files
+node_modules/
+.DS_Store
+Thumbs.db
