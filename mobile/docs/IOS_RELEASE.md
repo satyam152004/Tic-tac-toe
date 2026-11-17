@@ -6,7 +6,7 @@ surface signing/capability issues that need fixing on your Apple account.
 
 ## One-time setup
 
-1. Apple Developer Program membership + an App Store Connect app record with bundle id `com.squillion.tictactoe`
+1. Apple Developer Program membership + an App Store Connect app record with bundle id `com.tictactoe.game`
    (change `IOS_BUNDLE_ID` in `.env` / EAS env if you use your own).
 2. `npm i -g eas-cli` (or `npx eas-cli@latest`), `eas login`, `eas init` (creates the EAS project id and links `app.config.ts`).
 3. Replace the placeholders in `eas.json`: `EXPO_PUBLIC_API_URL` per profile (HTTPS for `production`) and

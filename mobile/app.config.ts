@@ -4,8 +4,8 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * Expo config. Secrets never live here: only public, per-build identifiers come from the environment
  * (EAS build profiles in eas.json set them; see .env.example).
  */
-const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? 'com.squillion.tictactoe';
-const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE ?? 'com.squillion.tictactoe';
+const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? 'com.tictactoe.game';
+const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE ?? 'com.tictactoe.game';
 const LINK_HOST = process.env.EXPO_PUBLIC_LINK_HOST ?? ''; // e.g. play.example.com (https app links for invitations)
 const GOOGLE_IOS_URL_SCHEME = process.env.GOOGLE_IOS_URL_SCHEME ?? ''; // reversed iOS client id: com.googleusercontent.apps.XXXX
 

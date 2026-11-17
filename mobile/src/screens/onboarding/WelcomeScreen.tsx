@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { Globe, Mail, Shield } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
-import { SymbolMark } from '../../components/game/SymbolMark';
+const appLogo = require('../../assets/images/app-logo.png');
 import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
@@ -39,8 +39,7 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
     <Screen testID="welcome-screen" contentStyle={{ flexGrow: 1, justifyContent: 'space-between' }}>
       <View style={styles.hero}>
         <View style={[styles.logo, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <SymbolMark value="X" size="md" />
-          <SymbolMark value="O" size="md" />
+          <Image source={appLogo} style={{ width: '100%', height: '100%' }} />
         </View>
         <Text style={[styles.title, { color: c.text }]}>Welcome to Tic Tac Toe</Text>
         <Text style={[type.body, { color: c.textSecondary, textAlign: 'center' }]}>Sign in to sync rankings, friends, and rewards.</Text>
@@ -74,7 +73,7 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 12, paddingTop: 24 },
-  logo: { width: 80, height: 80, borderRadius: 24, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  logo: { width: 80, height: 80, borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
   title: { fontFamily: fonts.display.bold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
   or: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
   line: { flex: 1, height: StyleSheet.hairlineWidth },
