@@ -1,0 +1,61 @@
+# Local / single-host deployment.
+#   docker compose up --build                 -> api + mongo
+#   docker compose --profile scale up --build -> api + mongo + redis (Socket.IO adapter, run several api replicas)
+#
+# Secrets come from your shell or a .env file next to this file (never commit it):
+#   JWT_ACCESS_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Not published to the host on purpose. Uncomment for local debugging only:
+    # ports: ["127.0.0.1:27017:27017"]
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["scale"]
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      MONGODB_URI: mongodb://mongo:27017/tictactoe
+      # Set to redis://redis:6379 when running with --profile scale
+      REDIS_URL: ${REDIS_URL:-}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET (>= 32 chars)}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://app.example.com}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      APP_BASE_URL: ${APP_BASE_URL:-https://app.example.com}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-Tic Tac Toe <no-reply@example.com>}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+    stop_grace_period: 20s
+
+volumes:
+  mongo-data:

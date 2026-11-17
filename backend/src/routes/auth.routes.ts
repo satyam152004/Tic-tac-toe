@@ -1,0 +1,23 @@
+import * as c from '../controllers/auth.controller.js';
+import * as v from '../validators/auth.validator.js';
+import { route } from './registry.js';
+
+const tag = 'Auth';
+const authErrors = ['INVALID_CREDENTIALS'];
+
+export const authRoutes = [
+  route({ method: 'post', path: '/auth/register', tag, summary: 'Register with email + password', auth: 'none', strictLimit: true, status: 201, body: v.registerBody, response: '{ user, tokens } - tokens: accessToken, refreshToken, expiresIn', errors: ['EMAIL_TAKEN', 'USERNAME_TAKEN'], handler: c.register }),
+  route({ method: 'post', path: '/auth/login', tag, summary: 'Login with email + password', auth: 'none', strictLimit: true, body: v.loginBody, response: '{ user, tokens }', errors: authErrors, handler: c.login }),
+  route({ method: 'post', path: '/auth/guest', tag, summary: 'Create a guest account and log in', auth: 'none', strictLimit: true, status: 201, body: v.guestBody, response: '{ user, tokens } (accountType GUEST)', handler: c.guest }),
+  route({ method: 'post', path: '/auth/google', tag, summary: 'Login/registration with a Google ID token', auth: 'none', strictLimit: true, body: v.googleBody, response: '{ user, tokens }', errors: ['INVALID_SOCIAL_TOKEN', 'PROVIDER_NOT_CONFIGURED'], handler: c.google }),
+  route({ method: 'post', path: '/auth/apple', tag, summary: 'Login/registration with an Apple identity token', auth: 'none', strictLimit: true, body: v.appleBody, response: '{ user, tokens }', errors: ['INVALID_SOCIAL_TOKEN', 'PROVIDER_NOT_CONFIGURED'], handler: c.apple }),
+  route({ method: 'post', path: '/auth/upgrade', tag, summary: 'Upgrade the current guest account to a registered account (keeps all progress)', body: v.upgradeBody, response: '{ user, tokens } - all previous sessions are revoked', errors: ['ALREADY_REGISTERED', 'EMAIL_TAKEN', 'USERNAME_TAKEN'], handler: c.upgrade }),
+  route({ method: 'post', path: '/auth/refresh', tag, summary: 'Rotate the refresh token and get a new access token', auth: 'none', strictLimit: true, body: v.refreshBody, response: 'tokens { accessToken, refreshToken, expiresIn, refreshExpiresAt } - the old refresh token becomes invalid', errors: ['INVALID_REFRESH_TOKEN', 'REFRESH_TOKEN_EXPIRED', 'REFRESH_TOKEN_REUSED'], handler: c.refresh }),
+  route({ method: 'post', path: '/auth/logout', tag, summary: 'Log out this device (revokes the session of the supplied refresh token)', auth: 'none', body: v.logoutBody, response: '{ loggedOut: true }', handler: c.logout }),
+  route({ method: 'post', path: '/auth/logout-all', tag, summary: 'Log out from all devices', response: '{ loggedOut: true }', handler: c.logoutAll }),
+  route({ method: 'post', path: '/auth/forgot-password', tag, summary: 'Request a password reset email (always returns success)', auth: 'none', strictLimit: true, body: v.forgotBody, response: '{ message }', handler: c.forgotPassword }),
+  route({ method: 'post', path: '/auth/reset-password', tag, summary: 'Set a new password using an emailed 6-digit code ({ email, code, newPassword }) or reset token ({ token, newPassword })', auth: 'none', strictLimit: true, body: v.resetBody, response: '{ message } - all sessions are revoked', errors: ['INVALID_RESET_TOKEN', 'INVALID_OTP', 'OTP_LOCKED'], handler: c.resetPassword }),
+  route({ method: 'post', path: '/auth/verify-email', tag, summary: 'Verify email address using the emailed 6-digit code ({ email, code }) or the link token ({ token })', auth: 'none', strictLimit: true, body: v.verifyEmailBody, response: '{ verified: true }', errors: ['INVALID_VERIFY_TOKEN', 'INVALID_OTP', 'OTP_LOCKED'], handler: c.verifyEmail }),
+  route({ method: 'post', path: '/auth/resend-verification', tag, summary: 'Send a fresh 6-digit verification code to my email (60 s cooldown, 5 per hour)', strictLimit: true, response: '{ sent: true, retryAfterSec }', errors: ['OTP_COOLDOWN', 'OTP_RATE_LIMITED', 'ALREADY_VERIFIED', 'NO_EMAIL'], handler: c.resendVerification }),
+  route({ method: 'post', path: '/auth/change-password', tag, summary: 'Change password (revokes all sessions)', body: v.changePasswordBody, response: '{ message }', errors: ['INVALID_CREDENTIALS', 'NO_PASSWORD'], handler: c.changePassword }),
+];

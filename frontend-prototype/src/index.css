@@ -1,0 +1,171 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Default Dark Gaming Palette */
+  --bg-primary: #0B0718;
+  --bg-secondary: #15102A;
+  --bg-card: #1C1635;
+  --bg-elevated: #241D44;
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #6D28D9;
+  --x-color: #38BDF8;
+  --o-color: #F472B6;
+  --success: #22C55E;
+  --warning: #FBBF24;
+  --danger: #EF4444;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A8A0BC;
+  --border-color: #30264D;
+}
+
+/* Theme definitions applied to phone container */
+[data-app-theme="dark"] {
+  --bg-primary: #0B0718;
+  --bg-secondary: #15102A;
+  --bg-card: #1C1635;
+  --bg-elevated: #241D44;
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #6D28D9;
+  --x-color: #38BDF8;
+  --o-color: #F472B6;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A8A0BC;
+  --border-color: #30264D;
+}
+
+[data-app-theme="light"] {
+  --bg-primary: #F7F6FB;
+  --bg-secondary: #EFEBF8;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #F3F0FA;
+  --accent-primary: #7C3AED;
+  --accent-secondary: #5B21B6;
+  --x-color: #0284C7;
+  --o-color: #DB2777;
+  --text-primary: #140E26;
+  --text-secondary: #5C5375;
+  --border-color: #DDD6EE;
+}
+
+[data-app-theme="classic"] {
+  --bg-primary: #100E1B;
+  --bg-secondary: #19162B;
+  --bg-card: #221E38;
+  --bg-elevated: #2B2645;
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #6D28D9;
+  --x-color: #60A5FA;
+  --o-color: #FB7185;
+  --text-primary: #F8FAFC;
+  --text-secondary: #B4ADC9;
+  --border-color: #373056;
+}
+
+[data-app-theme="neon"] {
+  --bg-primary: #070414;
+  --bg-secondary: #110A29;
+  --bg-card: #181038;
+  --bg-elevated: #22174D;
+  --accent-primary: #A855F7;
+  --accent-secondary: #7E22CE;
+  --x-color: #22D3EE;
+  --o-color: #F43F5E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B2A6D4;
+  --border-color: #3A256E;
+}
+
+[data-app-theme="ocean"] {
+  --bg-primary: #06131F;
+  --bg-secondary: #0C1F31;
+  --bg-card: #122A42;
+  --bg-elevated: #193754;
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #0284C7;
+  --x-color: #38BDF8;
+  --o-color: #34D399;
+  --text-primary: #F0F9FF;
+  --text-secondary: #94B4CC;
+  --border-color: #214566;
+}
+
+[data-app-theme="sunset"] {
+  --bg-primary: #160A18;
+  --bg-secondary: #221125;
+  --bg-card: #2C1630;
+  --bg-elevated: #381D3D;
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #C026D3;
+  --x-color: #FBBF24;
+  --o-color: #F472B6;
+  --text-primary: #FFF7FB;
+  --text-secondary: #C7AACB;
+  --border-color: #49284F;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #070510;
+  color: #FFFFFF;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom subtle scrollbars for phone viewport and studio sidebars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.studio-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.studio-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.studio-scroll::-webkit-scrollbar-thumb {
+  background: #30264D;
+  border-radius: 9999px;
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-symbol-pop {
+  animation: popIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-symbol-pop {
+    animation: none;
+  }
+}

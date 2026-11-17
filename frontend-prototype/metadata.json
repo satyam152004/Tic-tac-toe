@@ -1,0 +1,6 @@
+{
+  "name": "Tic Tac Toe",
+  "description": "Production mobile gaming application for Android and iOS featuring offline AI & pass-and-play modes, online multiplayer rooms, leaderboards, achievements, and a 40-screen dark gaming design system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
