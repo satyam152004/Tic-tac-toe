@@ -1,13 +1,13 @@
+
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
- * Expo config. Secrets never live here: only public, per-build identifiers come from the environment
- * (EAS build profiles in eas.json set them; see .env.example).
+ * Expo configuration
  */
 const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? 'com.tictactoe.game';
 const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE ?? 'com.tictactoe.game';
-const LINK_HOST = process.env.EXPO_PUBLIC_LINK_HOST ?? ''; // e.g. play.example.com (https app links for invitations)
-const GOOGLE_IOS_URL_SCHEME = process.env.GOOGLE_IOS_URL_SCHEME ?? ''; // reversed iOS client id: com.googleusercontent.apps.XXXX
+const LINK_HOST = process.env.EXPO_PUBLIC_LINK_HOST ?? '';
+const GOOGLE_IOS_URL_SCHEME = process.env.GOOGLE_IOS_URL_SCHEME ?? '';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins: NonNullable<ExpoConfig['plugins']> = [
@@ -18,10 +18,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     'expo-image',
     'expo-localization',
     'expo-apple-authentication',
-    ['expo-splash-screen', { backgroundColor: '#0B0718', image: './assets/splash-icon.png', imageWidth: 200 }],
+    ['expo-splash-screen', {
+      backgroundColor: '#0B0718',
+      image: './assets/splash-icon.png',
+      imageWidth: 200,
+    }],
     ['expo-notifications', { color: '#8B5CF6' }],
   ];
-  if (GOOGLE_IOS_URL_SCHEME) plugins.push(['@react-native-google-signin/google-signin', { iosUrlScheme: GOOGLE_IOS_URL_SCHEME }]);
+
+  if (GOOGLE_IOS_URL_SCHEME) {
+    plugins.push([
+      '@react-native-google-signin/google-signin',
+      { iosUrlScheme: GOOGLE_IOS_URL_SCHEME },
+    ]);
+  }
 
   return {
     ...config,
@@ -33,6 +43,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
     backgroundColor: '#0B0718',
+
+    extra: {
+      ...config.extra,
+      eas: {
+        ...config.extra?.eas,
+        projectId: '74b2b473-9add-482b-8613-67bdd8a100bc',
+      },
+    },
+
     ios: {
       bundleIdentifier: IOS_BUNDLE_ID,
       supportsTablet: false,
@@ -41,6 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       infoPlist: { ITSAppUsesNonExemptEncryption: false },
       associatedDomains: LINK_HOST ? [`applinks:${LINK_HOST}`] : undefined,
     },
+
     android: {
       package: ANDROID_PACKAGE,
       versionCode: 1,
@@ -53,9 +73,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       predictiveBackGestureEnabled: true,
       permissions: ['VIBRATE', 'POST_NOTIFICATIONS'],
       intentFilters: LINK_HOST
-        ? [{ action: 'VIEW', autoVerify: true, data: [{ scheme: 'https', host: LINK_HOST, pathPrefix: '/join' }, { scheme: 'https', host: LINK_HOST, pathPrefix: '/invite' }], category: ['BROWSABLE', 'DEFAULT'] }]
+        ? [{
+            action: 'VIEW',
+            autoVerify: true,
+            data: [
+              { scheme: 'https', host: LINK_HOST, pathPrefix: '/join' },
+              { scheme: 'https', host: LINK_HOST, pathPrefix: '/invite' },
+            ],
+            category: ['BROWSABLE', 'DEFAULT'],
+          }]
         : undefined,
     },
+
     plugins,
     experiments: { typedRoutes: false },
   };
