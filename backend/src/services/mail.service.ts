@@ -43,7 +43,7 @@ export async function sendMail(mail: Mail): Promise<void> {
   }
 
   // Prefer Brevo API when configured.
-  const brevoApiKey = process.env.BREVO_API_KEY;
+  const brevoApiKey = env.BREVO_API_KEY;
 
   if (brevoApiKey) {
     try {
