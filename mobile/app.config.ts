@@ -38,7 +38,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: "Tic Tac Toe",
-    slug: "tictactoe",
+    slug: "tic-tac-toe",
     scheme: "tictactoe",
     version: "1.0.0",
     orientation: "portrait",
