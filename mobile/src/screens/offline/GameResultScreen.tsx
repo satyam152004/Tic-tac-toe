@@ -8,6 +8,7 @@ import { Screen } from '../../components/common/Screen';
 import { GameBoard } from '../../components/game/GameBoard';
 import { SymbolMark } from '../../components/game/SymbolMark';
 import { ScoreCard } from '../../components/profile/Cards';
+import { iconSize } from '../../design-system/icons';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { RootScreenProps } from '../../navigation/types';
@@ -68,10 +69,9 @@ export const GameResultScreen: React.FC<RootScreenProps<'game_result'>> = () => 
               nav.replace('offline_board');
             }}
           />
-          <View style={styles.row}>
-            <AppButton testID="result-settings" variant="secondary" size="md" style={{ flex: 1 }} title="Change Settings" icon={<Settings size={16} color={c.text} />} onPress={changeSettings} />
-            <AppButton testID="result-options" variant="secondary" size="md" style={{ flex: 1 }} title="Series" onPress={() => nav.navigate('rematch')} />
-          </View>
+          {/* Stacked, full width: side by side these two labels clip below ~400dp and at large font scales. */}
+          <AppButton testID="result-settings" fullWidth variant="secondary" size="md" title="Change Setup" icon={<Settings size={iconSize.sm} color={c.text} />} onPress={changeSettings} />
+          <AppButton testID="result-options" fullWidth variant="secondary" size="md" title="Series" onPress={() => nav.navigate('rematch')} />
           <AppButton
             testID="result-home"
             fullWidth

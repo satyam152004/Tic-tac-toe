@@ -22,14 +22,20 @@ export const Screen: React.FC<{
   footer?: React.ReactNode;
   children: React.ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Outer padding (default 20). Game screens use a smaller gutter on short screens. */
+  gutter?: number;
+  /** Vertical gap between children (default 16). */
+  gap?: number;
+  /** Rendered over the body (below the header), e.g. the pause overlay. Not part of the scrolling content. */
+  overlay?: React.ReactNode;
   testID?: string;
-}> = ({ title, subtitle, onBack, rightAction, scroll = true, tabs, padded = true, footer, children, contentStyle, testID }) => {
+}> = ({ title, subtitle, onBack, rightAction, scroll = true, tabs, padded = true, footer, children, contentStyle, gutter = 20, gap = 16, overlay, testID }) => {
   const c = useTheme();
   const themeId = useSettingsStore((s) => s.theme);
   const insets = useSafeAreaInsets();
   const light = THEME_LIST.find((t) => t.id === themeId)?.isLight;
   const bottom = tabs ? 0 : insets.bottom;
-  const body: ViewStyle = { padding: padded ? 20 : 0, paddingBottom: (padded ? 20 : 0) + (footer ? 0 : bottom), gap: 16 };
+  const body: ViewStyle = { padding: padded ? gutter : 0, paddingBottom: (padded ? gutter : 0) + (footer ? 0 : bottom), gap };
 
   return (
     <View testID={testID} style={{ flex: 1, backgroundColor: c.bgPrimary, paddingTop: title ? 0 : insets.top }}>
@@ -37,12 +43,13 @@ export const Screen: React.FC<{
       {title ? <AppHeader title={title} subtitle={subtitle} onBack={onBack} rightAction={rightAction} /> : null}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={[body, contentStyle]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView testID={testID ? `${testID}-scroll` : undefined} style={{ flex: 1 }} contentContainerStyle={[body, contentStyle]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {children}
           </ScrollView>
         ) : (
           <View style={[{ flex: 1 }, body, contentStyle]}>{children}</View>
         )}
+        {overlay}
         {footer ? <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 + bottom, gap: 10 }}>{footer}</View> : null}
       </KeyboardAvoidingView>
     </View>

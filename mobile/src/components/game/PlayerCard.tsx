@@ -13,13 +13,16 @@ export const PlayerCard: React.FC<{
   isActive: boolean;
   activeLabel?: string;
   subtitle?: string;
-}> = ({ name, avatarId, symbol, score, isActive, activeLabel = 'Your Turn', subtitle }) => {
+  /** Tighter padding for short screens. */
+  dense?: boolean;
+}> = ({ name, avatarId, symbol, score, isActive, activeLabel = 'Your Turn', subtitle, dense }) => {
   const c = useTheme();
   return (
     <View
       accessibilityLabel={`${name}, ${symbol}, score ${score}${isActive ? ', active turn' : ''}`}
       style={[
         styles.card,
+        dense && styles.dense,
         isActive
           ? { backgroundColor: c.bgElevated, borderColor: c.accent, shadowColor: c.accent, shadowOpacity: 0.22, shadowRadius: 14, elevation: 3 }
           : { backgroundColor: c.bgCard, borderColor: c.border, opacity: 0.8 },
@@ -41,6 +44,7 @@ export const PlayerCard: React.FC<{
 };
 
 const styles = StyleSheet.create({
+  dense: { padding: 8, gap: 8 },
   card: { flex: 1, minWidth: 0, borderRadius: 16, borderWidth: 1, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
 });

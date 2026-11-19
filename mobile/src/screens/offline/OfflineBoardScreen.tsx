@@ -1,14 +1,18 @@
 import { Pause, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
 import { AppIconButton } from '../../components/common/AppIconButton';
 import { Screen } from '../../components/common/Screen';
-import { GameBoard } from '../../components/game/GameBoard';
+import { BoardArea } from '../../components/game/BoardArea';
+import { ControlBar, ControlTile } from '../../components/game/ControlBar';
 import { PausedOverlay } from '../../components/game/PausedOverlay';
 import { PlayerCard } from '../../components/game/PlayerCard';
+import { iconSize } from '../../design-system/icons';
+import { radius } from '../../design-system/radius';
+import { space } from '../../design-system/spacing';
 import { type } from '../../design-system/typography';
 import { useBackGuard } from '../../hooks/useBackGuard';
+import { useGameLayout } from '../../hooks/useGameLayout';
 import { useLocalGameRunner } from '../../hooks/useLocalGameRunner';
 import { useTheme, useThemedStyles } from '../../hooks/useTheme';
 import { RootScreenProps } from '../../navigation/types';
@@ -20,6 +24,8 @@ import { formatDurationMs } from '../../utils/format';
 export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = () => {
   const { nav, goHome } = useAppNav();
   const c = useTheme();
+  const layout = useGameLayout();
+  const dense = layout.density === 'compact';
   const game = useLocalGameStore((s) => s.game);
   const setup = useLocalGameStore((s) => s.setup);
   const paused = useLocalGameStore((s) => s.paused);
@@ -53,10 +59,7 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
   }, [missing]);
 
   const s = useThemedStyles((t) => ({
-    body: { flex: 1, justifyContent: 'space-between', gap: 16 },
-    cards: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
-    status: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, backgroundColor: t.bgCard, borderColor: t.border },
-    controls: { flexDirection: 'row', gap: 10 },
+    status: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, borderRadius: radius.md, borderWidth: 1, backgroundColor: t.bgCard, borderColor: t.border },
   }));
 
   if (!game) return null;
@@ -81,20 +84,41 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
       title={isVsAi ? `vs AI · ${game.difficulty ?? 'MEDIUM'}` : 'Offline Match'}
       subtitle={`${game.config.size}x${game.config.size} Grid · ${game.config.winLength} in a row`}
       onBack={() => nav.goBack()}
-      scroll={false}
+      // The page scrolls only when the board cannot keep 44dp cells; otherwise the board area absorbs the leftover height.
+      contentStyle={styles.grow}
+      gutter={layout.gutter}
+      gap={layout.gap}
       rightAction={
         <AppIconButton
           testID="board-pause"
           label="Pause game"
-          icon={<Pause size={16} color={c.text} />}
+          icon={<Pause size={iconSize.sm} color={c.text} />}
           disabled={!inProgress || paused}
           onPress={() => useLocalGameStore.getState().pause('manual')}
         />
       }
+      overlay={
+        paused && inProgress ? (
+          <PausedOverlay
+            matchLabel={`${seats.X.name} vs ${seats.O.name}`}
+            elapsedLabel={formatDurationMs(elapsedMs)}
+            reason={pauseReason}
+            onResume={() => useLocalGameStore.getState().unpause()}
+            onRestart={() => useLocalGameStore.getState().rematch()}
+            onSettings={() => nav.navigate('settings')}
+            onExit={() => {
+              // quit() empties the store; allow the back guard first so leaving does not ask a second time.
+              guard.allow();
+              useLocalGameStore.getState().quit();
+              goHome();
+            }}
+          />
+        ) : null
+      }
       testID="offline-board"
     >
-      <View style={s.body}>
-        <View style={s.cards}>
+      <View style={[styles.body, { gap: layout.gap }]}>
+        <View style={styles.cards}>
           {(['X', 'O'] as const).map((mark) => (
             <PlayerCard
               key={mark}
@@ -105,85 +129,62 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
               isActive={inProgress && game.current === mark}
               activeLabel={activeLabelFor(mark)}
               subtitle={subtitleFor(mark)}
+              dense={dense}
             />
           ))}
         </View>
 
-        <View style={s.status}>
-          <Text testID="board-status" style={[type.small, { color: c.textSecondary, flex: 1 }]} numberOfLines={1}>
+        <View style={[s.status, { paddingVertical: dense ? space.xs : space.sm }]}>
+          {/* Wraps instead of truncating: long names and large system fonts stay readable. */}
+          <Text testID="board-status" style={[type.small, { color: c.textSecondary, flex: 1 }]}>
             {statusText}
           </Text>
-          <Text style={[type.caption, { color: c.textSecondary, marginRight: 12 }]}>Draws {game.scores.draws}</Text>
+          <Text style={[type.caption, { color: c.textSecondary }]}>Draws {game.scores.draws}</Text>
           <Text testID="board-timer" accessibilityLabel={`Elapsed ${formatDurationMs(elapsedMs)}`} style={[type.num, { color: c.text }]}>
             {formatDurationMs(elapsedMs)}
           </Text>
         </View>
 
-        <View style={styles.boardWrap}>
-          <GameBoard
-            board={game.board}
-            size={game.config.size}
-            winningLine={out.status === 'WIN' ? out.line : null}
-            lastMoveIndex={lastMove}
-            disabled={boardLocked}
-            onCellPress={(i) => useLocalGameStore.getState().play(i)}
-          />
-        </View>
+        <BoardArea
+          initial={layout.estimate}
+          board={game.board}
+          size={game.config.size}
+          winningLine={out.status === 'WIN' ? out.line : null}
+          lastMoveIndex={lastMove}
+          disabled={boardLocked}
+          onCellPress={(i) => useLocalGameStore.getState().play(i)}
+        />
 
-        <View style={s.controls}>
-          <AppButton
+        <ControlBar stacked={layout.stackedControls}>
+          <ControlTile
             testID="board-undo"
-            title="Undo"
-            variant="secondary"
-            size="md"
-            style={styles.flex}
-            icon={<Undo2 size={16} color={c.text} />}
+            label="Undo"
+            icon={<Undo2 size={iconSize.md} color={c.text} />}
             disabled={game.moves.length === 0 || paused || !inProgress}
             onPress={() => useLocalGameStore.getState().undoMove()}
           />
-          <AppButton
+          <ControlTile
             testID="board-restart"
-            title="Restart"
-            variant="secondary"
-            size="md"
-            style={styles.flex}
-            icon={<RotateCcw size={16} color={c.text} />}
+            label="Restart"
+            icon={<RotateCcw size={iconSize.md} color={c.text} />}
             disabled={!inProgress}
             onPress={() => useLocalGameStore.getState().rematch()}
           />
-          <AppButton
+          <ControlTile
             testID="board-mute"
-            title={sound ? 'Mute' : 'Unmute'}
-            variant="outline"
-            size="md"
-            style={styles.flex}
-            icon={sound ? <Volume2 size={16} color={c.text} /> : <VolumeX size={16} color={c.text} />}
+            label={sound ? 'Mute' : 'Unmute'}
+            icon={sound ? <Volume2 size={iconSize.md} color={c.text} /> : <VolumeX size={iconSize.md} color={c.text} />}
             onPress={() => setSettings({ soundEffects: !sound })}
           />
-        </View>
+        </ControlBar>
       </View>
-
-      {paused && inProgress ? (
-        <PausedOverlay
-          matchLabel={`${seats.X.name} vs ${seats.O.name}`}
-          elapsedLabel={formatDurationMs(elapsedMs)}
-          reason={pauseReason}
-          onResume={() => useLocalGameStore.getState().unpause()}
-          onRestart={() => useLocalGameStore.getState().rematch()}
-          onSettings={() => nav.navigate('settings')}
-          onExit={() => {
-            // quit() empties the store; allow the back guard first so leaving does not ask a second time.
-            guard.allow();
-            useLocalGameStore.getState().quit();
-            goHome();
-          }}
-        />
-      ) : null}
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  boardWrap: { alignItems: 'center', justifyContent: 'center' },
-  flex: { flex: 1 },
+  // flexGrow (not flex: 1): inside a ScrollView a zero flex-basis collapses.
+  grow: { flexGrow: 1 },
+  body: { flexGrow: 1 },
+  cards: { flexDirection: 'row', alignItems: 'stretch', gap: space.sm },
 });

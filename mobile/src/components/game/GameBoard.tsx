@@ -3,12 +3,11 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { radius } from '../../design-system/radius';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from '../common/Pressy';
+import { BoardSize, boardMetrics } from './boardLayout';
 import { SymbolMark } from './SymbolMark';
 
 export type BoardCell = 'X' | 'O' | '' | null;
 
-const GAP: Record<number, number> = { 3: 10, 4: 8, 5: 6 };
-const PAD: Record<number, number> = { 3: 14, 4: 12, 5: 10 };
 
 interface CellProps {
   index: number;
@@ -51,28 +50,30 @@ const Cell = memo(function Cell({ index, value, side, glyph, winning, last, disa
   );
 });
 
-/**
- * Square, width-driven board that works for 3x3, 4x4 and 5x5 on any screen size: the side is the
- * smaller of the available width and `maxSize`, so nothing overflows or shifts when marks appear.
- */
-export const GameBoard: React.FC<{
+export interface GameBoardProps {
   board: BoardCell[];
-  size: 3 | 4 | 5;
+  size: BoardSize;
   winningLine?: number[] | null;
   lastMoveIndex?: number | null;
   disabled?: boolean;
+  /** Small static preview: tighter gaps and no glow. */
   compact?: boolean;
+  /** Largest outer side (dp) when `side` is not given. */
   maxSize?: number;
+  /** Exact outer side (dp), measured from the space the screen leaves for the board (see BoardArea). */
+  side?: number;
   onCellPress?: (index: number) => void;
-}> = ({ board, size, winningLine = null, lastMoveIndex = null, disabled = false, compact = false, maxSize = 340, onCellPress }) => {
+}
+
+/**
+ * Square board for 3x3, 4x4 and 5x5. Its side is `side` when the screen measured the available space, otherwise the
+ * smaller of the window width (minus gutters) and `maxSize` (used by the static previews).
+ */
+export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine = null, lastMoveIndex = null, disabled = false, compact = false, maxSize = 340, side, onCellPress }) => {
   const c = useTheme();
   const { width } = useWindowDimensions();
-  const outer = Math.min(width - 40, maxSize);
-  const gap = compact ? 4 : GAP[size];
-  const pad = compact ? 8 : PAD[size];
-  const cell = Math.floor((outer - pad * 2 - gap * (size - 1)) / size);
-  const glyph = Math.round(cell * 0.62);
-  const corner = size === 3 ? 16 : 12;
+  const outer = side ?? Math.min(width - 40, maxSize);
+  const { gap, pad, cell, glyph, corner } = boardMetrics(size, outer, compact);
   const winSet = useMemo(() => new Set(winningLine ?? []), [winningLine]);
 
   return (
