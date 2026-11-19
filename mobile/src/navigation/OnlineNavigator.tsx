@@ -9,7 +9,11 @@ import { OnlineResultScreen } from '../screens/online/OnlineResultScreen';
 import { ReconnectionScreen } from '../screens/online/ReconnectionScreen';
 import { RoomDetailsScreen } from '../screens/online/RoomDetailsScreen';
 import { WaitingRoomScreen } from '../screens/online/WaitingRoomScreen';
+import { withOverlayToast } from '../components/feedback/AppToast';
 import { Stack } from './stack';
+
+/** Presented as a native modal, which draws above the root toast host, so it hosts its own toast layer. */
+const MatchInvitationModal = withOverlayToast(MatchInvitationScreen);
 
 export const onlineScreens = () => (
   <Stack.Group key="online">
@@ -22,6 +26,6 @@ export const onlineScreens = () => (
     <Stack.Screen name="room_details" component={RoomDetailsScreen} options={{ gestureEnabled: false }} />
     <Stack.Screen name="online_result" component={OnlineResultScreen} options={{ gestureEnabled: false, animation: 'fade' }} />
     <Stack.Screen name="reconnection" component={ReconnectionScreen} options={{ gestureEnabled: false, animation: 'fade' }} />
-    <Stack.Screen name="match_invitation" component={MatchInvitationScreen} options={{ presentation: 'modal' }} />
+    <Stack.Screen name="match_invitation" component={MatchInvitationModal} options={{ presentation: 'modal' }} />
   </Stack.Group>
 );

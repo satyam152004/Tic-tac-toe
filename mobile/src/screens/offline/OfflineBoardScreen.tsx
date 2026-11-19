@@ -5,6 +5,7 @@ import { AppButton } from '../../components/common/AppButton';
 import { AppIconButton } from '../../components/common/AppIconButton';
 import { Screen } from '../../components/common/Screen';
 import { GameBoard } from '../../components/game/GameBoard';
+import { PausedOverlay } from '../../components/game/PausedOverlay';
 import { PlayerCard } from '../../components/game/PlayerCard';
 import { type } from '../../design-system/typography';
 import { useBackGuard } from '../../hooks/useBackGuard';
@@ -22,13 +23,15 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
   const game = useLocalGameStore((s) => s.game);
   const setup = useLocalGameStore((s) => s.setup);
   const paused = useLocalGameStore((s) => s.paused);
+  const pauseReason = useLocalGameStore((s) => s.pauseReason);
   const lastMove = useLocalGameStore((s) => s.lastMove);
   const sound = useSettingsStore((s) => s.soundEffects);
   const setSettings = useSettingsStore((s) => s.set);
   const inProgress = game?.outcome.status === 'IN_PROGRESS';
 
+  // Also while paused: leaving a paused match still discards it, so it is confirmed like any other exit.
   const guard = useBackGuard({
-    when: !!game && inProgress && !paused,
+    when: !!game && inProgress,
     title: 'Leave Match?',
     message: 'Your current round progress will be discarded.',
     confirmLabel: 'Exit',
@@ -84,11 +87,8 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
           testID="board-pause"
           label="Pause game"
           icon={<Pause size={16} color={c.text} />}
-          disabled={!inProgress}
-          onPress={() => {
-            useLocalGameStore.getState().pause();
-            nav.navigate('game_pause');
-          }}
+          disabled={!inProgress || paused}
+          onPress={() => useLocalGameStore.getState().pause('manual')}
         />
       }
       testID="offline-board"
@@ -138,7 +138,7 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
             size="md"
             style={styles.flex}
             icon={<Undo2 size={16} color={c.text} />}
-            disabled={game.moves.length === 0 || paused}
+            disabled={game.moves.length === 0 || paused || !inProgress}
             onPress={() => useLocalGameStore.getState().undoMove()}
           />
           <AppButton
@@ -148,6 +148,7 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
             size="md"
             style={styles.flex}
             icon={<RotateCcw size={16} color={c.text} />}
+            disabled={!inProgress}
             onPress={() => useLocalGameStore.getState().rematch()}
           />
           <AppButton
@@ -161,6 +162,23 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
           />
         </View>
       </View>
+
+      {paused && inProgress ? (
+        <PausedOverlay
+          matchLabel={`${seats.X.name} vs ${seats.O.name}`}
+          elapsedLabel={formatDurationMs(elapsedMs)}
+          reason={pauseReason}
+          onResume={() => useLocalGameStore.getState().unpause()}
+          onRestart={() => useLocalGameStore.getState().rematch()}
+          onSettings={() => nav.navigate('settings')}
+          onExit={() => {
+            // quit() empties the store; allow the back guard first so leaving does not ask a second time.
+            guard.allow();
+            useLocalGameStore.getState().quit();
+            goHome();
+          }}
+        />
+      ) : null}
     </Screen>
   );
 };

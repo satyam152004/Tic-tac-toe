@@ -19,6 +19,8 @@ import {
 import { feedback } from '../services/feedback';
 import { ActiveLocalGame, localGameStorage } from '../services/storage/localGameStorage';
 
+export type PauseReason = 'manual' | 'interrupted';
+
 export interface LocalSetup {
   mode: 'LOCAL_2P' | 'VS_AI';
   size: BoardSize;
@@ -47,6 +49,8 @@ interface LocalGameStore {
   setup: LocalSetup;
   game: LocalGameState | null;
   paused: boolean;
+  /** Why the game is paused: the player pressed Pause, or the app was interrupted (background, lock, call...). */
+  pauseReason: PauseReason | null;
   /** clientMatchId of the last finished + stored match (so the result screen can reference it). */
   lastMatchId: string | null;
   /** Bumped whenever a finished match is stored; History / sync listen to it. */
@@ -60,7 +64,7 @@ interface LocalGameStore {
   aiMove: () => void;
   undoMove: () => void;
   rematch: () => void;
-  pause: () => void;
+  pause: (reason?: PauseReason) => void;
   unpause: () => void;
   quit: () => void;
   elapsedMs: () => number;
@@ -109,6 +113,7 @@ export const useLocalGameStore = create<LocalGameStore>((set, get) => {
     setup: DEFAULT_SETUP,
     game: null,
     paused: false,
+    pauseReason: null,
     lastMatchId: null,
     historyVersion: 0,
     lastMove: null,
@@ -118,7 +123,7 @@ export const useLocalGameStore = create<LocalGameStore>((set, get) => {
     start: () => {
       const { setup } = get();
       const game = newLocalGame({ mode: setup.mode, size: setup.size, winLength: setup.winLength, difficulty: setup.difficulty, humanMark: setup.p1Mark });
-      set({ game, paused: false, lastMove: null, lastMatchId: null });
+      set({ game, paused: false, pauseReason: null, lastMove: null, lastMatchId: null });
       persist(game);
     },
 
@@ -138,6 +143,7 @@ export const useLocalGameStore = create<LocalGameStore>((set, get) => {
         },
         game: resumeTimer(pauseTimer(active.state)),
         paused: false,
+        pauseReason: null,
         lastMove: active.state.moves[active.state.moves.length - 1]?.position ?? null,
       });
     },
@@ -173,7 +179,9 @@ export const useLocalGameStore = create<LocalGameStore>((set, get) => {
 
     undoMove: () => {
       const { game, paused } = get();
-      if (!game || paused || game.moves.length === 0) return;
+      // Only while the round is running: a finished round was already stored in the history, so undoing it would
+      // leave that record behind and let the same round be stored a second time.
+      if (!game || paused || game.outcome.status !== 'IN_PROGRESS' || game.moves.length === 0) return;
       const next = undo(game);
       set({ game: next, lastMove: next.moves[next.moves.length - 1]?.position ?? null });
       persist(next);
@@ -184,24 +192,32 @@ export const useLocalGameStore = create<LocalGameStore>((set, get) => {
       const { game } = get();
       if (!game) return;
       const next = restart(game);
-      set({ game: next, paused: false, lastMove: null, lastMatchId: null });
+      set({ game: next, paused: false, pauseReason: null, lastMove: null, lastMatchId: null });
       persist(next);
     },
 
-    pause: () => {
-      const { game } = get();
-      if (!game || game.outcome.status !== 'IN_PROGRESS') return;
-      set({ game: pauseTimer(game), paused: true });
+    /**
+     * Single entry point for every pause source (Pause button; app backgrounded, locked or interrupted).
+     * Idempotent: a second call while already paused changes nothing, so the timer is frozen exactly once and the
+     * original reason is kept. The paused snapshot is persisted so a process kill does not let the clock run on.
+     */
+    pause: (reason = 'manual') => {
+      const { game, paused } = get();
+      if (!game || paused || game.outcome.status !== 'IN_PROGRESS') return;
+      const next = pauseTimer(game);
+      set({ game: next, paused: true, pauseReason: reason });
+      persist(next);
     },
 
+    /** Idempotent: does nothing unless the game is paused. Board, scores, turn and moves are untouched. */
     unpause: () => {
-      const { game } = get();
-      if (!game) return;
-      set({ game: resumeTimer(game), paused: false });
+      const { game, paused } = get();
+      if (!game || !paused) return;
+      set({ game: resumeTimer(game), paused: false, pauseReason: null });
     },
 
     quit: () => {
-      set({ game: null, paused: false, lastMove: null });
+      set({ game: null, paused: false, pauseReason: null, lastMove: null });
       void localGameStorage.clearActive().catch(() => undefined);
     },
 

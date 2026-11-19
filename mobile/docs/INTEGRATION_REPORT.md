@@ -16,7 +16,6 @@ Source of truth: backend source + generated `backend/docs/API.md` (69 endpoints)
 | 10 | offline_board | screens/offline/OfflineBoardScreen | shared engine (no network) |
 | 11 | board_selection | screens/offline/BoardSelectionScreen | engine |
 | 12 | ai_difficulty | screens/offline/AiDifficultyScreen | engine (5 levels) |
-| 13 | game_pause | screens/offline/GamePauseScreen | local game store |
 | 14 | game_result | screens/offline/GameResultScreen | local game store / SQLite |
 | 15 | rematch | screens/offline/RematchScreen | local game store |
 | 16 | offline_history | screens/offline/OfflineHistoryScreen | SQLite |

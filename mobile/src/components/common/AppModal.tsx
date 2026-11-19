@@ -4,6 +4,7 @@ import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
+import { OverlayToast } from '../feedback/AppToast';
 import { AppButton } from './AppButton';
 import { Pressy } from './Pressy';
 
@@ -18,22 +19,26 @@ export const AppModal: React.FC<{
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close dialog">
-        <Pressable
-          onPress={() => undefined}
-          style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom, borderRadius: Platform.OS === 'ios' ? 24 : 16 }]}
-        >
-          <View style={styles.titleRow}>
-            <Text style={[type.headline, { color: c.text, flex: 1 }]}>{title}</Text>
-            {onClose ? (
-              <Pressy accessibilityLabel="Close" onPress={onClose} style={styles.close}>
-                <X size={18} color={c.textSecondary} />
-              </Pressy>
-            ) : null}
-          </View>
-          {children}
+      <View style={styles.fill}>
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close dialog">
+          <Pressable
+            onPress={() => undefined}
+            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom, borderRadius: Platform.OS === 'ios' ? 24 : 16 }]}
+          >
+            <View style={styles.titleRow}>
+              <Text style={[type.headline, { color: c.text, flex: 1 }]}>{title}</Text>
+              {onClose ? (
+                <Pressy accessibilityLabel="Close" onPress={onClose} style={styles.close}>
+                  <X size={18} color={c.textSecondary} />
+                </Pressy>
+              ) : null}
+            </View>
+            {children}
+          </Pressable>
         </Pressable>
-      </Pressable>
+        {/* A Modal is its own native window: the root toast cannot draw above it, so it hosts the toast itself. */}
+        <OverlayToast />
+      </View>
     </Modal>
   );
 };
@@ -52,21 +57,25 @@ export const ConfirmDialog: React.FC<{
   const c = useTheme();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
-      <View style={[styles.backdrop, { justifyContent: 'center', padding: 20 }]}>
-        <View style={[styles.dialog, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <Text style={[type.headline, { color: c.text }]}>{title}</Text>
-          <Text style={[type.body, { color: c.textSecondary, marginTop: 6 }]}>{message}</Text>
-          <View style={styles.actions}>
-            <AppButton title={cancelLabel} variant="outline" size="md" onPress={onCancel} style={{ flex: 1 }} />
-            <AppButton title={confirmLabel} variant={destructive ? 'danger' : 'primary'} size="md" onPress={onConfirm} style={{ flex: 1 }} />
+      <View style={styles.fill}>
+        <View style={[styles.backdrop, { justifyContent: 'center', padding: 20 }]}>
+          <View style={[styles.dialog, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+            <Text style={[type.headline, { color: c.text }]}>{title}</Text>
+            <Text style={[type.body, { color: c.textSecondary, marginTop: 6 }]}>{message}</Text>
+            <View style={styles.actions}>
+              <AppButton title={cancelLabel} variant="outline" size="md" onPress={onCancel} style={{ flex: 1 }} />
+              <AppButton title={confirmLabel} variant={destructive ? 'danger' : 'primary'} size="md" onPress={onConfirm} style={{ flex: 1 }} />
+            </View>
           </View>
         </View>
+        <OverlayToast />
       </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end', padding: 12 },
   sheet: { borderWidth: 1, padding: 20, gap: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },

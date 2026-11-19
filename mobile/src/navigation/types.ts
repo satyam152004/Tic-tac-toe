@@ -33,7 +33,6 @@ export type RootStackParamList = {
   board_selection: { mode: 'LOCAL_2P' | 'VS_AI' } | undefined;
   ai_difficulty: undefined;
   offline_board: undefined; // the active local game lives in localGameStore
-  game_pause: undefined;
   game_result: undefined;
   rematch: undefined;
   offline_history: undefined;

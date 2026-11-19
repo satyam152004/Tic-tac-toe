@@ -8,7 +8,6 @@ import { BoardSelectionScreen } from '../../src/screens/offline/BoardSelectionSc
 import { GameResultScreen } from '../../src/screens/offline/GameResultScreen';
 import { OfflineBoardScreen } from '../../src/screens/offline/OfflineBoardScreen';
 import { OfflineHistoryScreen } from '../../src/screens/offline/OfflineHistoryScreen';
-import { GamePauseScreen } from '../../src/screens/offline/GamePauseScreen';
 import { localGameStorage } from '../../src/services/storage/localGameStorage';
 import { DEFAULT_SETUP, useLocalGameStore } from '../../src/store/localGameStore';
 
@@ -25,7 +24,6 @@ async function mount(initial: string, params?: object) {
     board_selection: BoardSelectionScreen,
     ai_difficulty: AiDifficultyScreen,
     game_result: GameResultScreen,
-    game_pause: GamePauseScreen,
     offline_history: OfflineHistoryScreen,
     Main: Stub('Main'),
     player_setup: Stub('player_setup'),
@@ -45,7 +43,7 @@ async function mount(initial: string, params?: object) {
 
 beforeEach(() => {
   sqlite.__matches.length = 0;
-  useLocalGameStore.setState({ setup: DEFAULT_SETUP, game: null, paused: false, lastMatchId: null, historyVersion: 0, lastMove: null });
+  useLocalGameStore.setState({ setup: DEFAULT_SETUP, game: null, paused: false, pauseReason: null, lastMatchId: null, historyVersion: 0, lastMove: null });
 });
 
 describe('OfflineBoardScreen', () => {
@@ -81,15 +79,60 @@ describe('OfflineBoardScreen', () => {
     expect(screen.getByText('Player 1 Wins!')).toBeTruthy();
   });
 
-  it('pause blocks moves and navigates to the pause screen', async () => {
+  it('manual pause shows the in-game overlay with Resume and blocks moves', async () => {
     st().start();
     await mount('offline_board');
+    expect(screen.queryByTestId('game-pause')).toBeNull();
     await fireEvent.press(await screen.findByTestId('board-pause'));
     expect(st().paused).toBe(true);
     expect(await screen.findByTestId('pause-resume')).toBeTruthy();
+    expect(screen.getByTestId('pause-restart')).toBeTruthy();
+    expect(screen.getByTestId('pause-quit')).toBeTruthy();
     expect(st().play(0)).toBe(false);
     await fireEvent.press(screen.getByTestId('pause-resume'));
     expect(st().paused).toBe(false);
+    expect(screen.queryByTestId('game-pause')).toBeNull();
+  });
+
+  it('regression: a game paused by an interruption (background, lock) always shows Resume, and Resume keeps the match', async () => {
+    st().start();
+    await mount('offline_board');
+    await fireEvent.press(await screen.findByTestId('cell-0'));
+    await fireEvent.press(screen.getByTestId('cell-4'));
+    const before = st().game!;
+    await act(async () => st().pause('interrupted')); // what useInterruptionPause does on background / inactive
+    expect(await screen.findByTestId('pause-resume')).toBeTruthy();
+    expect(screen.getByText('The game was paused while you were away.')).toBeTruthy();
+    // the pause button cannot pause a second time
+    expect(screen.getByTestId('board-pause').props.accessibilityState?.disabled ?? screen.getByTestId('board-pause').props['aria-disabled']).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('pause-resume'));
+    expect(st().paused).toBe(false);
+    expect(st().game?.board).toEqual(before.board);
+    expect(st().game?.current).toBe(before.current);
+    expect(st().game?.scores).toEqual(before.scores);
+    expect(st().game?.moves).toEqual(before.moves);
+    await fireEvent.press(screen.getByTestId('cell-8'));
+    expect(st().game?.board[8]).toBe('X');
+  });
+
+  it('Restart from the pause overlay resumes play on a fresh board with the scores kept', async () => {
+    st().start();
+    await mount('offline_board');
+    await fireEvent.press(await screen.findByTestId('cell-0'));
+    await act(async () => st().pause('manual'));
+    await fireEvent.press(await screen.findByTestId('pause-restart'));
+    expect(st().paused).toBe(false);
+    expect(st().game?.moves).toHaveLength(0);
+    expect(screen.queryByTestId('game-pause')).toBeNull();
+  });
+
+  it('Restart and Undo are disabled once the round has ended, so a stored result cannot be undone', async () => {
+    st().start();
+    await mount('offline_board');
+    for (const p of [0, 3, 1, 4, 2]) await fireEvent.press(await screen.findByTestId(`cell-${p}`));
+    const off = (id: string) => screen.getByTestId(id).props.accessibilityState?.disabled ?? screen.getByTestId(id).props['aria-disabled'];
+    expect(off('board-undo')).toBeTruthy();
+    expect(off('board-restart')).toBeTruthy();
   });
 
   it('undo is disabled until a move was made', async () => {

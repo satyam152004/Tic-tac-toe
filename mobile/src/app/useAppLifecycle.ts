@@ -2,6 +2,7 @@ import { CommonActions } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
+import { useInterruptionPause } from '../hooks/useInterruptionPause';
 import { navigateTo, navigationRef } from '../navigation/navigationRef';
 import { queryClient } from '../services/queryClient';
 import { flushPendingLink, startDeepLinks } from '../services/deepLinks';
@@ -35,6 +36,7 @@ function routeFromNotification(data: Record<string, unknown> | undefined): void 
  * handling, deep links, notification taps and "session ended" handling.
  */
 export function useAppLifecycle(): void {
+  useInterruptionPause();
   const status = useAuthStore((s) => s.status);
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
   const historyVersion = useLocalGameStore((s) => s.historyVersion);
@@ -88,11 +90,9 @@ export function useAppLifecycle(): void {
         void useAuthStore.getState().refreshUser();
         void queryClient.invalidateQueries();
         void syncLocalMatches();
-        // A running local game is paused while the app was in the background (timer fairness)
+        // A running offline game stays paused: useInterruptionPause paused it, the board shows a Resume overlay.
         flushPendingLink();
       } else if (next === 'background') {
-        const local = useLocalGameStore.getState();
-        if (local.game && local.game.outcome.status === 'IN_PROGRESS' && !local.paused) local.pause();
         bgTimer.current = setTimeout(() => {
           const g = useOnlineStore.getState().game;
           if (!g || isTerminal(g)) socketClient.disconnect(); // idle: save battery. Never while an online game is running.

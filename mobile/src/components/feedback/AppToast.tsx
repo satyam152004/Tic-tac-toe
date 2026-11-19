@@ -8,17 +8,12 @@ import { useTheme } from '../../hooks/useTheme';
 import { useToastStore } from '../../store/toastStore';
 import { Pressy } from '../common/Pressy';
 
-/** Mount once at the app root; driven by `toast.*` helpers. Auto-dismisses after 3.5 s. */
-export const AppToastHost: React.FC = () => {
+/** Presentational toast. Reads the shared toast store; the store owns the auto-dismiss timer. */
+const ToastView: React.FC = () => {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { toast, dismiss } = useToastStore();
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(dismiss, 3500);
-    return () => clearTimeout(t);
-  }, [toast, dismiss]);
+  const toast = useToastStore((s) => s.toast);
+  const dismiss = useToastStore((s) => s.dismiss);
 
   if (!toast) return null;
   const icon =
@@ -30,6 +25,7 @@ export const AppToastHost: React.FC = () => {
   return (
     <Animated.View
       key={toast.id}
+      testID="app-toast"
       entering={FadeInUp.duration(180)}
       exiting={FadeOutUp.duration(150)}
       pointerEvents="box-none"
@@ -49,7 +45,42 @@ export const AppToastHost: React.FC = () => {
   );
 };
 
+/**
+ * Mount once at the app root; driven by `toast.*` helpers.
+ *
+ * Why this is not just a bigger zIndex: React Native `<Modal>` and modal-presented native-stack screens live in their
+ * own native window / view controller, which always draws above the root view. Nothing rendered in the root tree can
+ * overtake them, whatever its zIndex or elevation. So while any such overlay is open (`overlayCount > 0`) the root host
+ * yields and the overlay's own `OverlayToast` shows the toast. Exactly one toast is ever visible.
+ */
+export const AppToastHost: React.FC = () => {
+  const hidden = useToastStore((s) => s.overlayCount > 0);
+  return hidden ? null : <ToastView />;
+};
+
+/**
+ * Render as the last child inside a native overlay (inside the `<Modal>` content, or in a modal-presented screen).
+ * While mounted it takes over toast rendering from the root host.
+ */
+export const OverlayToast: React.FC = () => {
+  useEffect(() => useToastStore.getState().pushOverlay(), []);
+  return <ToastView />;
+};
+
+/** Wrap a screen that is presented with `presentation: 'modal'` so toasts show above it. */
+export function withOverlayToast<P extends object>(Component: React.ComponentType<P>): React.FC<P> {
+  const Wrapped: React.FC<P> = (props) => (
+    <View style={styles.fill}>
+      <Component {...props} />
+      <OverlayToast />
+    </View>
+  );
+  Wrapped.displayName = `withOverlayToast(${Component.displayName ?? Component.name ?? 'Screen'})`;
+  return Wrapped;
+}
+
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100 },
+  fill: { flex: 1 },
+  wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100, elevation: 100 },
   toast: { borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 8, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
 });
