@@ -30,7 +30,7 @@ Auth levels: **public** (no token), **user** (any valid access token, guests inc
 
 | Method | Path | Auth | Summary |
 |---|---|---|---|
-| GET | `/api/v1/health` | public | Liveness/readiness probe (fails with 503 when MongoDB is down) |
+| GET | `/api/v1/health` | public | Health check for monitoring/clients (fails with 503 when MongoDB is down). Platform probes: GET /healthz (liveness, no DB) and GET /readyz (readiness) |
 | GET | `/api/v1/version` | public | API version information |
 | POST | `/api/v1/auth/register` | public | Register with email + password |
 | POST | `/api/v1/auth/login` | public | Login with email + password |
@@ -107,7 +107,7 @@ Auth levels: **public** (no token), **user** (any valid access token, guests inc
 
 ### GET `/api/v1/health`
 
-Liveness/readiness probe (fails with 503 when MongoDB is down)
+Health check for monitoring/clients (fails with 503 when MongoDB is down). Platform probes: GET /healthz (liveness, no DB) and GET /readyz (readiness)
 
 - **HTTP method:** GET
 - **Authentication:** none (public)

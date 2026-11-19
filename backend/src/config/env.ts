@@ -9,7 +9,8 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGINS: z.string().default('http://localhost:8081'),
-  TRUST_PROXY: bool.default(false),
+  // Render (RENDER=true) always terminates TLS in a proxy: without this every client shares the proxy's IP and the rate limits.
+  TRUST_PROXY: bool.default(process.env.RENDER === 'true'),
   LOG_LEVEL: z.string().default('info'),
 
   MONGODB_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/tictactoe'),
@@ -32,6 +33,8 @@ const schema = z.object({
   SMTP_PASS: z.string().default(''),
   MAIL_FROM: z.string().default('Tic Tac Toe <no-reply@example.com>'),
   APP_BASE_URL: z.string().default('http://localhost:3000'),
+  /** Upper bound for one email delivery attempt (Brevo API call or SMTP session). */
+  MAIL_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(10_000),
 
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().default(''),
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().default(''),
@@ -75,4 +78,15 @@ if (isProd) {
     console.error('JWT_ACCESS_SECRET must be changed in production');
     process.exit(1);
   }
+
+  // The localhost default is only meant for development; in production it would retry forever against nothing.
+  if (!process.env.MONGODB_URI) {
+    console.error('MONGODB_URI must be set in production');
+    process.exit(1);
+  }
+
+  // Warnings only (never fatal, so an existing deployment keeps starting): these are almost always misconfiguration.
+  if (!env.BREVO_API_KEY && !env.SMTP_HOST) console.warn('No email provider configured (BREVO_API_KEY / SMTP_HOST): verification and password-reset emails will fail');
+  if (!env.TRUST_PROXY) console.warn('TRUST_PROXY is false in production: behind a load balancer all clients will share one rate-limit bucket');
+  if (/localhost|127\.0\.0\.1/.test(env.APP_BASE_URL)) console.warn('APP_BASE_URL points at localhost: emailed links will not work');
 }

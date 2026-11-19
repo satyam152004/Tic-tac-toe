@@ -65,7 +65,7 @@ docker compose logs -f api
 ```
 
 The image is multi-stage (build → prod deps → runtime), runs as the unprivileged `node` user under `tini` (so `SIGTERM` reaches the
-graceful-shutdown handler), and has a `HEALTHCHECK` on `/api/v1/health`. With several replicas the load balancer must allow WebSocket upgrades
+graceful-shutdown handler), and has a `HEALTHCHECK` on `/healthz` (liveness, never touches MongoDB). With several replicas the load balancer must allow WebSocket upgrades
 (Socket.IO also works with sticky sessions disabled when clients use `transports: ['websocket']`, as the examples do).
 
 ## 4. Production checklist
@@ -85,7 +85,7 @@ graceful-shutdown handler), and has a `HEALTHCHECK` on `/api/v1/health`. With se
   *tested* `mongorestore` procedure. Per-period leaderboard rows and tickets are disposable; `users`, `games`, `moves` are the data that matters.
 * **Scaling** – run ≥ 2 replicas behind the load balancer with `REDIS_URL` set. Jobs and all state transitions are idempotent/atomic, so every
   replica can run them. MongoDB handles matchmaking and game state; Redis only carries Socket.IO fan-out.
-* **Health & probes** – Kubernetes: `livenessProbe`/`readinessProbe` → `GET /api/v1/health`; `terminationGracePeriodSeconds: 20`.
+* **Health & probes** – Kubernetes: `livenessProbe` → `GET /healthz`, `readinessProbe` → `GET /readyz` (503 until MongoDB, indexes and seed data are initialised and again during shutdown). **Render**: set the dashboard health check path to `/readyz` so traffic is only routed once the app is ready; keep `/api/v1/health` for external monitoring. The HTTP port opens immediately on `0.0.0.0:$PORT`; until ready, API and Socket.IO requests get a retryable `503 SERVICE_STARTING`. Startup-stage timings are logged as `startup stage` lines. Email calls time out after `MAIL_TIMEOUT_MS` (default 10000); `terminationGracePeriodSeconds: 20`.
 * **Logging & monitoring** – logs are structured JSON on stdout (pino; tokens and passwords redacted; each request has `requestId`, also returned in the
   `X-Request-Id` header and error bodies; `channel: "audit"` lines mark sensitive actions). Ship them with your platform's log driver
   (CloudWatch, Loki, Datadog…). Alert on: `/health` failures, 5xx rate, `auth.refresh_reuse_detected`, repeated `auth.login_failed`, event-loop lag, Mongo

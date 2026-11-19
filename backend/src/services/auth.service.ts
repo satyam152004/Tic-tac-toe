@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { OTP } from '../constants/index.js';
 import { RefreshTokenModel, UserDoc, UserModel } from '../models/index.js';
 import { Errors } from '../utils/errors.js';
@@ -93,7 +94,20 @@ async function sendVerification(user: UserDoc): Promise<void> {
     { $set: { emailVerifyTokenHash: sha256(token), emailVerifyExpiresAt: addMs(new Date(), DAY_MS) } },
   );
   const code = await issueOtp(String(user._id), 'verify').catch(() => null); // cooldown must never break registration
-  if (code) await sendMail(mailTemplates.verifyEmail(user.email, token, code));
+  // The account already exists at this point. A mail outage must not turn a created account into a failed request
+  // (the client would retry and hit EMAIL_TAKEN); the user can request a new code via resendVerification.
+  if (code) await sendMailBestEffort(mailTemplates.verifyEmail(user.email, token, code), 'verify');
+}
+
+/** Sends an email whose failure must not fail the surrounding operation. Delivery errors are logged, never thrown. */
+async function sendMailBestEffort(mail: Parameters<typeof sendMail>[0], purpose: string): Promise<boolean> {
+  try {
+    await sendMail(mail);
+    return true;
+  } catch (err) {
+    logger.warn({ purpose, err: (err as Error).message }, 'Email delivery failed (operation continued)');
+    return false;
+  }
 }
 
 /** Re-sends the six-digit verification code (cooldown + hourly cap enforced by issueOtp). */
@@ -311,7 +325,8 @@ export async function forgotPassword(email: string): Promise<void> {
     { $set: { passwordResetTokenHash: sha256(token), passwordResetExpiresAt: addMs(new Date(), 3600_000) } },
   );
   const code = await issueOtp(String(user._id), 'reset').catch(() => null); // silently skipped while cooling down: no enumeration
-  if (code) await sendMail(mailTemplates.resetPassword(user.email!, token, code));
+  // A delivery failure must look exactly like success: otherwise the response reveals which emails have accounts.
+  if (code) await sendMailBestEffort(mailTemplates.resetPassword(user.email!, token, code), 'reset');
   audit('auth.forgot_password', { userId: user._id });
 }
 
@@ -339,7 +354,8 @@ export async function resetPassword(input: ResetInput): Promise<void> {
   await UserModel.updateOne({ _id: user._id }, { $unset: { 'resetOtp.hash': 1, 'resetOtp.expiresAt': 1 } });
   await revokeAllSessions(user._id);
   audit('auth.password_reset', { userId: user._id });
-  if (user.email) await sendMail(mailTemplates.passwordChanged(user.email));
+  // The password is already changed and sessions revoked; a notification mail failing must not report the reset as failed.
+  if (user.email) await sendMailBestEffort(mailTemplates.passwordChanged(user.email), 'password-changed');
   void notify(user._id, { type: 'ACCOUNT', title: 'Password changed', body: 'Your password was changed and all devices were signed out.' });
 }
 

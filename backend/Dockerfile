@@ -26,8 +26,10 @@ COPY package.json ./
 # Run as the unprivileged "node" user shipped with the image.
 USER node
 EXPOSE 4000
+# Liveness only (/healthz never touches MongoDB): a slow or unavailable database must not get the container killed.
+# Readiness is exposed separately at /readyz for the platform / load balancer.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:${PORT:-4000}/api/v1/health" >/dev/null || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT:-4000}/healthz" >/dev/null || exit 1
 # tini forwards SIGTERM so the graceful shutdown handler in server.ts runs.
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/server.js"]

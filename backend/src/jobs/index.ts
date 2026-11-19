@@ -29,7 +29,14 @@ function every(name: string, ms: number, fn: () => Promise<unknown>): NodeJS.Tim
   return t;
 }
 
+let activeStop: (() => void) | null = null;
+
+/** Starts the background jobs once per process: calling it again returns the same stop function (no duplicate timers). */
 export function startJobs(): () => void {
+  if (activeStop) {
+    logger.warn('startJobs called twice; jobs are already running');
+    return activeStop;
+  }
   const timers = [
     every('game-timeouts', 5_000, () => processGameTimeouts()),
     every('matchmaking-sweep', 3_000, () => sweepMatchmaking()),
@@ -40,5 +47,9 @@ export function startJobs(): () => void {
       return { markedOffline: r.modifiedCount };
     }),
   ];
-  return () => timers.forEach(clearInterval);
+  activeStop = () => {
+    timers.forEach(clearInterval);
+    activeStop = null;
+  };
+  return activeStop;
 }

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import nodemailer, { Transporter } from 'nodemailer';
 import { env, isProd, isTest } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { AppError } from '../utils/errors.js';
 
 export interface Mail {
   to: string;
@@ -25,6 +26,10 @@ function getTransporter(): Transporter | null {
     auth: env.SMTP_USER
       ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
       : undefined,
+    // Never let a stalled SMTP server hang a request: fail fast and let the caller decide.
+    connectionTimeout: env.MAIL_TIMEOUT_MS,
+    greetingTimeout: env.MAIL_TIMEOUT_MS,
+    socketTimeout: env.MAIL_TIMEOUT_MS,
   });
 
   return transporter;
@@ -34,6 +39,14 @@ function getSenderEmail(): string {
   const from = env.MAIL_FROM;
   const match = from.match(/<([^>]+)>/);
   return (match?.[1] ?? from).trim();
+}
+
+/** Thrown when an email could not be handed to the provider (timeout, provider error, not configured). */
+export class MailDeliveryError extends AppError {
+  constructor(message = 'Email could not be sent right now, please try again shortly') {
+    super(503, 'EMAIL_DELIVERY_FAILED', message);
+    this.name = 'MailDeliveryError';
+  }
 }
 
 export async function sendMail(mail: Mail): Promise<void> {
@@ -54,6 +67,8 @@ export async function sendMail(mail: Mail): Promise<void> {
           'api-key': brevoApiKey,
           'content-type': 'application/json',
         },
+        // Bounded: a hung Brevo call must not hold a registration / password-reset request open.
+        signal: AbortSignal.timeout(env.MAIL_TIMEOUT_MS),
         body: JSON.stringify({
           sender: {
             email: getSenderEmail(),
@@ -68,7 +83,7 @@ export async function sendMail(mail: Mail): Promise<void> {
       if (!response.ok) {
         const errorText = await response.text();
         logger.error(
-          { status: response.status, error: errorText, subject: mail.subject },
+          { status: response.status, error: errorText.slice(0, 300), subject: mail.subject },
           'Brevo email delivery failed',
         );
         throw new Error(`Brevo API returned status ${response.status}`);
@@ -77,11 +92,12 @@ export async function sendMail(mail: Mail): Promise<void> {
       logger.info({ subject: mail.subject }, 'Email accepted by Brevo');
       return;
     } catch (err) {
+      const timedOut = (err as Error).name === 'TimeoutError' || (err as Error).name === 'AbortError';
       logger.error(
-        { err: (err as Error).message, subject: mail.subject },
+        { err: (err as Error).message, timedOut, subject: mail.subject },
         'Failed to send email through Brevo',
       );
-      throw err;
+      throw new MailDeliveryError();
     }
   }
 
@@ -97,7 +113,7 @@ export async function sendMail(mail: Mail): Promise<void> {
         { err: (err as Error).message, subject: mail.subject },
         'Failed to send email through SMTP',
       );
-      throw err;
+      throw new MailDeliveryError();
     }
   }
 
@@ -118,7 +134,7 @@ export async function sendMail(mail: Mail): Promise<void> {
   }
 
   logger.error({ subject: mail.subject }, 'No email provider configured');
-  throw new Error('No email provider configured');
+  throw new MailDeliveryError();
 }
 
 export const mailTemplates = {

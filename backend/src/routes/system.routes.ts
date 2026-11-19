@@ -15,7 +15,7 @@ export const systemRoutes = [
     method: 'get',
     path: '/health',
     tag: 'System',
-    summary: 'Liveness/readiness probe (fails with 503 when MongoDB is down)',
+    summary: 'Health check for monitoring/clients (fails with 503 when MongoDB is down). Platform probes: GET /healthz (liveness, no DB) and GET /readyz (readiness)',
     auth: 'none',
     response: '{ status, db, uptimeSec, timestamp }',
     handler: () => {
