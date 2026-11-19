@@ -74,7 +74,7 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 12, paddingTop: 24 },
   logo: { width: 80, height: 80, borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
-  title: { fontFamily: fonts.display.bold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  title: { ...type.title, textAlign: 'center' },
   or: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
   line: { flex: 1, height: StyleSheet.hairlineWidth },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },

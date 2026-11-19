@@ -1,8 +1,11 @@
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
+import { radius } from '../../design-system/radius';
+import { layout } from '../../design-system/spacing';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
 
+/** 44x44 square icon button (the minimum touch target). Pass an icon of `iconSize.md`. */
 export const AppIconButton: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -17,9 +20,10 @@ export const AppIconButton: React.FC<{
     <Pressy
       testID={testID}
       accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
-      style={[{ width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bgCard, borderColor: c.border, opacity: disabled ? 0.45 : 1 }, style]}
+      style={[{ width: layout.minTouch, height: layout.minTouch, borderRadius: radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bgCard, borderColor: c.border, opacity: disabled ? 0.45 : 1 }, style]}
     >
       {icon}
     </Pressy>

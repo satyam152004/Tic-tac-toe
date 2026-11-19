@@ -134,7 +134,7 @@ export const PlayerSetupScreen: React.FC<RootScreenProps<'player_setup'>> = ({ r
           {SIZES.map((sz) => (
             <View key={sz} style={{ flex: 1 }}>
               <AppCard selected={size === sz} onPress={() => setSize(sz)} padding="sm" testID={`size-${sz}`} accessibilityLabel={`${sz} by ${sz} board`} style={{ alignItems: 'center' }}>
-                <Text style={{ fontFamily: fonts.mono.bold, fontSize: 16, color: c.text }}>{sz}x{sz}</Text>
+                <Text style={[type.num, { color: c.text }]}>{sz}x{sz}</Text>
                 <Text style={[type.caption, { color: c.textSecondary }]}>{defaultWinLength(sz)} in a row</Text>
               </AppCard>
             </View>

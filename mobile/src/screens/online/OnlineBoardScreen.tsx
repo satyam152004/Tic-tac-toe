@@ -146,7 +146,7 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
         <View style={[styles.turnBar, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <Text testID="turn-status" style={[type.small, { color: c.textSecondary, flex: 1 }]}>{status}</Text>
           {running && secondsLeft !== null ? (
-            <Text testID="turn-timer" style={{ fontFamily: 'JetBrainsMono_700Bold', fontSize: 14, color: secondsLeft <= 5 ? c.danger : c.warning }}>
+            <Text testID="turn-timer" style={[type.num, { color: secondsLeft <= 5 ? c.danger : c.warning }]}>
               {formatClock(secondsLeft)}
             </Text>
           ) : null}

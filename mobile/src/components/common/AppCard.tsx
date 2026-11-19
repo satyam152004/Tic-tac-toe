@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { radius } from '../../design-system/radius';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
@@ -17,6 +16,7 @@ export interface AppCardProps {
 
 const PAD = { sm: 12, md: 16, lg: 20 } as const;
 
+/** Flat card: `bgCard` surface, 1px border, `radius.lg`. A selected card swaps to the accent border and a raised surface. */
 export const AppCard: React.FC<AppCardProps> = ({ children, selected, onPress, padding = 'md', style, testID, accessibilityLabel }) => {
   const c = useTheme();
   const box: ViewStyle = {
@@ -24,30 +24,19 @@ export const AppCard: React.FC<AppCardProps> = ({ children, selected, onPress, p
     borderWidth: 1,
     padding: PAD[padding],
     borderColor: selected ? c.accent : c.border,
-    backgroundColor: selected ? c.bgCard : c.bgCard,
+    backgroundColor: selected ? c.bgElevated : c.bgCard,
     overflow: 'hidden',
   };
-  const inner = (
-    <>
-      {selected ? (
-        <LinearGradient
-          colors={[c.accent + '33', c.accentSecondary + '26']}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      ) : null}
-      {children}
-    </>
-  );
   if (onPress) {
     return (
-      <Pressy testID={testID} accessibilityLabel={accessibilityLabel} onPress={onPress} scaleTo={0.99} style={[box, style]}>
-        {inner}
+      <Pressy testID={testID} accessibilityLabel={accessibilityLabel} accessibilityState={{ selected: !!selected }} onPress={onPress} scaleTo={0.99} style={[box, style]}>
+        {children}
       </Pressy>
     );
   }
   return (
     <View testID={testID} style={[box, style]}>
-      {inner}
+      {children}
     </View>
   );
 };

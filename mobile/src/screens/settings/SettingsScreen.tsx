@@ -10,7 +10,7 @@ import { AppModal, ConfirmDialog } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { THEME_LIST } from '../../design-system/themes';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { usePreferenceSync } from '../../hooks/usePreferenceSync';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
@@ -197,7 +197,7 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         ) : (
           <Row testID="row-change-password" icon={<KeyRound size={16} color={c.textSecondary} />} label="Change password" onPress={() => setDialog('password')} right={<ChevronRight size={16} color={c.textSecondary} />} />
         )}
-        <Row testID="row-about" icon={<Info size={16} color={c.textSecondary} />} label="App version" right={<Text style={[type.small, { color: c.textSecondary, fontFamily: 'JetBrainsMono_500Medium' }]}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
+        <Row testID="row-about" icon={<Info size={16} color={c.textSecondary} />} label="App version" right={<Text style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
       </AppCard>
 
       <AppButton testID="logout" fullWidth variant="danger" title="Log Out" icon={<LogOut size={16} color="#fff" />} onPress={() => setDialog('logout')} />

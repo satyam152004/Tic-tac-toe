@@ -83,7 +83,7 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
             error={error}
             returnKeyType="go"
             onSubmitEditing={join}
-            style={{ fontFamily: 'JetBrainsMono_700Bold', fontSize: 18, letterSpacing: 4 }}
+            style={[type.numLarge, { letterSpacing: 4 }]}
           />
           <AppButton testID="paste-code" title="Paste from clipboard" variant="secondary" size="md" icon={<ClipboardPaste size={16} color={c.accent} />} onPress={paste} />
         </View>

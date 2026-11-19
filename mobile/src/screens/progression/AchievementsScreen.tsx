@@ -6,7 +6,7 @@ import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { useAchievements } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
@@ -46,7 +46,7 @@ const XpAchievementCard: React.FC<{ item: AchievementItem }> = ({ item: a }) => 
       <View style={{ gap: 4 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={[type.caption, { color: c.textSecondary }]}>{titleCase(a.category)} · {a.unlocked ? 'Unlocked' : 'In Progress'}</Text>
-          <Text style={[type.caption, { color: c.textSecondary, fontFamily: 'JetBrainsMono_500Medium' }]}>{Math.min(a.progress, a.target)}/{a.target}</Text>
+          <Text style={[type.caption, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{Math.min(a.progress, a.target)}/{a.target}</Text>
         </View>
         <View style={{ height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: c.bgSecondary }}>
           <View style={{ width: `${pct}%`, height: '100%', borderRadius: 4, backgroundColor: a.unlocked ? c.success : c.accent }} />

@@ -230,7 +230,7 @@ const Shortcut: React.FC<{ label: string; sub: string; color: string; icon: Reac
           <Icon size={20} color={color} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[type.smallStrong, { color: c.text, fontFamily: fonts.display.semibold }]}>{label}</Text>
+          <Text numberOfLines={1} style={[type.smallStrong, { color: c.text }]}>{label}</Text>
           <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>{sub}</Text>
         </View>
       </AppCard>
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   coins: { minHeight: 44, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconBtn: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#FFFFFF', fontSize: 10, fontFamily: fonts.body.bold },
+  badgeText: { color: '#FFFFFF', fontSize: 10, fontFamily: fonts.body.semibold },
   hero: { borderRadius: 24, borderWidth: 1, padding: 20, gap: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   shortcutIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

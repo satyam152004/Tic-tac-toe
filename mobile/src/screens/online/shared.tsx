@@ -14,7 +14,7 @@ import { friendlyMessage } from '../../services/api/errors';
 import { useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 import { defaultWinLength } from '../../game-engine';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import type { BoardSize } from '../../services/api/types';
 import { toApiError } from '../../services/api/errors';
@@ -42,7 +42,7 @@ export const BoardSizePicker: React.FC<{ value: BoardSize; onChange: (s: BoardSi
       {ONLINE_SIZES.map((sz) => (
         <View key={sz} style={{ flex: 1 }}>
           <AppCard selected={value === sz} onPress={() => onChange(sz)} padding="sm" testID={`size-${sz}`} accessibilityLabel={`${sz} by ${sz} board`}>
-            <Text style={[type.heading, { color: c.text, textAlign: 'center', fontFamily: 'JetBrainsMono_700Bold' }]}>
+            <Text style={[type.heading, { color: c.text, textAlign: 'center', fontFamily: fonts.mono.semibold }]}>
               {sz}x{sz}
             </Text>
             <Text style={[type.caption, { color: c.textSecondary, textAlign: 'center' }]}>{defaultWinLength(sz)} to win</Text>
@@ -60,7 +60,7 @@ export const CodeText: React.FC<{ code: string; color?: string }> = ({ code, col
     <Text
       accessibilityLabel={`Room code ${code.split('').join(' ')}`}
       testID="room-code"
-      style={{ fontFamily: 'JetBrainsMono_700Bold', fontSize: 34, letterSpacing: 7, color: color ?? c.accent, textAlign: 'center' }}
+      style={[type.numHero, { letterSpacing: 7, color: color ?? c.accent, textAlign: 'center' }]}
     >
       {code}
     </Text>

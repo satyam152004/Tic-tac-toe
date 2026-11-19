@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react-native';
+import { lift } from '../../design-system/shadows';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useToastStore } from '../../store/toastStore';
@@ -82,5 +83,5 @@ export function withOverlayToast<P extends object>(Component: React.ComponentTyp
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100, elevation: 100 },
-  toast: { borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 8, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  toast: { borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10, ...lift },
 });

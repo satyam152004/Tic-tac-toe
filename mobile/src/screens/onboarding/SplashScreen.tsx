@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 const appLogo = require('../../assets/images/app-logo.png');
 import { fonts, type } from '../../design-system/typography';
@@ -36,10 +35,10 @@ export const SplashScreen: React.FC<RootScreenProps<'splash'>> = () => {
   }, [minDone, status, resetTo]);
 
   return (
-    <LinearGradient colors={[c.bgElevated, c.bgPrimary, c.bgPrimary]} style={styles.root} testID="splash-screen">
+    <View style={[styles.root, { backgroundColor: c.bgPrimary }]} testID="splash-screen">
       <View />
       <View style={styles.center}>
-        <View style={[styles.logo, { backgroundColor: c.bgCard, borderColor: c.accent + '80', shadowColor: c.accent }]}>
+        <View style={[styles.logo, { backgroundColor: c.bgCard, borderColor: c.accent }]}>
           <Image source={appLogo} style={{ width: '100%', height: '100%' }} />
         </View>
         <View style={{ alignItems: 'center', gap: 6 }}>
@@ -54,15 +53,15 @@ export const SplashScreen: React.FC<RootScreenProps<'splash'>> = () => {
           <Animated.View style={[styles.fill, { backgroundColor: c.accent }, bar]} />
         </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 64 },
   center: { alignItems: 'center', gap: 24 },
-  logo: { width: 112, height: 112, borderRadius: 24, borderWidth: 1, overflow: 'hidden', shadowOpacity: 0.3, shadowRadius: 30, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
-  title: { fontFamily: fonts.display.extrabold, fontSize: 30, lineHeight: 36 },
+  logo: { width: 112, height: 112, borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
+  title: { fontFamily: fonts.body.semibold, fontSize: 30, lineHeight: 38 },
   footer: { width: '100%', alignItems: 'center', gap: 6 },
   track: { width: '100%', height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 10 },
   fill: { height: '100%', borderRadius: 3 },

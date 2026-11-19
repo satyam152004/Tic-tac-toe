@@ -137,7 +137,7 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
         <Text testID="result-title" accessibilityRole="header" style={[type.title, { color: c.text }]}>{r.title}</Text>
         {r.reason ? <Text testID="result-reason" style={[type.small, { color: c.textSecondary }]}>{r.reason}</Text> : null}
         {r.outcome !== 'VOID' ? (
-          <Text testID="result-points" style={{ fontFamily: 'JetBrainsMono_700Bold', fontSize: 13, color: tone }}>
+          <Text testID="result-points" style={[type.num, { color: tone }]}>
             {r.points >= 0 ? '+' : ''}{r.points} points
           </Text>
         ) : null}

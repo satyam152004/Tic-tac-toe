@@ -1,8 +1,11 @@
 import { Platform, ViewStyle } from 'react-native';
 
-/** Used sparingly: only for the primary button, the active player and winning cells (as in the prototype). */
-export const glow = (color: string, opacity = 0.3, radius = 12): ViewStyle =>
+/**
+ * One restrained elevation for surfaces that float above content (toast, tab-bar Play button, menus).
+ * Neutral black, no coloured glow. Cards and buttons are flat and are separated by borders instead.
+ */
+export const lift: ViewStyle =
   Platform.select<ViewStyle>({
-    ios: { shadowColor: color, shadowOpacity: opacity, shadowRadius: radius, shadowOffset: { width: 0, height: 4 } },
-    default: { elevation: 4, shadowColor: color },
+    ios: { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+    default: { elevation: 4 },
   }) ?? {};

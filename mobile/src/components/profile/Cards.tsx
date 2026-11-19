@@ -1,10 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Award, Check, CheckCircle2, Coins, Lock } from 'lucide-react-native';
 import { ThemeDefinition } from '../../design-system/themes';
-import { THEME_COLORS } from '../../design-system/colors';
-import { type } from '../../design-system/typography';
+import { THEME_COLORS, withAlpha } from '../../design-system/colors';
+import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { AppAvatar } from '../common/AppAvatar';
 import { AppCard } from '../common/AppCard';
@@ -21,7 +20,7 @@ export const ScoreCard: React.FC<{
   const color = { default: c.text, accent: c.accent, success: c.success, warning: c.warning }[tone];
   return (
     <View style={[styles.score, { backgroundColor: c.bgCard, borderColor: c.border }]} accessibilityLabel={`${label}: ${value}`}>
-      <Text style={[type.title, { fontSize: 24, color, fontFamily: 'JetBrainsMono_700Bold' }]}>{value}</Text>
+      <Text style={[type.numLarge, { color }]}>{value}</Text>
       <Text style={[type.smallStrong, { color: c.textSecondary, marginTop: 2 }]}>{label}</Text>
       {subtext ? <Text style={[type.caption, { color: c.textSecondary, marginTop: 2 }]}>{subtext}</Text> : null}
     </View>
@@ -47,7 +46,7 @@ export const GameModeCard: React.FC<{
       scaleTo={0.99}
       style={[styles.mode, { borderColor: featured ? c.accent : c.border, backgroundColor: c.bgCard }]}
     >
-      {featured ? <LinearGradient colors={[c.accent + '40', c.accentSecondary + '26', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} /> : null}
+      {featured ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(c.accent, 0.12) }]} /> : null}
       <View style={[styles.modeIcon, featured ? { backgroundColor: c.accent } : { backgroundColor: c.bgElevated, borderWidth: 1, borderColor: c.border }]}>{icon}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={[type.subheading, { color: c.text }]}>{title}</Text>
@@ -76,7 +75,7 @@ export const AchievementCard: React.FC<{ achievement: AchievementView }> = ({ ac
   return (
     <AppCard selected={a.unlocked} style={{ gap: 10 }} accessibilityLabel={`${a.title}, ${a.unlocked ? 'unlocked' : `${pct} percent`}`}>
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={[styles.achIcon, a.unlocked ? { backgroundColor: c.success + '33', borderColor: c.success + '66' } : { backgroundColor: c.bgElevated, borderColor: c.border }]}>
+        <View style={[styles.achIcon, a.unlocked ? { backgroundColor: c.success + '33', borderColor: withAlpha(c.success, 0.4) } : { backgroundColor: c.bgElevated, borderColor: c.border }]}>
           {a.unlocked ? <Award size={20} color={c.success} /> : <Lock size={20} color={c.textSecondary} />}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -91,7 +90,7 @@ export const AchievementCard: React.FC<{ achievement: AchievementView }> = ({ ac
       <View style={{ gap: 4 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={[type.caption, { color: c.textSecondary }]}>{a.category} · {a.unlocked ? 'Unlocked' : 'In Progress'}</Text>
-          <Text style={[type.caption, { color: c.textSecondary, fontFamily: 'JetBrainsMono_500Medium' }]}>{Math.min(a.progress, a.target)}/{a.target}</Text>
+          <Text style={[type.caption, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{Math.min(a.progress, a.target)}/{a.target}</Text>
         </View>
         <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
           <View style={{ width: `${pct}%`, height: '100%', borderRadius: 4, backgroundColor: a.unlocked ? c.success : c.accent }} />
@@ -150,9 +149,9 @@ export const RewardCard: React.FC<{ reward: RewardView; onClaim: (day: number) =
       disabled={!claimable}
       onPress={() => claimable && onClaim(reward.day)}
       scaleTo={0.95}
-      style={[styles.reward, { borderColor: claimable ? c.accent : claimed ? c.success + '66' : c.border, backgroundColor: c.bgCard, opacity: claimable ? 1 : claimed ? 0.85 : 0.6 }]}
+      style={[styles.reward, { borderColor: claimable ? c.accent : claimed ? withAlpha(c.success, 0.4) : c.border, backgroundColor: c.bgCard, opacity: claimable ? 1 : claimed ? 0.85 : 0.6 }]}
     >
-      {claimable ? <LinearGradient colors={[c.accent + '4D', c.accentSecondary + '33']} style={StyleSheet.absoluteFill} /> : null}
+      {claimable ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(c.accent, 0.16) }]} /> : null}
       <Text style={[type.caption, { color: c.textSecondary }]}>Day {reward.day}</Text>
       {claimed ? <CheckCircle2 size={24} color={c.success} /> : <Coins size={24} color={claimable ? c.warning : c.textSecondary} />}
       <View style={{ alignItems: 'center' }}>
@@ -174,19 +173,19 @@ export const ThemeCard: React.FC<{ theme: ThemeDefinition; selected: boolean; on
         <View style={{ width: 84, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {marks.map((m, i) => (
             <View key={i} style={{ width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bgCard }}>
-              {m ? <Text style={{ fontSize: 10, fontWeight: '700', color: m === 'X' ? t.x : t.o }}>{m}</Text> : null}
+              {m ? <Text style={[type.caption, { color: m === 'X' ? t.x : t.o }]}>{m}</Text> : null}
             </View>
           ))}
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text, fontSize: 13 }]}>{theme.name}</Text>
+          <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{theme.name}</Text>
           <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>{theme.subtitle}</Text>
         </View>
         {selected ? (
-          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}>
-            <Check size={14} color="#fff" />
+          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: c.accentFill, alignItems: 'center', justifyContent: 'center' }}>
+            <Check size={14} color={c.onAccent} />
           </View>
         ) : null}
       </View>

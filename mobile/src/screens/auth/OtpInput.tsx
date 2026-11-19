@@ -99,7 +99,7 @@ export const OtpInput: React.FC<{
                 color: c.text,
                 borderColor: hasError ? c.danger : d ? c.accent : c.border,
                 opacity: disabled ? 0.5 : 1,
-                fontFamily: fonts.mono.bold,
+                fontFamily: fonts.mono.semibold,
               },
             ]}
           />

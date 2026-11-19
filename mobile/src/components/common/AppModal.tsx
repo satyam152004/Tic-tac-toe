@@ -1,7 +1,8 @@
 import React from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { radius } from '../../design-system/radius';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { OverlayToast } from '../feedback/AppToast';
@@ -20,10 +21,10 @@ export const AppModal: React.FC<{
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.fill}>
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close dialog">
+        <Pressable style={[styles.backdrop, { backgroundColor: c.scrim }]} onPress={onClose} accessibilityLabel="Close dialog">
           <Pressable
             onPress={() => undefined}
-            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom, borderRadius: Platform.OS === 'ios' ? 24 : 16 }]}
+            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom, borderRadius: radius.xl }]}
           >
             <View style={styles.titleRow}>
               <Text style={[type.headline, { color: c.text, flex: 1 }]}>{title}</Text>
@@ -58,7 +59,7 @@ export const ConfirmDialog: React.FC<{
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.fill}>
-        <View style={[styles.backdrop, { justifyContent: 'center', padding: 20 }]}>
+        <View style={[styles.backdrop, { backgroundColor: c.scrim, justifyContent: 'center', padding: 20 }]}>
           <View style={[styles.dialog, { backgroundColor: c.bgCard, borderColor: c.border }]}>
             <Text style={[type.headline, { color: c.text }]}>{title}</Text>
             <Text style={[type.body, { color: c.textSecondary, marginTop: 6 }]}>{message}</Text>
@@ -76,10 +77,10 @@ export const ConfirmDialog: React.FC<{
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end', padding: 12 },
+  backdrop: { flex: 1, justifyContent: 'flex-end', padding: 12 },
   sheet: { borderWidth: 1, padding: 20, gap: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
-  close: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  dialog: { borderRadius: 24, borderWidth: 1, padding: 20 },
+  close: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  dialog: { borderRadius: radius.xl, borderWidth: 1, padding: 20 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
 });

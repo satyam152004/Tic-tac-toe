@@ -38,7 +38,7 @@ Components (`src/components`):
 - `profile/Cards`: `ScoreCard`, `GameModeCard`, `AchievementCard`, `LeaderboardItem`, `RewardCard`, `ThemeCard`
 - `navigation/AppTabBar` (used by the tab navigator, not by screens)
 Design tokens: `src/design-system/{colors,typography,spacing,radius,shadows,themes}.ts`. Use `type.heading`, `type.body`, `type.small`, `type.num` etc.
-Fonts are loaded by the app shell (Outfit display, Plus Jakarta Sans body, JetBrains Mono numbers); use `fonts.display.bold` etc. from `typography.ts`.
+Fonts are loaded by the app shell from `design-system/fonts.ts` (Plus Jakarta Sans for all text, JetBrains Mono for timers, scores and codes; regular / medium / semibold only). Use the `type` scale (or `<AppText variant>`) from `typography.ts`; do not set fontSize, fontFamily or fontWeight inline.
 
 Navigation (`src/navigation`): flat native stack; route names == prototype ScreenIds. Types in `navigation/types.ts`
 (`RootScreenProps<'online_board'>` gives typed `route.params`). Helpers: `const { nav, goTab, goHome, resetTo, back } = useAppNav()`.

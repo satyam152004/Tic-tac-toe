@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BadgeCheck, BarChart3, ChevronRight, Coins, Edit3, Flame, Gift, History, MailWarning, Settings, UserPlus } from 'lucide-react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
@@ -145,7 +144,7 @@ export const UserProfileScreen: React.FC = () => {
               </Text>
             </View>
             <View style={[styles.track, { backgroundColor: c.bgSecondary }]} accessibilityLabel={`Level progress ${Math.round(pct * 100)} percent`}>
-              <LinearGradient colors={[c.accent, c.x]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ width: `${Math.round(pct * 100)}%`, height: '100%', borderRadius: 999 }} />
+              <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', borderRadius: 999, backgroundColor: c.accent }} />
             </View>
           </View>
 
@@ -180,7 +179,7 @@ export const UserProfileScreen: React.FC = () => {
               <Text style={[type.caption, { color: c.textSecondary }]}>Recent form</Text>
               {form.map((r, i) => (
                 <View key={i} accessibilityLabel={r === 'WIN' ? 'Win' : r === 'LOSS' ? 'Loss' : 'Draw'} style={[styles.chip, { backgroundColor: c[FORM_COLOR[r]] + '33', borderColor: c[FORM_COLOR[r]] }]}>
-                  <Text style={[type.caption, { color: c[FORM_COLOR[r]], fontFamily: fonts.mono.bold }]}>{FORM_LETTER[r]}</Text>
+                  <Text style={[type.caption, { color: c[FORM_COLOR[r]], fontFamily: fonts.mono.semibold }]}>{FORM_LETTER[r]}</Text>
                 </View>
               ))}
             </View>

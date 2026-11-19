@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   skip: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
   frame: { width: '100%', aspectRatio: 4 / 3, borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
-  title: { fontFamily: fonts.display.bold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  title: { ...type.title, textAlign: 'center' },
   dots: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   dot: { height: 8, borderRadius: 4 },
 });

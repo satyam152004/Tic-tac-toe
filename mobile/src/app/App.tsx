@@ -1,10 +1,3 @@
-import {
-  Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold,
-} from '@expo-google-fonts/outfit';
-import {
-  PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold,
-} from '@expo-google-fonts/plus-jakarta-sans';
-import { JetBrainsMono_500Medium, JetBrainsMono_600SemiBold, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { DarkTheme, DefaultTheme, NavigationContainer, Theme } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
@@ -14,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppToastHost } from '../components/feedback/AppToast';
 import { NetworkStatus } from '../components/feedback/NetworkStatus';
+import { FONT_ASSETS } from '../design-system/fonts';
 import { THEME_LIST } from '../design-system/themes';
 import { useTheme } from '../hooks/useTheme';
 import { navigationRef } from '../navigation/navigationRef';
@@ -46,11 +40,9 @@ function Shell() {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold,
-    PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold,
-    JetBrainsMono_500Medium, JetBrainsMono_600SemiBold, JetBrainsMono_700Bold,
-  });
+  // A font that fails to load must not leave the app on a blank splash: fall back to the system font instead.
+  const [loaded, fontError] = useFonts(FONT_ASSETS);
+  const fontsLoaded = loaded || !!fontError;
 
   const onLayout = useCallback(() => {
     if (fontsLoaded) void SplashScreen.hideAsync().catch(() => undefined);

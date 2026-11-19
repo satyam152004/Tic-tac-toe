@@ -121,7 +121,7 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
           <Text style={[type.smallStrong, { color: c.textSecondary }]}>
             Ranked Arena · {boardSize}x{boardSize}
           </Text>
-          <Text testID="search-timer" style={{ fontFamily: 'JetBrainsMono_700Bold', fontSize: 24, color: c.accent }}>
+          <Text testID="search-timer" style={[type.numLarge, { color: c.accent }]}>
             {formatClock(elapsed)}
           </Text>
         </View>

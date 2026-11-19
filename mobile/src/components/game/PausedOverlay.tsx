@@ -1,6 +1,7 @@
 import { Pause, Play, RotateCcw, Settings } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { iconSize } from '../../design-system/icons';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { AppButton } from '../common/AppButton';
@@ -41,7 +42,7 @@ export const PausedOverlay: React.FC<{
           </Text>
         </View>
         <View style={styles.actions}>
-          <AppButton testID="pause-resume" fullWidth title="Resume Game" icon={<Play size={16} color="#FFFFFF" />} onPress={onResume} />
+          <AppButton testID="pause-resume" fullWidth title="Resume Game" icon={<Play size={iconSize.sm} color={c.onAccent} />} onPress={onResume} />
           <AppButton testID="pause-restart" fullWidth variant="secondary" title="Restart Match" icon={<RotateCcw size={16} color={c.text} />} onPress={onRestart} />
           <AppButton testID="pause-settings" fullWidth variant="secondary" title="Settings" icon={<Settings size={16} color={c.text} />} onPress={onSettings} />
           <AppButton testID="pause-quit" fullWidth variant="outline" title="Exit to Home" onPress={() => setConfirmQuit(true)} />

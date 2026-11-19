@@ -22,8 +22,8 @@ export const NetworkStatus: React.FC = () => {
       accessibilityLiveRegion="polite"
     >
       <View style={styles.row}>
-        <WifiOff size={14} color="#1a1200" />
-        <Text style={[type.smallStrong, { color: '#1a1200' }]}>You are offline. Local games still work.</Text>
+        <WifiOff size={14} color={c.onWarning} />
+        <Text style={[type.smallStrong, { color: c.onWarning }]}>You are offline. Local games still work.</Text>
       </View>
     </Animated.View>
   );
