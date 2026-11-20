@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-import { Coins, Flame, Gift, PartyPopper } from 'lucide-react-native';
+import { Award, Coins, Flame, Gift, PartyPopper } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { RewardCard } from '../../components/profile/Cards';
+import { withAlpha } from '../../design-system/colors';
 import { type } from '../../design-system/typography';
 import { useClaimDailyReward, useDailyReward } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
@@ -56,7 +57,7 @@ const Celebration: React.FC<{ coins: number; day: number; onDone: () => void }> 
   }, []);
   const anim = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View testID="claim-celebration" style={[{ borderRadius: 16, borderWidth: 1, borderColor: c.success + '88', backgroundColor: c.success + '22', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }, anim]}>
+    <Animated.View testID="claim-celebration" style={[{ borderRadius: 16, borderWidth: 1, borderColor: withAlpha(c.success, 0.55), backgroundColor: withAlpha(c.success, 0.14), padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }, anim]}>
       <PartyPopper size={28} color={c.success} />
       <View style={{ flex: 1 }}>
         <Text style={[type.subheading, { color: c.text }]}>Day {day} claimed!</Text>
@@ -68,7 +69,7 @@ const Celebration: React.FC<{ coins: number; day: number; onDone: () => void }> 
 
 export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = () => {
   const c = useTheme();
-  const { back } = useAppNav();
+  const { nav, back } = useAppNav();
   const q = useDailyReward();
   const claim = useClaimDailyReward();
   const [celebrate, setCelebrate] = useState<{ day: number; coins: number } | null>(null);
@@ -152,7 +153,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
           {celebrate ? <Celebration coins={celebrate.coins} day={celebrate.day} onDone={() => setCelebrate(null)} /> : null}
 
           <AppCard style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: c.warning + '33', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: withAlpha(c.warning, 0.2), alignItems: 'center', justifyContent: 'center' }}>
               <Gift size={24} color={c.warning} />
             </View>
             <View style={{ flex: 1 }}>
@@ -186,8 +187,18 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
             </View>
           ))}
           {status.cycle[6] ? (
-            <RewardCard reward={{ day: status.cycle[6].day, coins: status.cycle[6].coins, status: status.cycle[6].status }} onClaim={() => void doClaim()} />
+            <RewardCard reward={{ day: status.cycle[6].day, coins: status.cycle[6].coins, bonusLabel: 'Cobalt Emblem', status: status.cycle[6].status }} onClaim={() => void doClaim()} />
           ) : null}
+
+          <AppCard onPress={() => nav.navigate('coin_shop')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: withAlpha(c.accent, 0.14), alignItems: 'center', justifyContent: 'center' }}>
+              <Award size={20} color={c.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[type.bodyStrong, { color: c.text }]}>Emblems &amp; Coin Shop</Text>
+              <Text style={[type.caption, { color: c.textSecondary }]}>Equip Cobalt Emblem or unlock profile crests</Text>
+            </View>
+          </AppCard>
         </ScrollView>
       )}
     </Screen>

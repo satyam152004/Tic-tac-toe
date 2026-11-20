@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Award, Bell, Coins, Cpu, Gift, Globe, History, Play, RotateCcw, Settings, Trophy, UserPlus, Users, WifiOff } from 'lucide-react-native';
+import { Award, Bell, Coins, Cpu, Flame, Gift, Globe, History, Play, RotateCcw, Settings, Sparkles, Trophy, UserPlus, Users, WifiOff } from 'lucide-react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
@@ -11,6 +11,7 @@ import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { SymbolMark } from '../../components/game/SymbolMark';
 import { GameModeCard, ScoreCard } from '../../components/profile/Cards';
+import { withAlpha } from '../../design-system/colors';
 import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useMe, useNotifications } from '../../hooks/queries';
@@ -21,6 +22,7 @@ import { useAuthStore, useIsGuest } from '../../store/authStore';
 import { useLocalGameStore } from '../../store/localGameStore';
 import { isTerminal, useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
+import { divisionForPoints } from '../social/LeagueTiersScreen';
 
 /** Loads the interrupted offline match (if any) every time the screen gains focus. */
 function useInterruptedMatch() {
@@ -94,6 +96,7 @@ export const HomeScreen: React.FC = () => {
   const stats = user.stats;
   const pct = levelProgress(stats.xp, stats.xpForCurrentLevel, stats.xpForNextLevel);
   const liveGame = onlineGame && !isTerminal(onlineGame) ? onlineGame : null;
+  const division = divisionForPoints(stats.points);
 
   return (
     <Screen tabs scroll={false} padded={false} testID="home-screen">
@@ -104,7 +107,7 @@ export const HomeScreen: React.FC = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} />}
       >
         {offline ? (
-          <View testID="offline-banner" accessibilityRole="alert" style={[styles.banner, { backgroundColor: c.warning + '26', borderColor: c.warning + '66' }]}>
+          <View testID="offline-banner" accessibilityRole="alert" style={[styles.banner, { backgroundColor: withAlpha(c.warning, 0.16), borderColor: withAlpha(c.warning, 0.4) }]}>
             <WifiOff size={16} color={c.warning} />
             <Text style={[type.smallStrong, { color: c.text, flex: 1 }]}>You are offline. Offline games still work; online features need a connection.</Text>
           </View>
@@ -118,7 +121,7 @@ export const HomeScreen: React.FC = () => {
               <Text testID="home-level" style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>
                 Level {stats.level} · {stats.points} pts
               </Text>
-              <View testID="xp-bar" accessibilityLabel={`${stats.xp} of ${stats.xpForNextLevel} XP`} style={[styles.xpTrack, { backgroundColor: c.bgCard }]}>
+              <View testID="xp-bar" accessibilityLabel={`${stats.xp} of ${stats.xpForNextLevel} XP`} style={[styles.xpTrack, { backgroundColor: c.bgSecondary }]}>
                 <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', backgroundColor: c.accent, borderRadius: 3 }} />
               </View>
             </View>
@@ -163,19 +166,29 @@ export const HomeScreen: React.FC = () => {
           </AppCard>
         ) : null}
 
-        <LinearHero>
+        <View style={[styles.hero, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <View style={[styles.row, { justifyContent: 'space-between' }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[type.headline, { color: c.text }]}>Ready to Play</Text>
-              <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>Win streak {stats.currentStreak} · Classic 3x3 & Tactical 5x5</Text>
+              <View style={styles.row}>
+                <View style={[styles.streakPill, { backgroundColor: withAlpha(c.warning, 0.16) }]}>
+                  <Flame size={12} color={c.warning} />
+                  <Text style={[type.caption, { color: c.text, fontFamily: fonts.mono.medium }]}>{stats.currentStreak}d Streak</Text>
+                </View>
+                <Pressy onPress={() => nav.navigate('league_tiers')} style={[styles.streakPill, { backgroundColor: withAlpha(c.accent, 0.12) }]}>
+                  <Trophy size={12} color={c.accent} />
+                  <Text style={[type.caption, { color: c.accent }]}>{division.name}</Text>
+                </Pressy>
+              </View>
+              <Text style={[type.headline, { color: c.text, marginTop: 8 }]}>Ready to Play</Text>
+              <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>Classic 3×3, 4×4 &amp; Tactical 5×5</Text>
             </View>
             <View style={styles.row}>
-              <SymbolMark value="X" size="md" />
-              <SymbolMark value="O" size="md" />
+              <SymbolMark value="X" size="md" animate={false} />
+              <SymbolMark value="O" size="md" animate={false} />
             </View>
           </View>
           <AppButton testID="home-play" title="Play Game" fullWidth icon={<Play size={16} color="#FFFFFF" />} onPress={() => goTab('PlayTab')} />
-        </LinearHero>
+        </View>
 
         {isGuest ? (
           <AppCard testID="upgrade-card" style={{ gap: 12 }}>
@@ -196,9 +209,9 @@ export const HomeScreen: React.FC = () => {
 
         <View style={styles.grid}>
           <Shortcut label="Leaderboard" sub="Global rankings" color={c.warning} icon={Trophy} onPress={() => goTab('RankingTab')} />
-          <Shortcut label="Friends" sub="Play together" color={c.accentSecondary} icon={Users} onPress={() => goTab('FriendsTab')} />
-          <Shortcut label="Daily Rewards" sub="Claim coins" color={c.o} icon={Gift} onPress={() => nav.navigate('daily_rewards')} />
-          <Shortcut label="Achievements" sub="Track progress" color={c.accent} icon={Award} onPress={() => nav.navigate('achievements')} />
+          <Shortcut label="Friends" sub="Play & spectate" color={c.accentSecondary} icon={Users} onPress={() => goTab('FriendsTab')} />
+          <Shortcut label="Daily Rewards" sub="Claim coins" color={c.success} icon={Gift} onPress={() => nav.navigate('daily_rewards')} />
+          <Shortcut label="Emblems Shop" sub="Spend coins" color={c.accent} icon={Sparkles} onPress={() => nav.navigate('coin_shop')} />
         </View>
 
         <View style={styles.row} testID="home-stats">
@@ -209,16 +222,15 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.row}>
           <ScoreCard label="Matches" value={stats.totalGames} subtext="Online & AI" />
           <ScoreCard label="Win Rate" value={`${Math.round(stats.winPercentage)}%`} tone="accent" />
+          <ScoreCard label="Division" value={division.name} subtext={`${stats.points} ELO`} tone="warning" />
         </View>
-        <AppButton title="View Offline Match History" variant="ghost" size="md" fullWidth icon={<History size={16} color={c.textSecondary} />} onPress={() => nav.navigate('offline_history')} />
+        <View style={styles.row}>
+          <AppButton title="Achievements" variant="secondary" size="md" icon={<Award size={16} color={c.accent} />} onPress={() => nav.navigate('achievements')} style={{ flex: 1 }} />
+          <AppButton title="Match History" variant="outline" size="md" icon={<History size={16} color={c.textSecondary} />} onPress={() => nav.navigate('offline_history')} style={{ flex: 1 }} />
+        </View>
       </ScrollView>
     </Screen>
   );
-};
-
-const LinearHero: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const c = useTheme();
-  return <View style={[styles.hero, { backgroundColor: c.bgCard, borderColor: c.accent + '80' }]}>{children}</View>;
 };
 
 const Shortcut: React.FC<{ label: string; sub: string; color: string; icon: React.ComponentType<{ size?: number; color?: string }>; onPress: () => void }> = ({ label, sub, color, icon: Icon, onPress }) => {
@@ -226,7 +238,7 @@ const Shortcut: React.FC<{ label: string; sub: string; color: string; icon: Reac
   return (
     <View style={{ width: '48.5%' }}>
       <AppCard onPress={onPress} padding="sm" accessibilityLabel={label} style={styles.row}>
-        <View style={[styles.shortcutIcon, { backgroundColor: color + '26' }]}>
+        <View style={[styles.shortcutIcon, { backgroundColor: withAlpha(color, 0.14) }]}>
           <Icon size={20} color={color} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -247,7 +259,8 @@ const styles = StyleSheet.create({
   iconBtn: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#FFFFFF', fontSize: 10, fontFamily: fonts.body.semibold },
-  hero: { borderRadius: 24, borderWidth: 1, padding: 20, gap: 16 },
+  hero: { borderRadius: 18, borderWidth: 1, padding: 18, gap: 14 },
+  streakPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-  shortcutIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  shortcutIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
 });

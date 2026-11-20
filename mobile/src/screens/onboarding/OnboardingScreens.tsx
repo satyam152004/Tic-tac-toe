@@ -1,10 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { Check } from 'lucide-react-native';
+import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
+import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
-import { ONBOARDING_IMAGES } from '../../constants/avatars';
+import { GameBoard } from '../../components/game/GameBoard';
+import { withAlpha } from '../../design-system/colors';
 import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
@@ -15,9 +18,9 @@ type Step = 1 | 2 | 3;
 const STEP_ROUTES = { 1: 'onboarding_1', 2: 'onboarding_2', 3: 'onboarding_3' } as const;
 
 const CONTENT = {
-  1: { img: ONBOARDING_IMAGES.classic, alt: 'Isometric glowing Tic Tac Toe crystal game board', title: 'Classic Strategy, Reimagined', desc: 'Master 3x3 classics or expand into 4x4 and 5x5 tactical grids with crisp turn feedback.', cta: 'Next' },
-  2: { img: ONBOARDING_IMAGES.ai, alt: 'Tactical AI strategist analyzing strategy grid', title: 'Offline Duels & Smart AI', desc: 'Play pass-and-play with a friend anywhere or challenge AI from Easy up to Impossible.', cta: 'Next' },
-  3: { img: ONBOARDING_IMAGES.online, alt: 'Two competitive player crests connected in online arena', title: 'Compete Online Worldwide', desc: 'Join instant quick matches, create private friend rooms, and climb global leaderboards.', cta: 'Get Started' },
+  1: { title: 'Pure Classic Strategy', desc: 'Master classic 3×3 or expand into 4×4 and 5×5 tactical grids with crisp turn feedback.', cta: 'Next' },
+  2: { title: 'Calibrated AI Levels', desc: 'Warm up on Easy or test your calculation against our unbeatable Minimax engine.', cta: 'Next' },
+  3: { title: 'Instant 1v1 & Rooms', desc: 'Climb the ranked leaderboard or share a private room code with friends.', cta: 'Get Started' },
 } as const;
 
 export const OnboardingPage: React.FC<{ step: Step }> = ({ step }) => {
@@ -40,10 +43,55 @@ export const OnboardingPage: React.FC<{ step: Step }> = ({ step }) => {
         </Pressy>
       </View>
 
-      <View style={{ gap: 24 }}>
-        <View style={[styles.frame, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <Image source={content.img} accessibilityLabel={content.alt} contentFit="cover" style={StyleSheet.absoluteFill} />
-        </View>
+      <View style={{ gap: 24, alignItems: 'center' }}>
+        {step === 1 ? (
+          <View style={{ width: 220 }}>
+            <GameBoard
+              compact
+              disabled
+              size={3}
+              board={['X', 'O', '', 'O', 'X', '', '', '', 'X']}
+              winningLine={[0, 4, 8]}
+              maxSize={220}
+            />
+          </View>
+        ) : step === 2 ? (
+          <AppCard style={{ width: '100%', maxWidth: 280, gap: 10 }}>
+            <View style={[styles.botRow, { borderBottomColor: c.border }]}>
+              <Text style={[type.small, { color: c.textSecondary }]}>Casual Bot</Text>
+              <Text style={[type.caption, { color: c.textSecondary }]}>Level 1</Text>
+            </View>
+            <View style={[styles.botRow, { borderBottomColor: c.border }]}>
+              <Text style={[type.small, { color: c.textSecondary }]}>Tactical Bot</Text>
+              <Text style={[type.caption, { color: c.textSecondary }]}>Level 2</Text>
+            </View>
+            <View style={[styles.botHighlight, { backgroundColor: withAlpha(c.accent, 0.1) }]}>
+              <Text style={[type.smallStrong, { color: c.accent }]}>Unbeatable Minimax</Text>
+              <Check size={16} color={c.accent} />
+            </View>
+          </AppCard>
+        ) : (
+          <AppCard style={{ width: '100%', maxWidth: 280, gap: 14 }}>
+            <View style={styles.between}>
+              <Text style={[type.caption, { color: c.accent }]}>1V1 RANKED ARENA</Text>
+              <View style={[styles.eloBadge, { backgroundColor: withAlpha(c.success, 0.14) }]}>
+                <Text style={[type.caption, { color: c.success, fontFamily: fonts.mono.medium }]}>+18 ELO</Text>
+              </View>
+            </View>
+            <View style={styles.between}>
+              <View style={styles.playerChip}>
+                <AppAvatar avatarId="av_1" name="You" size="sm" status="online" />
+                <Text style={[type.smallStrong, { color: c.text }]}>You</Text>
+              </View>
+              <Text style={[type.caption, { color: c.textSecondary }]}>VS</Text>
+              <View style={styles.playerChip}>
+                <Text style={[type.smallStrong, { color: c.text }]}>Rival</Text>
+                <AppAvatar avatarId="av_2" name="Rival" size="sm" status="online" />
+              </View>
+            </View>
+          </AppCard>
+        )}
+
         <View style={{ gap: 10, paddingHorizontal: 8 }}>
           <Text style={[styles.title, { color: c.text }]}>{content.title}</Text>
           <Text style={[type.body, { color: c.textSecondary, textAlign: 'center', lineHeight: 22 }]}>{content.desc}</Text>
@@ -75,7 +123,11 @@ export const Onboarding3Screen: React.FC<RootScreenProps<'onboarding_3'>> = () =
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   skip: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  frame: { width: '100%', aspectRatio: 4 / 3, borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
+  botRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  botHighlight: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 10 },
+  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  eloBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  playerChip: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { ...type.title, textAlign: 'center' },
   dots: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   dot: { height: 8, borderRadius: 4 },

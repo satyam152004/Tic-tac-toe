@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
-import { Bell, BellOff, Check, ChevronRight, Globe, Info, KeyRound, LogOut, Mail, Music, Palette, Smartphone, Trash2, UserPlus, Volume2 } from 'lucide-react-native';
+import { Bell, BellOff, Check, CheckCircle2, ChevronRight, Globe, Info, KeyRound, LogOut, Mail, Music, Palette, Shield, Smartphone, Trash2, UserPlus, Volume2 } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { AppInput } from '../../components/common/AppInput';
@@ -54,7 +54,7 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; right?: React.ReactN
   const body = (
     <>
       {icon}
-      <Text style={[type.bodyStrong, { color: danger ? '#F87171' : c.text, flex: 1 }]}>{label}</Text>
+      <Text style={[type.bodyStrong, { color: danger ? c.dangerText : c.text, flex: 1 }]}>{label}</Text>
       {right}
     </>
   );
@@ -88,7 +88,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
   const [busy, setBusy] = useState(false);
   const [permDenied, setPermDenied] = useState(false);
 
-  // Keep the "permission denied" banner honest when the user changes it in the OS settings and comes back.
   useEffect(() => {
     let alive = true;
     Notifications.getPermissionsAsync()
@@ -140,10 +139,11 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
   return (
     <Screen title="Settings" onBack={back}>
       <AppCard style={{ gap: 14 }}>
-        <SectionTitle>Audio & Haptics</SectionTitle>
+        <SectionTitle>Audio &amp; Gameplay</SectionTitle>
         <Row icon={<Volume2 size={16} color={c.accent} />} label="Sound Effects" right={<ToggleSwitch testID="toggle-sound" label="Toggle sound effects" checked={settings.soundEffects} onChange={() => sync({ soundEffects: !settings.soundEffects }, { sound: { effects: !settings.soundEffects } })} />} />
         <Row icon={<Music size={16} color={c.accentSecondary} />} label="Background Music" right={<ToggleSwitch testID="toggle-music" label="Toggle background music" checked={settings.music} onChange={() => sync({ music: !settings.music }, { sound: { music: !settings.music } })} />} />
         <Row icon={<Smartphone size={16} color={c.o} />} label="Vibration" right={<ToggleSwitch testID="toggle-vibration" label="Toggle vibration" checked={settings.vibration} onChange={() => sync({ vibration: !settings.vibration })} />} />
+        <Row icon={<CheckCircle2 size={16} color={c.success} />} label="Move Confirm" right={<ToggleSwitch testID="toggle-move-confirm" label="Toggle move confirmation" checked={settings.moveConfirm} onChange={() => settings.set({ moveConfirm: !settings.moveConfirm })} />} />
       </AppCard>
 
       <AppCard style={{ gap: 14 }}>
@@ -162,9 +162,9 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         />
         <Row icon={<Bell size={16} color={c.warning} />} label="Notifications" right={<ToggleSwitch testID="toggle-notifications" label="Toggle notifications" checked={settings.notifications} onChange={() => void toggleNotifications()} />} />
         {permDenied ? (
-          <View testID="notif-denied" style={{ borderRadius: 12, borderWidth: 1, borderColor: c.danger + '66', backgroundColor: c.danger + '1A', padding: 12, gap: 8 }}>
+          <View testID="notif-denied" style={{ borderRadius: 12, borderWidth: 1, borderColor: c.dangerBorder, backgroundColor: c.dangerSoft, padding: 12, gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <BellOff size={16} color="#F87171" />
+              <BellOff size={16} color={c.dangerText} />
               <Text style={[type.smallStrong, { color: c.text, flex: 1 }]}>Notification permission denied</Text>
             </View>
             <Text style={[type.small, { color: c.textSecondary }]}>Allow notifications in your device settings to get friend requests, invites and reward reminders.</Text>
@@ -186,11 +186,18 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
       </AppCard>
 
       <AppCard style={{ gap: 14 }}>
-        <SectionTitle>Account</SectionTitle>
+        <SectionTitle>Account &amp; Privacy</SectionTitle>
         <Row
           icon={<Mail size={16} color={c.textSecondary} />}
           label={isGuest ? 'Guest account' : user?.email ?? 'Not signed in'}
           right={!isGuest && user?.email ? <Text testID="verified-status" style={[type.smallStrong, { color: user.emailVerified ? c.success : c.warning }]}>{user.emailVerified ? 'Verified' : 'Not verified'}</Text> : undefined}
+        />
+        <Row
+          testID="row-privacy"
+          icon={<Shield size={16} color={c.accent} />}
+          label="Privacy & Safety"
+          onPress={() => nav.navigate('privacy_settings')}
+          right={<ChevronRight size={16} color={c.textSecondary} />}
         />
         {isGuest ? (
           <Row testID="row-upgrade" icon={<UserPlus size={16} color={c.accent} />} label="Upgrade account" onPress={() => nav.navigate('registration')} right={<ChevronRight size={16} color={c.textSecondary} />} />
@@ -200,9 +207,9 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         <Row testID="row-about" icon={<Info size={16} color={c.textSecondary} />} label="App version" right={<Text style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
       </AppCard>
 
-      <AppButton testID="logout" fullWidth variant="danger" title="Log Out" icon={<LogOut size={16} color="#fff" />} onPress={() => setDialog('logout')} />
+      <AppButton testID="logout" fullWidth variant="danger" title="Log Out" icon={<LogOut size={16} color={c.dangerText} />} onPress={() => setDialog('logout')} />
       <AppButton testID="logout-all" fullWidth variant="outline" title="Log out from all devices" onPress={() => setDialog('logoutAll')} />
-      <AppButton testID="delete-account" fullWidth variant="ghost" title="Delete account" icon={<Trash2 size={16} color="#F87171" />} onPress={() => setDialog('delete')} />
+      <AppButton testID="delete-account" fullWidth variant="ghost" title="Delete account" icon={<Trash2 size={16} color={c.dangerText} />} onPress={() => setDialog('delete')} />
 
       <ConfirmDialog
         open={dialog === 'logout'}
@@ -241,7 +248,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         open={dialog === 'password'}
         onClose={() => setDialog(null)}
         onChanged={async () => {
-          // The server revokes every session on a password change, so sign in again with the new password.
           setDialog(null);
           toast.success('Password changed', 'Please sign in again with your new password.');
           await logout();

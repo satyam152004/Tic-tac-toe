@@ -8,12 +8,12 @@ export interface ThemeDefinition {
 }
 
 export const THEME_LIST: ThemeDefinition[] = [
-  { id: 'dark', name: 'Dark Theme', subtitle: 'Signature deep obsidian & violet', isLight: false },
-  { id: 'neon', name: 'Neon Theme', subtitle: 'High-contrast arena glow', isLight: false },
-  { id: 'classic', name: 'Classic Theme', subtitle: 'Balanced slate & crisp symbols', isLight: false },
-  { id: 'light', name: 'Light Theme', subtitle: 'Daylight contrast & clean surfaces', isLight: true },
-  { id: 'ocean', name: 'Ocean Theme', subtitle: 'Deep abyssal teal & cyan', isLight: false },
-  { id: 'sunset', name: 'Sunset Theme', subtitle: 'Dusk plum, amber & magenta', isLight: false },
+  { id: 'light', name: 'Clean Light', subtitle: 'Off-white canvas with Cobalt accent', isLight: true },
+  { id: 'classic', name: 'Warm Paper', subtitle: 'Soft ivory editorial surface', isLight: true },
+  { id: 'dark', name: 'Soft Slate', subtitle: 'Low-glare charcoal slate palette', isLight: false },
+  { id: 'neon', name: 'Neon Arena', subtitle: 'High-contrast dark violet glow', isLight: false },
+  { id: 'ocean', name: 'Deep Ocean', subtitle: 'Abyssal teal & crisp cyan', isLight: false },
+  { id: 'sunset', name: 'Dusk Sunset', subtitle: 'Warm plum, amber & magenta', isLight: false },
 ];
 
 export const isThemeId = (v: unknown): v is ThemeId => typeof v === 'string' && (THEME_IDS as string[]).includes(v);

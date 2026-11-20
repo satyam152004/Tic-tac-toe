@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Flag, Volume2, VolumeX, WifiOff } from 'lucide-react-native';
+import { Flag, Handshake, Volume2, VolumeX, WifiOff } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { ConfirmDialog } from '../../components/common/AppModal';
 import { Screen } from '../../components/common/Screen';
@@ -8,6 +8,7 @@ import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { GameBoard } from '../../components/game/GameBoard';
 import { PlayerCard } from '../../components/game/PlayerCard';
+import { withAlpha } from '../../design-system/colors';
 import { type } from '../../design-system/typography';
 import { formatClock, useCountdown, useOnlineGame } from '../../hooks/useOnlineGame';
 import { useBackGuard } from '../../hooks/useBackGuard';
@@ -39,6 +40,7 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
 
   const [loadError, setLoadError] = useState<unknown>(null);
   const [confirmForfeit, setConfirmForfeit] = useState(false);
+  const [confirmDraw, setConfirmDraw] = useState(false);
   const [longReconnect, setLongReconnect] = useState(false);
   const booted = useRef<string | null>(null);
 
@@ -52,7 +54,6 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
     onLeave: () => void forfeitGame(gameId).catch(() => undefined),
   });
 
-  // Make sure the server game is in the store, and confirm presence so the server can start it.
   const boot = useCallback(async () => {
     setLoadError(null);
     try {
@@ -70,7 +71,6 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
     void boot();
   }, [gameId, boot]);
 
-  // Terminal game -> result screen (server decided). Rematch started by the server -> new game.
   useEffect(() => {
     if (!mine || !finished) return;
     const t = setTimeout(() => {
@@ -89,7 +89,6 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rematchGameId]);
 
-  // Move rejections are shown once as a toast.
   useEffect(() => {
     if (!moveError) return;
     toast.error('Move not allowed', friendlyMessage({ code: moveError.code, message: moveError.message }));
@@ -135,7 +134,7 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
         </View>
 
         {opponentOffline && !finished ? (
-          <View testID="opponent-offline-banner" accessibilityRole="alert" style={[styles.banner, { backgroundColor: c.warning + '26', borderColor: c.warning + '66' }]}>
+          <View testID="opponent-offline-banner" accessibilityRole="alert" style={[styles.banner, { backgroundColor: withAlpha(c.warning, 0.16), borderColor: withAlpha(c.warning, 0.4) }]}>
             <WifiOff size={16} color={c.warning} />
             <Text style={[type.small, { color: c.text, flex: 1 }]}>
               {oppName} disconnected. They forfeit in {formatClock(graceLeft ?? 0)} unless they come back.
@@ -173,7 +172,17 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
             onPress={() => setSettings({ soundEffects: !soundOn })}
             style={{ flex: 1 }}
           />
-          <AppButton testID="forfeit" title="Forfeit" variant="danger" size="md" icon={<Flag size={16} color="#F87171" />} disabled={!active} onPress={() => setConfirmForfeit(true)} style={{ flex: 1 }} />
+          <AppButton
+            testID="offer-draw"
+            title="Draw"
+            variant="outline"
+            size="md"
+            icon={<Handshake size={16} color={c.accent} />}
+            disabled={!active}
+            onPress={() => setConfirmDraw(true)}
+            style={{ flex: 1 }}
+          />
+          <AppButton testID="forfeit" title="Forfeit" variant="danger" size="md" icon={<Flag size={16} color={c.dangerText} />} disabled={!active} onPress={() => setConfirmForfeit(true)} style={{ flex: 1 }} />
         </View>
       </>
     );
@@ -187,11 +196,23 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
     >
       {body}
       {reconnecting && mine && !finished ? (
-        <View testID="reconnecting-overlay" accessibilityRole="alert" style={[styles.overlay, { backgroundColor: c.bgPrimary + 'E6' }]}>
+        <View testID="reconnecting-overlay" accessibilityRole="alert" style={[styles.overlay, { backgroundColor: withAlpha(c.bgPrimary, 0.9) }]}>
           <AppLoader label="Reconnecting..." sublabel="Your seat is kept while we restore the connection." />
           {longReconnect ? <AppButton testID="open-reconnection" title="Open Reconnection Screen" variant="secondary" onPress={() => nav.navigate('reconnection', { gameId })} /> : null}
         </View>
       ) : null}
+      <ConfirmDialog
+        open={confirmDraw}
+        title="Offer Mutual Draw?"
+        message="Propose a draw to your opponent (0 ELO rating change if accepted)."
+        confirmLabel="Send Draw Offer"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setConfirmDraw(false);
+          toast.info('Draw offer sent', 'Waiting for opponent response');
+        }}
+        onCancel={() => setConfirmDraw(false)}
+      />
       <ConfirmDialog
         open={confirmForfeit}
         title="Forfeit Match?"
@@ -211,6 +232,6 @@ const styles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 10 },
   turnBar: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   boardWrap: { paddingVertical: 8 },
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexDirection: 'row', gap: 8 },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 12 },
 });

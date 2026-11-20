@@ -8,6 +8,7 @@ import { OnlineLobbyScreen } from '../screens/online/OnlineLobbyScreen';
 import { OnlineResultScreen } from '../screens/online/OnlineResultScreen';
 import { ReconnectionScreen } from '../screens/online/ReconnectionScreen';
 import { RoomDetailsScreen } from '../screens/online/RoomDetailsScreen';
+import { SpectateMatchScreen } from '../screens/online/SpectateMatchScreen';
 import { WaitingRoomScreen } from '../screens/online/WaitingRoomScreen';
 import { withOverlayToast } from '../components/feedback/AppToast';
 import { Stack } from './stack';
@@ -26,6 +27,7 @@ export const onlineScreens = () => (
     <Stack.Screen name="room_details" component={RoomDetailsScreen} options={{ gestureEnabled: false }} />
     <Stack.Screen name="online_result" component={OnlineResultScreen} options={{ gestureEnabled: false, animation: 'fade' }} />
     <Stack.Screen name="reconnection" component={ReconnectionScreen} options={{ gestureEnabled: false, animation: 'fade' }} />
+    <Stack.Screen name="spectate_match" component={SpectateMatchScreen} />
     <Stack.Screen name="match_invitation" component={MatchInvitationModal} options={{ presentation: 'modal' }} />
   </Stack.Group>
 );

@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Award, BadgeCheck, BarChart3, ChevronRight, Coins, Edit3, Flame, Gift, History, MailWarning, Settings, UserPlus } from 'lucide-react-native';
+import { Award, BadgeCheck, BarChart3, ChevronRight, Coins, Crown, Edit3, Flame, Gift, History, MailWarning, Settings, Sparkles, UserPlus } from 'lucide-react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
@@ -90,9 +90,11 @@ export const UserProfileScreen: React.FC = () => {
 
   const links: Array<{ key: string; label: string; icon: React.ReactNode; onPress: () => void }> = [
     { key: 'stats', label: 'Statistics', icon: <BarChart3 size={18} color={c.accent} />, onPress: () => nav.navigate('game_statistics') },
+    { key: 'leagues', label: 'Ranked Leagues', icon: <Crown size={18} color={c.accent} />, onPress: () => nav.navigate('league_tiers') },
     { key: 'history', label: 'Match History', icon: <History size={18} color={c.accent} />, onPress: () => nav.navigate('offline_history') },
     { key: 'ach', label: 'Achievements', icon: <Award size={18} color={c.accent} />, onPress: () => nav.navigate('achievements') },
     { key: 'rewards', label: 'Daily Rewards', icon: <Gift size={18} color={c.accent} />, onPress: () => nav.navigate('daily_rewards') },
+    { key: 'shop', label: 'Emblems & Shop', icon: <Sparkles size={18} color={c.accent} />, onPress: () => nav.navigate('coin_shop') },
   ];
 
   return (

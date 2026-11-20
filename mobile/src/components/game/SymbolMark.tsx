@@ -6,9 +6,9 @@ import { useTheme } from '../../hooks/useTheme';
 export type SymbolSize = 'sm' | 'md' | 'lg' | 'xl';
 const DIM: Record<SymbolSize, number> = { sm: 16, md: 28, lg: 44, xl: 56 };
 
-/** X / O glyphs from the prototype (48x48 viewBox, 6px round stroke) with the 180ms pop-in. */
+/** Crisp flat vector X / O glyphs from the Clean & Minimal UI Kit (48x48 viewBox, 5.5px round stroke). */
 export const SymbolMark: React.FC<{ value: 'X' | 'O'; size?: SymbolSize | number; glow?: boolean; animate?: boolean }> = ({
-  value, size = 'md', glow = true, animate = true,
+  value, size = 'md', animate = true,
 }) => {
   const c = useTheme();
   const d = typeof size === 'number' ? size : DIM[size];
@@ -23,19 +23,12 @@ export const SymbolMark: React.FC<{ value: 'X' | 'O'; size?: SymbolSize | number
   const style = useAnimatedStyle(() => ({ opacity: op.value, transform: [{ scale: sc.value }] }));
 
   return (
-    <Animated.View
-      accessibilityLabel={value}
-      style={[
-        { width: d, height: d },
-        glow ? { shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } } : null,
-        style,
-      ]}
-    >
+    <Animated.View accessibilityLabel={value} style={[{ width: d, height: d }, style]}>
       <Svg width={d} height={d} viewBox="0 0 48 48" fill="none">
         {value === 'X' ? (
-          <Path d="M12 12L36 36M36 12L12 36" stroke={color} strokeWidth={6} strokeLinecap="round" />
+          <Path d="M12 12L36 36M36 12L12 36" stroke={color} strokeWidth={5.5} strokeLinecap="round" />
         ) : (
-          <Circle cx={24} cy={24} r={13} stroke={color} strokeWidth={6} />
+          <Circle cx={24} cy={24} r={13.5} stroke={color} strokeWidth={5.5} />
         )}
       </Svg>
     </Animated.View>

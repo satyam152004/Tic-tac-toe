@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { Ban, Check, Search, Swords, UserMinus, UserPlus, X } from 'lucide-react-native';
+import { Ban, Check, Eye, Search, Swords, UserMinus, UserPlus, X } from 'lucide-react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
@@ -131,6 +131,16 @@ export const FriendsScreen: React.FC = () => {
         {row.kind === 'friend' ? (
           <>
             <AppButton testID={`challenge-${user.id}`} title="Challenge" size="md" variant="secondary" icon={<Swords size={16} color={c.accent} />} onPress={() => challenge(user.id, name)} />
+            {user.online ? (
+              <Pressy
+                testID={`spectate-${user.id}`}
+                accessibilityLabel={`Spectate ${name}`}
+                onPress={() => nav.navigate('spectate_match', { friendId: user.id, friendName: name, friendAvatar: user.avatar })}
+                style={[sheetIconBtn, { borderColor: c.border }]}
+              >
+                <Eye size={18} color={c.accent} />
+              </Pressy>
+            ) : null}
             <Pressy testID={`remove-${user.id}`} accessibilityLabel={`Remove ${name}`} onPress={() => setRemoving(row.item)} style={[sheetIconBtn, { borderColor: c.border }]}>
               <UserMinus size={18} color={c.textSecondary} />
             </Pressy>

@@ -48,6 +48,7 @@ export type RootStackParamList = {
   online_result: { gameId: string };
   reconnection: { gameId?: string } | undefined;
   match_invitation: { gameId?: string; roomCode?: string; fromName?: string } | undefined;
+  spectate_match: { friendId: string; friendName: string; friendAvatar?: string | null };
 
   // Profile / social / progression / settings
   edit_profile: undefined;
@@ -55,7 +56,10 @@ export type RootStackParamList = {
   game_statistics: undefined;
   achievements: undefined;
   daily_rewards: undefined;
+  coin_shop: undefined;
+  league_tiers: undefined;
   settings: undefined;
+  privacy_settings: undefined;
   theme_selection: undefined;
   notifications: undefined;
 };
