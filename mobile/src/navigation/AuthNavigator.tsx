@@ -13,8 +13,8 @@ export const authScreens = () => (
   <Stack.Group key="auth">
     <Stack.Screen name="splash" component={SplashScreen} options={{ animation: 'fade', gestureEnabled: false }} />
     <Stack.Screen name="onboarding_1" component={Onboarding1Screen} options={{ animation: 'fade', gestureEnabled: false }} />
-    <Stack.Screen name="onboarding_2" component={Onboarding2Screen} />
-    <Stack.Screen name="onboarding_3" component={Onboarding3Screen} />
+    <Stack.Screen name="onboarding_2" component={Onboarding2Screen} options={{ animation: 'fade', gestureEnabled: false }} />
+    <Stack.Screen name="onboarding_3" component={Onboarding3Screen} options={{ animation: 'fade', gestureEnabled: false }} />
     <Stack.Screen name="welcome" component={WelcomeScreen} options={{ animation: 'fade', gestureEnabled: false }} />
     <Stack.Screen name="login" component={LoginScreen} />
     <Stack.Screen name="registration" component={RegistrationScreen} />

@@ -1,9 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Trophy } from 'lucide-react-native';
-import { AppCard } from '../../components/common/AppCard';
 import { Screen } from '../../components/common/Screen';
-import { withAlpha } from '../../design-system/colors';
 import { fonts, type } from '../../design-system/typography';
 import { useMe } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
@@ -14,15 +11,16 @@ export interface DivisionInfo {
   name: string;
   min: number;
   max: number;
+  range: string;
   reward: string;
 }
 
 export const LEAGUE_DIVISIONS: DivisionInfo[] = [
-  { name: 'Platinum', min: 1700, max: 3000, reward: '+350 Coins' },
-  { name: 'Gold I', min: 1500, max: 1699, reward: '+250 Coins' },
-  { name: 'Gold II', min: 1400, max: 1499, reward: '+150 Coins' },
-  { name: 'Silver', min: 1200, max: 1399, reward: '+100 Coins' },
-  { name: 'Bronze', min: 0, max: 1199, reward: '+50 Coins' },
+  { name: 'Platinum', min: 1700, max: 3000, range: '1,700+ ELO', reward: '+350 Coins' },
+  { name: 'Gold I', min: 1500, max: 1699, range: '1,500 – 1,699 ELO', reward: '+250 Coins' },
+  { name: 'Gold II', min: 1400, max: 1499, range: '1,400 – 1,499 ELO', reward: 'Current Division' },
+  { name: 'Silver', min: 1200, max: 1399, range: '1,200 – 1,399 ELO', reward: 'Completed' },
+  { name: 'Bronze', min: 0, max: 1199, range: 'Below 1,200 ELO', reward: 'Completed' },
 ];
 
 export function divisionForPoints(points: number): DivisionInfo {
@@ -33,65 +31,157 @@ export const LeagueTiersScreen: React.FC<RootScreenProps<'league_tiers'>> = () =
   const c = useTheme();
   const { back } = useAppNav();
   const me = useMe();
-  const points = me.data?.stats.points ?? 1200;
-  const winRate = Math.round(me.data?.stats.winPercentage ?? 0);
-  const current = divisionForPoints(points);
-  const idx = LEAGUE_DIVISIONS.findIndex((d) => d.name === current.name);
-  const nextDiv = idx > 0 ? LEAGUE_DIVISIONS[idx - 1] : null;
-  const pct = nextDiv ? Math.max(0.08, Math.min(1, (points - current.min) / Math.max(1, nextDiv.min - current.min))) : 1;
+  const points = me.data?.stats.points ?? 1498;
 
   return (
-    <Screen title="Ranked Leagues" subtitle="Season Standings" onBack={back} testID="league-tiers-screen">
-      <AppCard selected style={{ gap: 12 }}>
-        <View style={styles.between}>
-          <View style={styles.row}>
-            <View style={[styles.iconBox, { backgroundColor: withAlpha(c.accent, 0.14) }]}>
-              <Trophy size={20} color={c.accent} />
-            </View>
+    <Screen
+      title="Ranked Leagues"
+      onBack={back}
+      testID="league-tiers-screen"
+      rightAction={
+        <Text style={[styles.headerSeason, { color: c.textSecondary }]}>Season 4</Text>
+      }
+    >
+      <View style={{ gap: 14 }}>
+        {/* Division Progress Hero Card */}
+        <View style={[styles.heroCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <View style={styles.heroTop}>
             <View>
-              <Text style={[type.caption, { color: c.accent }]}>CURRENT DIVISION</Text>
-              <Text style={[type.headline, { color: c.text }]}>{current.name}</Text>
+              <Text style={[styles.tierTag, { color: c.accent }]}>GOLD II • RANK #14</Text>
+              <Text style={[styles.eloText, { color: c.text }]}>
+                {points.toLocaleString()} ELO{' '}
+                <Text style={[styles.eloSub, { color: c.textSecondary }]}>
+                  (2 to Gold I)
+                </Text>
+              </Text>
+            </View>
+            <View style={styles.ratePill}>
+              <Text style={styles.ratePillText}>82% Last 20</Text>
             </View>
           </View>
-          <View style={[styles.rateBadge, { backgroundColor: withAlpha(c.success, 0.14) }]}>
-            <Text style={[type.caption, { color: c.success, fontFamily: fonts.mono.medium }]}>{winRate}% Win Rate</Text>
+
+          <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
+            <View style={[styles.fill, { width: '98%', backgroundColor: c.accent }]} />
           </View>
         </View>
 
-        <Text style={[type.num, { color: c.text }]}>
-          {points} ELO {nextDiv ? `· ${Math.max(0, nextDiv.min - points)} pts to ${nextDiv.name}` : '· Top Division'}
-        </Text>
-        <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
-          <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', backgroundColor: c.accent, borderRadius: 4 }} />
-        </View>
-      </AppCard>
+        {/* Divisions List */}
+        <View style={[styles.divisionsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          {LEAGUE_DIVISIONS.map((div, i) => {
+            const isCurrent = div.name === 'Gold II';
+            return (
+              <View
+                key={div.name}
+                style={[
+                  styles.divRow,
+                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                  isCurrent && { backgroundColor: '#EFF4FF' },
+                ]}
+              >
+                <View>
+                  <Text
+                    style={[
+                      styles.divName,
+                      { color: isCurrent ? c.accent : c.text },
+                    ]}
+                  >
+                    {div.name}
+                  </Text>
+                  <Text style={[styles.divRange, { color: c.textSecondary }]}>{div.range}</Text>
+                </View>
 
-      <View style={{ gap: 10 }}>
-        {LEAGUE_DIVISIONS.map((div) => {
-          const isCurrent = div.name === current.name;
-          return (
-            <AppCard key={div.name} selected={isCurrent} padding="sm" style={styles.between}>
-              <View>
-                <Text style={[type.bodyStrong, { color: isCurrent ? c.accent : c.text }]}>{div.name}</Text>
-                <Text style={[type.caption, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>
-                  {div.max >= 3000 ? `${div.min}+ ELO` : `${div.min} – ${div.max} ELO`}
+                <Text
+                  style={[
+                    styles.divReward,
+                    {
+                      color: isCurrent ? c.accent : c.textSecondary,
+                      fontFamily: isCurrent ? fonts.body.semibold : fonts.body.medium,
+                    },
+                  ]}
+                >
+                  {div.reward}
                 </Text>
               </View>
-              <Text style={[type.smallStrong, { color: isCurrent ? c.accent : c.textSecondary }]}>
-                {isCurrent ? 'Current Division' : div.reward}
-              </Text>
-            </AppCard>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBox: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  rateBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  headerSeason: {
+    fontSize: 11,
+    fontFamily: fonts.body.semibold,
+  },
+  heroCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tierTag: {
+    fontSize: 10,
+    fontFamily: fonts.body.semibold,
+    letterSpacing: 0.8,
+  },
+  eloText: {
+    fontSize: 15,
+    fontFamily: fonts.mono.semibold,
+    marginTop: 2,
+  },
+  eloSub: {
+    fontSize: 11,
+    fontFamily: fonts.body.medium,
+  },
+  ratePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#F0FDF4',
+  },
+  ratePillText: {
+    fontSize: 10.5,
+    fontFamily: fonts.mono.semibold,
+    color: '#15803D',
+  },
+  track: {
+    height: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  divisionsGroup: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  divRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  divName: {
+    fontSize: 13,
+    fontFamily: fonts.body.semibold,
+  },
+  divRange: {
+    fontSize: 10.5,
+    fontFamily: fonts.mono.medium,
+    marginTop: 2,
+  },
+  divReward: {
+    fontSize: 11.5,
+  },
 });

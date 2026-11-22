@@ -111,7 +111,7 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
 
   return (
     <Screen
-      title="OTP Verification"
+      title="Verify Email"
       onBack={back}
       testID="otp-screen"
       footer={
@@ -119,6 +119,7 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
           <AppButton
             testID="otp-submit"
             title="Verify & Continue"
+            size="lg"
             fullWidth
             loading={busy}
             disabled={code.length < OTP_LENGTH || locked}
@@ -128,14 +129,14 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
         </>
       }
     >
-      <View style={{ alignItems: 'center', gap: 6, paddingTop: 16 }}>
-        <Text style={[type.headline, { color: c.text }]}>Enter Verification Code</Text>
-        <Text style={[type.small, { color: c.textSecondary, textAlign: 'center' }]}>
-          We sent a 6-digit security code to <Text style={{ color: c.text, fontFamily: fonts.body.semibold }}>{email}</Text>.
+      <View style={{ gap: 4, marginTop: 4 }}>
+        <Text style={[type.headline, { color: c.text }]}>Enter verification code</Text>
+        <Text style={[type.small, { color: c.textSecondary }]}>
+          We sent a 6-digit code to <Text style={{ color: c.text, fontFamily: fonts.body.semibold }}>{email}</Text>
         </Text>
       </View>
 
-      <View style={{ paddingTop: 12, gap: 10 }}>
+      <View style={{ paddingTop: 8, gap: 10 }}>
         <OtpInput digits={digits} onChange={(d) => { setDigits(d); setError(null); }} disabled={busy || locked} hasError={!!error} shakeKey={shakeKey} autoFocus />
         {error ? (
           <Text testID="otp-error" accessibilityRole="alert" style={[type.small, { color: c.danger, textAlign: 'center' }]}>
@@ -144,14 +145,18 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
         ) : null}
       </View>
 
-      <View style={{ alignItems: 'center' }}>
+      {/* Resend Row matching View #8 */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, minHeight: 28 }}>
+        <Text style={[type.small, { color: c.textSecondary }]}>Resend in</Text>
         {left > 0 ? (
-          <Text testID="otp-countdown" style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>
-            Resend code in {mmss(left)}
+          <Text testID="otp-countdown" style={[type.smallStrong, { color: c.accent, fontFamily: fonts.mono.semibold }]}>
+            {mmss(left)}
           </Text>
         ) : (
-          <Pressy testID="otp-resend" accessibilityLabel="Resend OTP code" disabled={resending} onPress={() => void resend()} style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Text style={[type.smallStrong, { color: c.accent }]}>{resending ? 'Sending...' : locked ? 'Request a new code' : 'Resend OTP Code'}</Text>
+          <Pressy testID="otp-resend" accessibilityLabel="Resend OTP code" disabled={resending} onPress={() => void resend()} hitSlop={8} style={{ justifyContent: 'center' }}>
+            <Text style={[type.smallStrong, { color: c.accent }]}>
+              {resending ? 'Sending...' : locked ? 'Request a new code' : 'Resend Code'}
+            </Text>
           </Pressy>
         )}
       </View>

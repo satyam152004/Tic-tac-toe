@@ -5,7 +5,7 @@ import { AppButton } from '../../components/common/AppButton';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { formatClock, useOnlineGame } from '../../hooks/useOnlineGame';
 import { useBackGuard } from '../../hooks/useBackGuard';
 import { useTheme } from '../../hooks/useTheme';
@@ -48,7 +48,6 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
     startQuickMatch(boardSize).catch((e) => setError(e));
   }, [boardSize]);
 
-  // Start once (guards StrictMode double effects / re-renders); leave the queue if we unmount still searching.
   useEffect(() => {
     mounted.current = true;
     if (!startedRef.current) begin();
@@ -76,8 +75,7 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
       nav.replace('online_board', { gameId });
     }, FOUND_DELAY_MS);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, nav]);
+  }, [gameId, nav, guard]);
 
   const cancel = async () => {
     guard.allow();
@@ -101,71 +99,194 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
     begin();
   };
 
-  let body: React.ReactNode;
   if (error) {
     const code = toApiError(error).code;
-    body =
-      code === 'ALREADY_IN_GAME' ? (
-        <ErrorState title="You are already in a game" message={friendlyMessage(error)} retryLabel="Return to game" onRetry={returnToGame} />
-      ) : (
-        <ErrorState offline={isOfflineError(error)} message={friendlyMessage(error)} onRetry={retry} />
-      );
-  } else if (begun && phase === 'idle' && cancelReason === 'EXPIRED') {
-    body = <ErrorState title="No opponent found" message="The search timed out. Try again or pick another board size." retryLabel="Search Again" onRetry={retry} />;
-  } else {
-    const found = phase === 'found';
-    const oppName = opponentCard?.displayName ?? 'Opponent';
-    body = (
-      <>
-        <View style={styles.top}>
-          <Text style={[type.smallStrong, { color: c.textSecondary }]}>
-            Ranked Arena · {boardSize}x{boardSize}
-          </Text>
-          <Text testID="search-timer" style={[type.numLarge, { color: c.accent }]}>
-            {formatClock(elapsed)}
+    return (
+      <Screen title="Finding Opponent" onBack={back}>
+        {code === 'ALREADY_IN_GAME' ? (
+          <ErrorState title="You are already in a game" message={friendlyMessage(error)} retryLabel="Return to game" onRetry={returnToGame} />
+        ) : (
+          <ErrorState offline={isOfflineError(error)} message={friendlyMessage(error)} onRetry={retry} />
+        )}
+      </Screen>
+    );
+  }
+
+  if (begun && phase === 'idle' && cancelReason === 'EXPIRED') {
+    return (
+      <Screen title="Finding Opponent" onBack={back}>
+        <ErrorState title="No opponent found" message="The search timed out. Try again or pick another board size." retryLabel="Search Again" onRetry={retry} />
+      </Screen>
+    );
+  }
+
+  const found = phase === 'found';
+  const oppName = opponentCard?.displayName ?? 'Opponent';
+
+  return (
+    <Screen
+      title="Finding Opponent"
+      onBack={cancel}
+      footer={
+        <AppButton
+          testID="cancel-search"
+          title="Cancel Search"
+          variant="secondary"
+          fullWidth
+          onPress={cancel}
+        />
+      }
+    >
+      <View style={styles.centerContainer}>
+        {/* Concentric radar rings matching prototype */}
+        <View style={styles.outerRadar}>
+          <View style={styles.midRadar}>
+            <View style={styles.innerTimerBadge}>
+              <Text testID="search-timer" style={styles.timerText}>
+                {formatClock(elapsed)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <Text style={[styles.title, { color: c.text }]}>
+          {found ? 'Opponent Found!' : 'Searching Arena...'}
+        </Text>
+
+        <View style={styles.specPill}>
+          <Text style={[styles.specText, { color: c.textSecondary }]}>
+            {boardSize}×{boardSize} Ranked • ~1,500 ELO
           </Text>
         </View>
 
-        <View style={styles.vs}>
-          <View style={styles.side}>
-            <AppAvatar avatarId={me?.avatar} name={me?.displayName} size="lg" activeRing />
-            <Text numberOfLines={1} style={[type.smallStrong, { color: c.text, maxWidth: 110 }]}>{me?.displayName ?? 'You'}</Text>
+        {/* Player vs Opponent preview */}
+        <View style={styles.vsRow}>
+          <View style={styles.avatarCol}>
+            <AppAvatar avatarId={me?.avatar} name={me?.displayName} size="md" activeRing />
+            <Text numberOfLines={1} style={[styles.playerName, { color: c.text }]}>
+              {me?.displayName ?? 'You'}
+            </Text>
           </View>
-          <Text style={[type.subheading, { color: c.textSecondary }]}>VS</Text>
-          <View style={styles.side} testID="opponent-slot">
+
+          <Text style={[styles.vsText, { color: c.textSecondary }]}>VS</Text>
+
+          <View style={styles.avatarCol} testID="opponent-slot">
             {found ? (
-              <AppAvatar avatarId={opponentCard?.avatar} name={oppName} size="lg" activeRing />
+              <AppAvatar avatarId={opponentCard?.avatar} name={oppName} size="md" activeRing />
             ) : (
-              <View style={[styles.unknown, { borderColor: c.accent }]}>
-                <Text style={[type.heading, { color: c.accent }]}>?</Text>
+              <View style={[styles.unknownBox, { borderColor: c.border }]}>
+                <Text style={[styles.unknownText, { color: c.textSecondary }]}>?</Text>
               </View>
             )}
-            <Text numberOfLines={1} style={[type.smallStrong, { color: found ? c.text : c.textSecondary, maxWidth: 110 }]}>{found ? oppName : 'Searching'}</Text>
-            {found && opponentCard ? <Text style={[type.caption, { color: c.textSecondary }]}>Level {opponentCard.level}</Text> : null}
+            <Text numberOfLines={1} style={[styles.playerName, { color: found ? c.text : c.textSecondary }]}>
+              {found ? oppName : 'Searching...'}
+            </Text>
           </View>
         </View>
 
         {found ? (
-          <AppLoader label="Opponent found!" sublabel="Entering the match..." />
-        ) : (
-          <AppLoader label="Searching for Opponent" sublabel={`In queue for ${elapsed}s · matching ${boardSize}x${boardSize} players`} />
-        )}
-
-        <AppButton testID="cancel-search" title="Cancel Search" variant="outline" fullWidth disabled={found} onPress={cancel} />
-      </>
-    );
-  }
-
-  return (
-    <Screen title="Matchmaking" onBack={() => (phase === 'searching' ? void cancel() : back())}>
-      {body}
+          <View style={{ marginTop: 12 }}>
+            <AppLoader label="Entering match..." />
+          </View>
+        ) : null}
+      </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  top: { alignItems: 'center', gap: 4, paddingTop: 8 },
-  vs: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, paddingVertical: 12 },
-  side: { alignItems: 'center', gap: 8 },
-  unknown: { width: 56, height: 56, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 12,
+  },
+  outerRadar: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: '#EFF4FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  midRadar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#EFF4FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  innerTimerBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#1D4ED8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  timerText: {
+    fontSize: 14,
+    fontFamily: fonts.mono.semibold,
+    color: '#1D4ED8',
+  },
+  title: {
+    fontSize: 17,
+    fontFamily: fonts.body.semibold,
+    marginTop: 6,
+  },
+  specPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E4DF',
+  },
+  specText: {
+    fontSize: 11,
+    fontFamily: fonts.body.medium,
+  },
+  vsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginTop: 16,
+  },
+  avatarCol: {
+    alignItems: 'center',
+    gap: 6,
+    width: 80,
+  },
+  playerName: {
+    fontSize: 11.5,
+    fontFamily: fonts.body.semibold,
+  },
+  vsText: {
+    fontSize: 13,
+    fontFamily: fonts.mono.semibold,
+  },
+  unknownBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unknownText: {
+    fontSize: 16,
+    fontFamily: fonts.mono.semibold,
+  },
 });

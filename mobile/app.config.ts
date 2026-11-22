@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#0B0718",
+        backgroundColor: "#F8F8F6",
         image: "./assets/splash-icon.png",
         imageWidth: 200,
       },
@@ -44,7 +44,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
-    backgroundColor: "#0B0718",
+    backgroundColor: "#F8F8F6",
 
     extra: {
       ...config.extra,

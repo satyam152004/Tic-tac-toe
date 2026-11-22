@@ -1,19 +1,19 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, CloudOff, Play, Trash2 } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, Play, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { AppIconButton } from '../../components/common/AppIconButton';
 import { AppModal, ConfirmDialog } from '../../components/common/AppModal';
+import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
 import { BoardCell, GameBoard } from '../../components/game/GameBoard';
+import { fonts } from '../../design-system/typography';
 import { withAlpha } from '../../design-system/colors';
-import { type } from '../../design-system/typography';
-import { checkOutcome } from '../../game-engine';
+import { Cell, evaluate } from '../../game-engine';
 import { useTheme } from '../../hooks/useTheme';
 import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
@@ -46,7 +46,7 @@ export function describeMatch(m: StoredMatch): MatchView {
   return {
     opponent: `${m.p1Name} vs ${m.p2Name}`,
     avatar: undefined,
-    mode: '2 Players',
+    mode: 'Pass & Play',
     result: winnerName ? 'played' : 'draw',
     label: winnerName ? `${winnerName} won` : 'Draw',
   };
@@ -64,13 +64,13 @@ const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => voi
   const { board, winLine } = useMemo(() => {
     if (!match) return { board: [] as BoardCell[], winLine: null as number[] | null };
     const sz = match.record.config.size;
-    const cells: BoardCell[] = Array<BoardCell>(sz * sz).fill('');
+    const cells: Cell[] = Array<Cell>(sz * sz).fill('');
     const moves = match.record.moves.slice(0, step);
     moves.forEach((pos, idx) => {
       cells[pos] = idx % 2 === 0 ? 'X' : 'O';
     });
-    const out = step === total ? checkOutcome(cells, match.record.config) : { status: 'IN_PROGRESS' as const };
-    return { board: cells, winLine: out.status === 'WIN' ? out.line : null };
+    const out = step === total ? evaluate(cells, match.record.config) : { status: 'IN_PROGRESS' as const };
+    return { board: cells as BoardCell[], winLine: out.status === 'WIN' ? out.line : null };
   }, [match, step, total]);
 
   if (!match) return null;
@@ -79,7 +79,7 @@ const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => voi
 
   return (
     <AppModal open={!!match} title="Match Replay" onClose={onClose}>
-      <Text style={[type.small, { color: c.textSecondary, textAlign: 'center' }]}>
+      <Text style={[styles.replaySubtitle, { color: c.textSecondary }]}>
         {match.p1Name} vs {match.p2Name} · {sz}×{sz} Grid
       </Text>
       <GameBoard
@@ -89,9 +89,9 @@ const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => voi
         size={sz}
         winningLine={winLine}
         lastMoveIndex={lastPos}
-        maxSize={280}
+        maxSize={260}
       />
-      <Text style={[type.smallStrong, { color: c.textSecondary, textAlign: 'center' }]}>
+      <Text style={[styles.replayStep, { color: c.textSecondary }]}>
         {step === 0 ? 'Start' : `Move ${step} of ${total}`}
       </Text>
       <View style={styles.replayRow}>
@@ -117,15 +117,21 @@ const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => voi
   );
 };
 
+type FilterKey = 'all' | 'wins' | 'draws';
+
 export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> = () => {
   const c = useTheme();
-  const { nav, goTab } = useAppNav();
+  const { nav, goTab, back } = useAppNav();
   const version = useLocalGameStore((s) => s.historyVersion);
   const [items, setItems] = useState<StoredMatch[] | null>(null);
+  const [filter, setFilter] = useState<FilterKey>('all');
   const [error, setError] = useState(false);
   const [toDelete, setToDelete] = useState<StoredMatch | null>(null);
   const [replaying, setReplaying] = useState<StoredMatch | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const { height: screenH } = useWindowDimensions();
+  const isTall = screenH >= 780;
 
   const load = useCallback(async () => {
     try {
@@ -160,22 +166,80 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
     }
   };
 
-  const tone = { win: c.success, loss: c.dangerText, draw: c.warning, played: c.accent };
+  const filteredItems = useMemo(() => {
+    if (!items) return [];
+    if (filter === 'wins') {
+      return items.filter((m) => {
+        const v = describeMatch(m);
+        return v.result === 'win' || v.result === 'played';
+      });
+    }
+    if (filter === 'draws') {
+      return items.filter((m) => describeMatch(m).result === 'draw');
+    }
+    return items;
+  }, [items, filter]);
 
   return (
     <Screen
       title="Match History"
       subtitle="Offline & AI rounds on this device"
-      onBack={() => nav.goBack()}
+      onBack={back}
       scroll={false}
       padded={false}
       testID="offline-history"
       rightAction={
         items && items.length > 0 ? (
-          <AppIconButton testID="history-clear" label="Clear all history" icon={<Trash2 size={16} color={c.dangerText} />} onPress={() => setConfirmClear(true)} />
+          <AppIconButton
+            testID="history-clear"
+            label="Clear all history"
+            icon={<Trash2 size={16} color={c.dangerText} />}
+            onPress={() => setConfirmClear(true)}
+          />
         ) : undefined
       }
     >
+      {/* Filter Pills */}
+      {items && items.length > 0 ? (
+        <View style={styles.filterBar}>
+          {(['all', 'wins', 'draws'] as const).map((key) => {
+            const active = filter === key;
+            const count =
+              key === 'all'
+                ? items.length
+                : key === 'wins'
+                  ? items.filter((m) => describeMatch(m).result === 'win' || describeMatch(m).result === 'played').length
+                  : items.filter((m) => describeMatch(m).result === 'draw').length;
+
+            const label = key === 'all' ? `All ${count}` : key === 'wins' ? `Wins ${count}` : `Draws ${count}`;
+
+            return (
+              <Pressy
+                key={key}
+                accessibilityLabel={label}
+                onPress={() => setFilter(key)}
+                style={[
+                  styles.filterPill,
+                  {
+                    backgroundColor: active ? '#1D4ED8' : c.bgCard,
+                    borderColor: active ? '#1D4ED8' : c.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    { color: active ? '#FFFFFF' : c.textSecondary },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressy>
+            );
+          })}
+        </View>
+      ) : null}
+
       {error ? (
         <View style={styles.pad}>
           <ErrorState message="Could not read your match history." onRetry={() => void load()} />
@@ -184,75 +248,174 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
         <AppLoader />
       ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           keyExtractor={(m) => String(m.id)}
-          contentContainerStyle={[styles.pad, { gap: 10, flexGrow: 1 }]}
+          contentContainerStyle={[styles.pad, { gap: isTall ? 12 : 10, flexGrow: 1 }]}
           ListEmptyComponent={
-            <EmptyState title="No Matches Played Yet" description="Complete an offline or AI match to see your round history here." actionLabel="Play now" onAction={() => goTab('PlayTab')} />
+            <EmptyState
+              title="No Matches Played Yet"
+              description="Complete an offline or AI match to see your round history here."
+              actionLabel="Play now"
+              onAction={() => goTab('PlayTab')}
+            />
           }
           renderItem={({ item }) => {
             const v = describeMatch(item);
+            const isWin = v.result === 'win' || v.result === 'played';
+            const isLoss = v.result === 'loss';
+            const badgeBg = isWin ? '#F0FDF4' : isLoss ? '#FEF2F2' : '#F1F1EE';
+            const badgeBorder = isWin ? '#BBF7D0' : isLoss ? '#FECACA' : '#E4E4DF';
+            const badgeColor = isWin ? '#15803D' : isLoss ? '#DC2626' : '#5C606A';
+
             return (
-              <AppCard testID={`history-row-${item.id}`} padding="sm">
-                <View style={styles.row}>
-                  <AppAvatar avatarId={v.avatar} name={v.opponent} size="sm" />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{v.opponent}</Text>
-                    <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary, marginTop: 2 }]}>
-                      {v.mode} · {item.record.config.size}x{item.record.config.size}
+              <View
+                testID={`history-row-${item.id}`}
+                style={[
+                  styles.matchCard,
+                  {
+                    padding: isTall ? 14 : 11,
+                    borderRadius: isTall ? 14 : 12,
+                    backgroundColor: c.bgCard,
+                    borderColor: c.border,
+                  },
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardLeft}>
+                    <View style={[styles.outcomeBadge, { backgroundColor: badgeBg, borderColor: badgeBorder }]}>
+                      <Text style={[styles.outcomeText, { color: badgeColor }]}>{v.label}</Text>
+                    </View>
+                    <Text numberOfLines={1} style={[styles.opponentName, { color: c.text }]}>
+                      {v.opponent}
                     </Text>
-                    <View style={[styles.row, { gap: 4, marginTop: 2 }]}>
-                      <Calendar size={11} color={c.textSecondary} />
-                      <Text style={[type.caption, { color: c.textSecondary }]}>{formatShortDate(item.playedAt)}</Text>
-                      <Text style={[type.caption, { color: c.textSecondary }]}> · {formatDurationMs(item.record.durationMs)} · {item.record.moves.length} moves</Text>
-                    </View>
-                    <View accessibilityLabel={item.synced ? 'Synced to account' : 'Stored on this device'} style={[styles.row, { gap: 4, marginTop: 2 }]}>
-                      {item.synced ? <CheckCircle2 size={11} color={c.success} /> : <CloudOff size={11} color={c.textSecondary} />}
-                      <Text style={[type.caption, { color: item.synced ? c.success : c.textSecondary }]}>{item.synced ? 'Synced to account' : 'On this device'}</Text>
-                    </View>
                   </View>
-                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                    <View style={[styles.badge, { backgroundColor: withAlpha(tone[v.result], 0.14), borderColor: withAlpha(tone[v.result], 0.4) }]}>
-                      <Text numberOfLines={1} style={[type.smallStrong, { color: tone[v.result] }]}>{v.label}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <AppIconButton testID={`history-replay-${item.id}`} label="Replay match" icon={<Play size={14} color={c.accent} />} onPress={() => setReplaying(item)} style={{ width: 44, height: 44 }} />
-                      <AppIconButton testID={`history-delete-${item.id}`} label="Delete match" icon={<Trash2 size={14} color={c.textSecondary} />} onPress={() => setToDelete(item)} style={{ width: 44, height: 44 }} />
-                    </View>
-                  </View>
+
+                  {/* Replay Button */}
+                  <Pressy
+                    testID={`history-replay-${item.id}`}
+                    accessibilityLabel="Replay match"
+                    onPress={() => setReplaying(item)}
+                    style={[styles.replayBtn, { backgroundColor: withAlpha(c.accent, 0.12) }]}
+                  >
+                    <Play size={14} color={c.accent} fill={c.accent} />
+                  </Pressy>
                 </View>
-              </AppCard>
+
+                <View style={styles.cardFooter}>
+                  <Text style={[styles.metaText, { color: c.textSecondary }]}>
+                    {v.mode} · {item.record.config.size}×{item.record.config.size} Grid · {item.record.moves.length} moves
+                  </Text>
+                  <Text style={[styles.metaText, { color: c.textSecondary }]}>
+                    {formatDurationMs(item.record.durationMs)}
+                  </Text>
+                </View>
+              </View>
             );
           }}
         />
       )}
 
       <LocalReplayModal match={replaying} onClose={() => setReplaying(null)} />
-      <ConfirmDialog
-        open={!!toDelete}
-        title="Delete match?"
-        message="This match will be removed from this device."
-        confirmLabel="Delete"
-        destructive
-        onCancel={() => setToDelete(null)}
-        onConfirm={() => toDelete && void remove(toDelete)}
-      />
+
       <ConfirmDialog
         open={confirmClear}
-        title="Clear all history?"
-        message="All offline matches stored on this device will be deleted."
-        confirmLabel="Clear all"
+        title="Clear Match History?"
+        message="This removes all recorded offline matches from your device."
+        confirmLabel="Clear History"
         destructive
+        onConfirm={clearAll}
         onCancel={() => setConfirmClear(false)}
-        onConfirm={() => void clearAll()}
       />
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  pad: { padding: 20 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  badge: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3, maxWidth: 140 },
-  replayRow: { flexDirection: 'row', gap: 10 },
+  pad: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontFamily: fonts.body.semibold,
+  },
+  matchCard: {
+    borderWidth: 1,
+    gap: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  outcomeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  outcomeText: {
+    fontSize: 10.5,
+    fontFamily: fonts.body.semibold,
+  },
+  opponentName: {
+    fontSize: 13.5,
+    fontFamily: fonts.body.semibold,
+    flex: 1,
+  },
+  replayBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metaText: {
+    fontSize: 11,
+    fontFamily: fonts.body.regular,
+  },
+  replaySubtitle: {
+    fontSize: 12,
+    fontFamily: fonts.body.medium,
+    textAlign: 'center',
+  },
+  replayStep: {
+    fontSize: 12,
+    fontFamily: fonts.mono.medium,
+    textAlign: 'center',
+  },
+  replayRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
 });

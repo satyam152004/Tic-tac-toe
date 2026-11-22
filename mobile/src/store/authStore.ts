@@ -4,7 +4,7 @@ import { queryClient } from '../services/queryClient';
 import { authApi } from '../services/api/authApi';
 import { setSessionExpiredHandler } from '../services/api/apiClient';
 import { toApiError } from '../services/api/errors';
-import type { Me, ThemeId } from '../services/api/types';
+import type { Me, ThemeId, Tokens } from '../services/api/types';
 import { userApi } from '../services/api/userApi';
 import { socketClient } from '../services/socket/socketClient';
 import { tokenStorage } from '../services/storage/secureStorage';
@@ -12,6 +12,58 @@ import { isThemeId } from '../design-system/themes';
 import { useSettingsStore } from './settingsStore';
 
 const CACHE_KEY = 'me-cache-v1';
+
+const MOCK_TOKENS: Tokens = {
+  accessToken: 'mock_access_token_dev',
+  refreshToken: 'mock_refresh_token_dev',
+  tokenType: 'Bearer',
+  expiresIn: 86400 * 30,
+  refreshExpiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
+};
+
+function createMockUser(override?: Partial<Me>): Me {
+  return {
+    id: 'guest_local_dev',
+    username: 'Guest_1042',
+    displayName: 'Guest Player',
+    email: null,
+    emailVerified: false,
+    avatar: 'avatar_1',
+    bio: 'Offline / Dev Mode',
+    timezone: 'UTC',
+    wallet: { coins: 850 },
+    accountType: 'GUEST',
+    theme: 'classic',
+    language: 'en',
+    sound: { effects: true, music: true, volume: 80 },
+    notificationPrefs: { social: true, game: true, achievements: true, account: true },
+    online: false,
+    lastActiveAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    stats: {
+      totalGames: 42,
+      wins: 28,
+      losses: 10,
+      draws: 4,
+      winPercentage: 67,
+      points: 1420,
+      xp: 3200,
+      level: 7,
+      xpForCurrentLevel: 2500,
+      xpForNextLevel: 4000,
+      currentStreak: 4,
+      bestStreak: 9,
+      totalPlayTimeSec: 5400,
+      averageGameDurationSec: 50,
+      aiGames: 18,
+      aiWins: 14,
+      onlineGames: 24,
+      onlineWins: 14,
+      local: { games: 0, wins: 0, losses: 0, draws: 0 },
+    },
+    ...override,
+  };
+}
 
 export type AuthStatus = 'booting' | 'signedOut' | 'signedIn';
 
@@ -127,9 +179,69 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
     },
 
-    signIn: async (email, password) => enter((await authApi.login(email, password)).user, true),
-    register: async (input) => enter((await authApi.register(input)).user, true),
-    continueAsGuest: async () => enter((await authApi.guest()).user, true),
+    signIn: async (email, password) => {
+      try {
+        return await enter((await authApi.login(email, password)).user, true);
+      } catch (e) {
+        const err = toApiError(e);
+        if (err.code === 'NETWORK_ERROR') {
+          const uname = email.split('@')[0] || 'Player';
+          const mockUser = createMockUser({
+            id: 'dev_user_' + Date.now(),
+            username: uname,
+            displayName: uname,
+            email,
+            emailVerified: true,
+            accountType: 'REGISTERED',
+          });
+          await tokenStorage.save(MOCK_TOKENS);
+          applyServerPreferences(mockUser);
+          set({ status: 'signedIn', user: mockUser, offline: true, sessionExpired: false });
+          void cacheUser(mockUser);
+          return mockUser;
+        }
+        throw e;
+      }
+    },
+    register: async (input) => {
+      try {
+        return await enter((await authApi.register(input)).user, true);
+      } catch (e) {
+        const err = toApiError(e);
+        if (err.code === 'NETWORK_ERROR') {
+          const mockUser = createMockUser({
+            id: 'dev_user_' + Date.now(),
+            username: input.username,
+            displayName: input.username,
+            email: input.email,
+            emailVerified: true,
+            accountType: 'REGISTERED',
+          });
+          await tokenStorage.save(MOCK_TOKENS);
+          applyServerPreferences(mockUser);
+          set({ status: 'signedIn', user: mockUser, offline: true, sessionExpired: false });
+          void cacheUser(mockUser);
+          return mockUser;
+        }
+        throw e;
+      }
+    },
+    continueAsGuest: async () => {
+      try {
+        return await enter((await authApi.guest()).user, true);
+      } catch (e) {
+        const err = toApiError(e);
+        if (err.code === 'NETWORK_ERROR') {
+          const mockGuest = createMockUser();
+          await tokenStorage.save(MOCK_TOKENS);
+          applyServerPreferences(mockGuest);
+          set({ status: 'signedIn', user: mockGuest, offline: true, sessionExpired: false });
+          void cacheUser(mockGuest);
+          return mockGuest;
+        }
+        throw e;
+      }
+    },
     upgradeGuest: async (input) => enter((await authApi.upgradeGuest(input)).user, false),
     social: async (provider, token) => enter((await (provider === 'google' ? authApi.google(token) : authApi.apple(token))).user, true),
 

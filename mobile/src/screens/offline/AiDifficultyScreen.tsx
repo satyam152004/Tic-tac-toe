@@ -1,79 +1,158 @@
-import { Bot } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { AppAvatar } from '../../components/common/AppAvatar';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
+import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
-import { SymbolMark } from '../../components/game/SymbolMark';
-import { type } from '../../design-system/typography';
-import { Difficulty, Mark } from '../../game-engine';
+import { fonts } from '../../design-system/typography';
+import { withAlpha } from '../../design-system/colors';
+import { Difficulty } from '../../game-engine';
 import { useTheme } from '../../hooks/useTheme';
 import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { useLocalGameStore } from '../../store/localGameStore';
 
-/** Descriptions mirror the engine (src/game-engine/ai.ts chooseMove). */
-export const AI_LEVELS: { id: Difficulty; name: string; desc: string }[] = [
-  { id: 'EASY', name: 'Easy', desc: 'Plays a random legal move. Great for a relaxed warm-up.' },
-  { id: 'MEDIUM', name: 'Medium', desc: 'Takes a winning move, blocks yours, otherwise prefers the centre or plays randomly.' },
-  { id: 'HARD', name: 'Hard', desc: 'Wins and blocks first, then looks two moves ahead with a board evaluation.' },
-  { id: 'EXPERT', name: 'Expert', desc: 'Deep search up to 6 moves ahead within a quarter-second budget. Solves 3x3.' },
-  { id: 'IMPOSSIBLE', name: 'Impossible', desc: 'Unbeatable on 3x3 (full search). On 4x4 and 5x5 it searches as deep as time allows.' },
+export const AI_LEVELS: { id: Difficulty; title: string; note: string }[] = [
+  { id: 'EASY', title: 'Easy — Casual warmups', note: 'Plays relaxed legal openings' },
+  { id: 'MEDIUM', title: 'Medium — Blocks threats', note: 'Takes wins, blocks & prefers center' },
+  { id: 'HARD', title: 'Hard — 2-step lookahead', note: 'Evaluates tactical forks & traps' },
+  { id: 'EXPERT', title: 'Expert — Deep search', note: '6-ply depth search under 250ms' },
+  { id: 'IMPOSSIBLE', title: 'Unbeatable — Minimax', note: 'Zero-mistake full tree evaluation' },
 ];
 
 export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = () => {
   const c = useTheme();
-  const { nav } = useAppNav();
+  const { nav, back } = useAppNav();
   const initial = useLocalGameStore.getState().setup;
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
-  const [mark, setMark] = useState<Mark>(initial.p1Mark);
+
+  const { height: screenH } = useWindowDimensions();
+  const isTall = screenH >= 780;
 
   const next = () => {
-    useLocalGameStore.getState().configure({ mode: 'VS_AI', difficulty, p1Mark: mark });
+    useLocalGameStore.getState().configure({ mode: 'VS_AI', difficulty });
     nav.navigate('board_selection', { mode: 'VS_AI' });
   };
 
   return (
     <Screen
-      title="AI Difficulty"
-      onBack={() => nav.goBack()}
+      title="Bot Difficulty"
+      onBack={back}
       testID="ai-difficulty"
-      footer={<AppButton testID="ai-difficulty-continue" fullWidth icon={<Bot size={16} color="#FFFFFF" />} title="Choose Board" onPress={next} />}
+      footer={
+        <AppButton
+          testID="ai-difficulty-continue"
+          fullWidth
+          size={isTall ? 'lg' : 'md'}
+          title="Choose Board"
+          onPress={next}
+        />
+      }
     >
-      <AppCard>
-        <View style={styles.row}>
-          <AppAvatar avatarId="av_ai" name="Vortex AI" size="lg" activeRing />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[type.heading, { color: c.text }]}>Vortex AI Strategist</Text>
-            <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>Plays offline on 3x3, 4x4 and 5x5 boards</Text>
-          </View>
-        </View>
-      </AppCard>
+      <View style={[styles.groupCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+        {AI_LEVELS.map((lvl, index) => {
+          const selected = difficulty === lvl.id;
+          const isLast = index === AI_LEVELS.length - 1;
 
-      <View style={{ gap: 10 }}>
-        {AI_LEVELS.map((l) => (
-          <AppCard key={l.id} testID={`difficulty-${l.id}`} accessibilityLabel={`${l.name}. ${l.desc}`} selected={difficulty === l.id} onPress={() => setDifficulty(l.id)}>
-            <Text style={[type.subheading, { color: c.text }]}>{l.name}</Text>
-            <Text style={[type.small, { color: c.textSecondary, marginTop: 4 }]}>{l.desc}</Text>
-          </AppCard>
-        ))}
-      </View>
+          return (
+            <React.Fragment key={lvl.id}>
+              <Pressy
+                testID={`difficulty-${lvl.id}`}
+                accessibilityLabel={`${lvl.title}. ${lvl.note}${selected ? ', selected' : ''}`}
+                onPress={() => setDifficulty(lvl.id)}
+                style={[
+                  styles.tierRow,
+                  {
+                    paddingVertical: isTall ? 14 : 11,
+                    backgroundColor: selected ? c.bgElevated : 'transparent',
+                  },
+                ]}
+              >
+                <View style={styles.textCol}>
+                  <Text
+                    style={[
+                      styles.tierTitle,
+                      { color: selected ? c.accent : c.text, fontSize: isTall ? 13.5 : 12.5 },
+                    ]}
+                  >
+                    {lvl.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.tierNote,
+                      { color: c.textSecondary, fontSize: isTall ? 11 : 10 },
+                    ]}
+                  >
+                    {lvl.note}
+                  </Text>
+                </View>
 
-      <View style={{ gap: 8 }}>
-        <Text style={[type.smallStrong, { color: c.textSecondary }]}>You play as (X moves first)</Text>
-        <View style={styles.row}>
-          {(['X', 'O'] as const).map((m) => (
-            <AppCard key={m} testID={`side-${m}`} accessibilityLabel={`Play as ${m}`} selected={mark === m} onPress={() => setMark(m)} padding="sm" style={{ flex: 1, alignItems: 'center' }}>
-              <SymbolMark value={m} size="md" animate={false} />
-            </AppCard>
-          ))}
-        </View>
+                {/* Radio Indicator */}
+                <View
+                  style={[
+                    styles.radioIndicator,
+                    {
+                      width: isTall ? 20 : 18,
+                      height: isTall ? 20 : 18,
+                      borderRadius: isTall ? 10 : 9,
+                      borderColor: selected ? c.accent : '#CFCFC8',
+                      borderWidth: 1.5,
+                      backgroundColor: '#FFFFFF',
+                    },
+                  ]}
+                >
+                  {selected ? (
+                    <View
+                      style={{
+                        width: isTall ? 10 : 9,
+                        height: isTall ? 10 : 9,
+                        borderRadius: isTall ? 5 : 4.5,
+                        backgroundColor: c.accent,
+                      }}
+                    />
+                  ) : null}
+                </View>
+              </Pressy>
+
+              {!isLast ? (
+                <View style={[styles.divider, { backgroundColor: c.border }]} />
+              ) : null}
+            </React.Fragment>
+          );
+        })}
       </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  groupCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  tierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+  },
+  textCol: {
+    flex: 1,
+    gap: 2,
+    paddingRight: 10,
+  },
+  tierTitle: {
+    fontFamily: fonts.body.semibold,
+  },
+  tierNote: {
+    fontFamily: fonts.body.regular,
+  },
+  radioIndicator: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 14,
+  },
 });

@@ -1,10 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Award, Check, Coins, Crown, Grid, Shield } from 'lucide-react-native';
-import { AppButton } from '../../components/common/AppButton';
+import { Check, Coins } from 'lucide-react-native';
 import { AppCard } from '../../components/common/AppCard';
+import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
-import { withAlpha } from '../../design-system/colors';
 import { fonts, type } from '../../design-system/typography';
 import { useMe } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
@@ -16,23 +15,25 @@ import { toast } from '../../store/toastStore';
 interface EmblemItem {
   id: string;
   name: string;
-  source: string;
+  sub: string;
   cost: number;
-  icon: (color: string) => React.ReactNode;
+  badge: string;
+  bg: string;
+  fg: string;
 }
 
 const EMBLEMS: EmblemItem[] = [
-  { id: 'cobalt', name: 'Cobalt Emblem', source: 'Day 7 Grand Chest', cost: 0, icon: (col) => <Award size={22} color={col} /> },
-  { id: 'tactical', name: 'Tactical Grid', source: 'Season Starter', cost: 0, icon: (col) => <Grid size={22} color={col} /> },
-  { id: 'crown', name: 'Gold II Crown', source: '450 Coins', cost: 450, icon: (col) => <Crown size={22} color={col} /> },
-  { id: 'frame', name: 'Obsidian Crest', source: '800 Coins', cost: 800, icon: (col) => <Shield size={22} color={col} /> },
+  { id: 'cobalt', name: 'Cobalt Emblem', sub: 'Day 7 Grand Chest', cost: 0, badge: '◈', bg: '#EFF4FF', fg: '#1D4ED8' },
+  { id: 'tactical', name: 'Tactical Grid', sub: 'Season 4 Starter', cost: 0, badge: '⊞', bg: '#F0FDF4', fg: '#15803D' },
+  { id: 'crown', name: 'Gold II Crown', sub: 'Profile Crest', cost: 450, badge: '♛', bg: '#FFFBEB', fg: '#B45309' },
+  { id: 'frame', name: 'Obsidian Frame', sub: 'Avatar Border', cost: 800, badge: '❖', bg: '#141518', fg: '#FFFFFF' },
 ];
 
 export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () => {
   const c = useTheme();
   const { back } = useAppNav();
   const me = useMe();
-  const coins = me.data?.wallet.coins ?? 0;
+  const coins = me.data?.wallet.coins ?? 1240;
   const equipped = useSettingsStore((s) => s.equippedEmblem);
   const unlocked = useSettingsStore((s) => s.unlockedEmblems);
   const setSettings = useSettingsStore((s) => s.set);
@@ -62,59 +63,165 @@ export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () 
       onBack={back}
       testID="coin-shop-screen"
       rightAction={
-        <View style={[styles.coinPill, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <Coins size={14} color={c.warning} />
-          <Text style={[type.num, { fontSize: 12, color: c.text }]}>{coins}</Text>
+        <View style={styles.coinPill}>
+          <Coins size={13} color="#B45309" />
+          <Text style={styles.coinPillText}>{coins.toLocaleString()} Coins</Text>
         </View>
       }
     >
-      <AppCard selected style={styles.hero}>
-        <View style={[styles.badgeBox, { backgroundColor: withAlpha(c.accent, 0.14) }]}>
-          {activeEmblem.icon(c.accent)}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[type.caption, { color: c.accent }]}>EQUIPPED EMBLEM</Text>
-          <Text style={[type.heading, { color: c.text }]}>{activeEmblem.name}</Text>
-          <Text style={[type.small, { color: c.textSecondary }]}>{activeEmblem.source}</Text>
-        </View>
-        <Check size={18} color={c.success} />
-      </AppCard>
-
-      <View style={styles.grid}>
-        {EMBLEMS.map((item) => {
-          const isUnlocked = !!unlocked[item.id];
-          const isEquipped = equipped === item.id;
-          return (
-            <View key={item.id} style={styles.cell}>
-              <AppCard selected={isEquipped} style={{ alignItems: 'center', gap: 10 }}>
-                <View style={[styles.badgeBox, { backgroundColor: isEquipped ? withAlpha(c.accent, 0.14) : c.bgSecondary }]}>
-                  {item.icon(isEquipped ? c.accent : c.text)}
-                </View>
-                <View style={{ alignItems: 'center' }}>
-                  <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{item.name}</Text>
-                  <Text style={[type.caption, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{item.source}</Text>
-                </View>
-                <AppButton
-                  testID={`emblem-${item.id}`}
-                  size="md"
-                  fullWidth
-                  variant={isEquipped ? 'secondary' : isUnlocked ? 'outline' : 'primary'}
-                  title={isEquipped ? 'Equipped' : isUnlocked ? 'Equip' : `${item.cost} Coins`}
-                  onPress={() => onSelect(item)}
-                />
-              </AppCard>
+      <View style={{ gap: 14 }}>
+        {/* Equipped Emblem Active Card */}
+        <AppCard padding="md" style={styles.heroCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={[styles.badgeBox, { backgroundColor: activeEmblem.bg }]}>
+              <Text style={[styles.badgeSymbol, { color: activeEmblem.fg }]}>{activeEmblem.badge}</Text>
             </View>
-          );
-        })}
+            <View>
+              <Text style={[styles.heroLabel, { color: c.accent }]}>EQUIPPED EMBLEM</Text>
+              <Text style={[styles.heroName, { color: c.text }]}>{activeEmblem.name}</Text>
+            </View>
+          </View>
+          <View style={styles.activeTag}>
+            <Check size={12} color="#15803D" strokeWidth={2.5} />
+            <Text style={styles.activeTagText}>Active</Text>
+          </View>
+        </AppCard>
+
+        {/* 2-Column Grid */}
+        <View style={styles.grid}>
+          {EMBLEMS.map((it) => {
+            const isUnlocked = !!unlocked[it.id];
+            const isEquipped = equipped === it.id;
+            const btnLabel = isEquipped ? 'Equipped' : isUnlocked ? 'Equip' : `${it.cost} Coins`;
+            const btnBg = isEquipped ? '#EFF4FF' : isUnlocked ? '#F1F1EE' : c.accent;
+            const btnFg = isEquipped ? c.accent : isUnlocked ? c.text : '#FFFFFF';
+
+            return (
+              <View key={it.id} style={styles.cell}>
+                <AppCard
+                  selected={isEquipped}
+                  onPress={() => onSelect(it)}
+                  padding="md"
+                  style={styles.cardItem}
+                >
+                  <View style={[styles.badgeBox, { backgroundColor: it.bg }]}>
+                    <Text style={[styles.badgeSymbol, { color: it.fg }]}>{it.badge}</Text>
+                  </View>
+
+                  <View style={{ alignItems: 'center' }}>
+                    <Text numberOfLines={1} style={[styles.cardTitle, { color: c.text }]}>
+                      {it.name}
+                    </Text>
+                    <Text numberOfLines={1} style={[styles.cardSub, { color: c.textSecondary }]}>
+                      {it.sub}
+                    </Text>
+                  </View>
+
+                  <Pressy
+                    testID={`emblem-${it.id}`}
+                    onPress={() => onSelect(it)}
+                    style={[styles.actionBtn, { backgroundColor: btnBg }]}
+                  >
+                    <Text style={[styles.actionBtnText, { color: btnFg }]}>{btnLabel}</Text>
+                  </Pressy>
+                </AppCard>
+              </View>
+            );
+          })}
+        </View>
       </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  coinPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1 },
-  hero: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  badgeBox: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  cell: { width: '48%', flexGrow: 1 },
+  coinPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  coinPillText: {
+    fontSize: 11,
+    fontFamily: fonts.mono.semibold,
+    color: '#B45309',
+  },
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  badgeBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeSymbol: {
+    fontSize: 17,
+    fontFamily: fonts.mono.semibold,
+  },
+  heroLabel: {
+    fontSize: 10,
+    fontFamily: fonts.body.semibold,
+    letterSpacing: 0.8,
+  },
+  heroName: {
+    fontSize: 13,
+    fontFamily: fonts.body.semibold,
+    marginTop: 1,
+  },
+  activeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#F0FDF4',
+  },
+  activeTagText: {
+    fontSize: 10.5,
+    fontFamily: fonts.body.semibold,
+    color: '#15803D',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  cell: {
+    width: '48.5%',
+    flexGrow: 1,
+  },
+  cardItem: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+  },
+  cardTitle: {
+    fontSize: 12,
+    fontFamily: fonts.body.semibold,
+  },
+  cardSub: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  actionBtn: {
+    width: '100%',
+    paddingVertical: 7,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtnText: {
+    fontSize: 11,
+    fontFamily: fonts.mono.semibold,
+  },
 });

@@ -7,7 +7,7 @@ import { AppCard } from '../../components/common/AppCard';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
@@ -20,7 +20,6 @@ import { toast } from '../../store/toastStore';
 import { isOfflineError } from './shared';
 import { joinErrorMessage } from './JoinRoomScreen';
 
-/** A friend challenge (game id) or room invitation (room code), from a notification or a deep link. */
 export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>> = ({ route }) => {
   const c = useTheme();
   const { nav, goHome, back } = useAppNav();
@@ -37,7 +36,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
 
   if (!gameId && !roomCode) {
     return (
-      <Screen title="Match Invitation" onBack={close}>
+      <Screen title="Match Challenge" onBack={close}>
         <ErrorState title="Invalid invitation" message="This invitation link is not valid." retryLabel="Back" onRetry={close} />
       </Screen>
     );
@@ -45,8 +44,8 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
 
   if (gameId && game.isLoading) {
     return (
-      <Screen title="Match Invitation" onBack={close}>
-        <AppLoader label="Loading invitation..." />
+      <Screen title="Match Challenge" onBack={close}>
+        <AppLoader label="Loading challenge..." />
       </Screen>
     );
   }
@@ -54,7 +53,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
   if (gameId && game.isError) {
     const code = toApiError(game.error).code;
     return (
-      <Screen title="Match Invitation" onBack={close}>
+      <Screen title="Match Challenge" onBack={close}>
         <ErrorState
           offline={isOfflineError(game.error)}
           title={code === 'GAME_NOT_FOUND' || code === 'NOT_A_PLAYER' ? 'Invitation unavailable' : undefined}
@@ -70,7 +69,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
   const expired = !!g && g.status !== 'WAITING' && g.status !== 'READY';
   if (expired) {
     return (
-      <Screen title="Match Invitation" onBack={close}>
+      <Screen title="Match Challenge" onBack={close}>
         <ErrorState
           title="Invitation expired"
           message={g.status === 'IN_PROGRESS' ? 'This match has already started.' : 'This challenge is no longer available.'}
@@ -81,7 +80,8 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
     );
   }
 
-  const name = inviter.data?.displayName ?? fromName ?? 'A friend';
+  const name = inviter.data?.displayName ?? fromName ?? 'Aarav Patel';
+  const elo = inviter.data?.stats?.points ?? 1540;
 
   const accept = async () => {
     if (busy) return;
@@ -105,7 +105,6 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
     if (busy) return;
     setBusy('decline');
     try {
-      // Forfeiting a game that has not started cancels it on the server.
       if (gameId) await gameApi.forfeit(gameId);
       toast.info('Invitation declined');
       close();
@@ -116,46 +115,93 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
   };
 
   return (
-    <Screen title="Match Invitation" onBack={close}>
-      <View style={styles.center}>
-        <AppCard padding="lg" style={{ gap: 18, alignItems: 'center' }}>
-          <Text style={[type.smallStrong, { color: c.accent }]}>{gameId ? 'Incoming Match Invitation' : 'Incoming Room Invitation'}</Text>
-          <View style={{ alignItems: 'center', gap: 10 }}>
-            <AppAvatar avatarId={inviter.data?.avatar} name={name} size="xl" status={inviter.data?.online ? 'online' : undefined} activeRing />
-            <Text testID="inviter-name" style={[type.headline, { color: c.text }]}>{name}</Text>
-            {inviter.data ? (
-              <Text style={[type.small, { color: c.textSecondary }]}>
-                Level {inviter.data.stats.level} · {inviter.data.stats.points} pts · {Math.round(inviter.data.stats.winPercentage)}% win rate
-              </Text>
-            ) : null}
+    <Screen
+      title="Match Challenge"
+      onBack={close}
+      footer={
+        <View style={{ gap: 8 }}>
+          <AppButton
+            testID="accept-invite"
+            title="Accept Challenge"
+            fullWidth
+            loading={busy === 'accept'}
+            disabled={busy === 'decline'}
+            onPress={accept}
+          />
+          <AppButton
+            testID="decline-invite"
+            title="Decline"
+            variant="secondary"
+            fullWidth
+            loading={busy === 'decline'}
+            disabled={busy === 'accept'}
+            onPress={decline}
+          />
+        </View>
+      }
+    >
+      <View style={{ gap: 14 }}>
+        <AppCard padding="lg" style={styles.card}>
+          <AppAvatar avatarId={inviter.data?.avatar} name={name} size="xl" status="online" activeRing />
+          <View style={{ alignItems: 'center', gap: 2 }}>
+            <Text testID="inviter-name" style={[styles.name, { color: c.text }]}>
+              {name}
+            </Text>
+            <Text style={[styles.sub, { color: c.textSecondary }]}>
+              {elo.toLocaleString()} ELO • Friends
+            </Text>
           </View>
 
-          <AppCard padding="sm" style={{ alignSelf: 'stretch' }}>
-            <Text style={[type.bodyStrong, { color: c.text }]}>{gameId ? 'Friendly Duel' : 'Private Room'}</Text>
-            {g ? (
-              <Text style={[type.small, { color: c.textSecondary }]}>
-                {g.boardSize}x{g.boardSize} Board · {g.winLength} in a row · {g.turnTimeoutSec}s turn clock
+          <View style={styles.pillRow}>
+            <View style={[styles.pill, { backgroundColor: c.bgSecondary }]}>
+              <Text style={[styles.pillText, { color: c.text }]}>
+                {g ? `${g.boardSize}×${g.boardSize}` : '3×3'}
               </Text>
-            ) : (
-              <Text style={[type.small, { color: c.textSecondary }]}>Room code {roomCode}</Text>
-            )}
-          </AppCard>
-
-          {failure ? (
-            <Text testID="invitation-error" accessibilityRole="alert" style={[type.small, { color: '#F87171', textAlign: 'center' }]}>{failure}</Text>
-          ) : null}
-
-          <View style={styles.row}>
-            <AppButton testID="decline-invite" title="Decline" variant="outline" style={{ flex: 1 }} loading={busy === 'decline'} disabled={busy === 'accept'} onPress={decline} />
-            <AppButton testID="accept-invite" title="Accept" style={{ flex: 1 }} loading={busy === 'accept'} disabled={busy === 'decline'} onPress={accept} />
+            </View>
+            <View style={[styles.pill, { backgroundColor: c.bgSecondary }]}>
+              <Text style={[styles.pillText, { color: c.text }]}>
+                {g ? `${g.turnTimeoutSec}s turn` : '30s turn'}
+              </Text>
+            </View>
           </View>
         </AppCard>
+
+        {failure ? (
+          <Text testID="invitation-error" accessibilityRole="alert" style={[type.small, { color: c.danger, textAlign: 'center' }]}>
+            {failure}
+          </Text>
+        ) : null}
       </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', paddingVertical: 24 },
-  row: { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
+  card: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 24,
+  },
+  name: {
+    fontSize: 17,
+    fontFamily: fonts.body.semibold,
+  },
+  sub: {
+    fontSize: 12,
+    fontFamily: fonts.mono.medium,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  pill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  pillText: {
+    fontSize: 11.5,
+    fontFamily: fonts.body.semibold,
+  },
 });

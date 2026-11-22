@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { withAlpha } from '../../design-system/colors';
 import { radius } from '../../design-system/radius';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from '../common/Pressy';
@@ -25,6 +26,10 @@ interface CellProps {
 const Cell = memo(function Cell({ index, value, side, glyph, winning, last, disabled, compact, corner, onPress }: CellProps) {
   const c = useTheme();
   const filled = value === 'X' || value === 'O';
+  const winBg = compact ? (c.bgElevated === '#EFF4FF' ? '#EFF4FF' : withAlpha(c.accent, 0.18)) : withAlpha(c.accent, 0.2);
+  const winBorder = compact ? (c.bgElevated === '#EFF4FF' ? '#BFDBFE' : withAlpha(c.accent, 0.35)) : c.accent;
+  const cellRadius = compact ? (side < 35 ? 6 : side < 45 ? 8 : 10) : corner;
+
   return (
     <Pressy
       testID={`cell-${index}`}
@@ -36,16 +41,18 @@ const Cell = memo(function Cell({ index, value, side, glyph, winning, last, disa
       style={{
         width: side,
         height: side,
-        borderRadius: corner,
+        borderRadius: cellRadius,
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: winning ? c.accent + '40' : last ? c.bgElevated : c.bgSecondary,
-        borderColor: winning ? c.accent : last ? c.accent + '99' : c.border,
-        ...(winning ? { shadowColor: c.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 4 } : null),
+        backgroundColor: winning ? winBg : last ? c.bgElevated : c.bgSecondary,
+        borderColor: winning ? winBorder : last ? withAlpha(c.accent, 0.6) : c.border,
+        ...(winning && !compact
+          ? { shadowColor: c.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 4 }
+          : null),
       }}
     >
-      {filled ? <SymbolMark value={value as 'X' | 'O'} size={glyph} glow={!compact} /> : null}
+      {filled ? <SymbolMark value={value as 'X' | 'O'} size={glyph} glow={!compact} animate={!compact} /> : null}
     </Pressy>
   );
 });
@@ -79,7 +86,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine =
   return (
     <View
       accessibilityLabel={`${size} by ${size} game board`}
-      style={[styles.board, { width: outer, backgroundColor: c.bgCard, borderColor: c.border, padding: pad, gap }]}
+      style={[
+        styles.board,
+        {
+          width: outer,
+          backgroundColor: c.bgCard,
+          borderColor: c.border,
+          padding: pad,
+          gap,
+          borderRadius: compact ? radius.lg : radius.xl,
+          ...(compact ? styles.compactShadow : null),
+        },
+      ]}
     >
       {Array.from({ length: size }, (_, r) => (
         <View key={r} style={{ flexDirection: 'row', gap }}>
@@ -108,5 +126,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine =
 };
 
 const styles = StyleSheet.create({
-  board: { alignSelf: 'center', borderRadius: radius.xl, borderWidth: 1 },
+  board: { alignSelf: 'center', borderWidth: 1 },
+  compactShadow: {
+    shadowColor: '#141518',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
 });

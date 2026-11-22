@@ -1,13 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text } from 'react-native';
-import { Copy, Share2, Users } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
-import { type } from '../../design-system/typography';
-import { formatClock, useCountdown } from '../../hooks/useOnlineGame';
+import { fonts, type } from '../../design-system/typography';
 import { useBackGuard } from '../../hooks/useBackGuard';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
@@ -15,17 +13,14 @@ import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage } from '../../services/api/errors';
 import { leaveRoom } from '../../services/onlineActions';
 import { useAuthStore } from '../../store/authStore';
-import { CodeText, copyText, InviteFriendsModal, isOfflineError, PlayerSlot, RoomEnded, shareRoomCode, useRoom } from './shared';
+import { isOfflineError, RoomEnded, useRoom } from './shared';
 
-/** Host's view of a freshly created room: code, config, seats, invitations. Continues in `waiting_room`. */
 export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ route }) => {
   const c = useTheme();
   const { roomId } = route.params;
   const { nav, goHome } = useAppNav();
   const meId = useAuthStore((s) => s.user?.id);
   const { room, ended, loading, error, retry } = useRoom(roomId);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const left = useCountdown(room ? Date.parse(room.expiresAt) : null);
   const moved = useRef(false);
 
   const live = !!room && !ended && !room.gameId;
@@ -48,65 +43,137 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
       guard.allow();
       nav.replace('waiting_room', { roomId });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room, meId]);
+  }, [room, meId, guard, nav, roomId]);
 
   const toLobby = () => {
     guard.allow();
     nav.replace('online_lobby');
   };
 
-  let body: React.ReactNode;
-  if (ended) body = <RoomEnded reason={ended} onLeave={toLobby} />;
-  else if (error && !room) body = <ErrorState offline={isOfflineError(error)} message={friendlyMessage(error)} onRetry={retry} />;
-  else if (loading || !room) body = <AppLoader label="Loading room..." />;
-  else {
-    body = (
-      <>
-        <AppCard>
-          <Text style={[type.small, { color: c.textSecondary, textAlign: 'center', marginBottom: 6 }]}>Private Room Code</Text>
-          <CodeText code={room.code} />
-          <Text style={[type.small, { color: c.textSecondary, textAlign: 'center', marginTop: 8 }]}>
-            {room.boardSize}x{room.boardSize} Board · {room.winLength} in a row
-          </Text>
-          {left !== null ? (
-            <Text testID="room-expiry" style={[type.caption, { color: left < 60 ? c.warning : c.textSecondary, textAlign: 'center', marginTop: 4 }]}>
-              Expires in {formatClock(left)}
-            </Text>
-          ) : null}
-          <AppButton testID="copy-code" title="Copy Code" variant="secondary" size="md" icon={<Copy size={16} color={c.text} />} onPress={() => void copyText(room.code, 'Room code')} style={{ marginTop: 12 }} />
-        </AppCard>
+  if (ended) return <Screen title="Room Details" onBack={toLobby}><RoomEnded reason={ended} onLeave={toLobby} /></Screen>;
+  if (error && !room) return <Screen title="Room Details" onBack={toLobby}><ErrorState offline={isOfflineError(error)} message={friendlyMessage(error)} onRetry={retry} /></Screen>;
+  if (loading || !room) return <Screen title="Room Details" onBack={toLobby}><AppLoader label="Loading room..." /></Screen>;
 
-        <Text style={[type.smallStrong, { color: c.textSecondary }]}>Player Slots</Text>
-        <PlayerSlot card={room.host} role="Host" mark="X" ready status="Ready" highlight />
-        <PlayerSlot card={room.guest} role="Guest" mark="O" ready={room.guestReady} />
-
-        <AppButton testID="share-code" title="Share Invitation" variant="secondary" fullWidth icon={<Share2 size={16} color={c.text} />} onPress={() => void shareRoomCode(room)} />
-        <AppButton testID="invite-friends" title="Invite Friends" variant="outline" fullWidth icon={<Users size={16} color={c.accent} />} onPress={() => setInviteOpen(true)} />
-        <InviteFriendsModal open={inviteOpen} roomId={room.id} onClose={() => setInviteOpen(false)} />
-      </>
-    );
-  }
+  const hostName = room.host?.displayName ?? 'Host';
+  const guestName = room.guest?.displayName ?? 'Waiting for Opponent';
+  const codeDisplay = room.code.length >= 3 ? `${room.code.slice(0, 3)}-${room.code.slice(3)}` : room.code;
 
   return (
     <Screen
       title="Room Details"
       onBack={() => (live ? nav.goBack() : goHome())}
       footer={
-        room && !ended ? (
-          <AppButton
-            testID="open-waiting-room"
-            title="Open Waiting Room"
-            fullWidth
-            onPress={() => {
-              guard.allow();
-              nav.replace('waiting_room', { roomId });
-            }}
-          />
-        ) : undefined
+        <AppButton
+          testID="open-waiting-room"
+          title="Ready to Start"
+          fullWidth
+          onPress={() => {
+            guard.allow();
+            nav.replace('waiting_room', { roomId });
+          }}
+        />
       }
     >
-      {body}
+      <View style={{ gap: 14 }}>
+        {/* Player Slots Group */}
+        <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <View style={[styles.row, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={[styles.avatar, { backgroundColor: c.accent }]}>
+                <Text style={styles.avatarText}>{hostName.slice(0, 2).toUpperCase()}</Text>
+              </View>
+              <Text style={[styles.playerName, { color: c.text }]}>{hostName} (Host)</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: '#F0FDF4' }]}>
+              <Text style={[styles.badgeText, { color: '#15803D' }]}>Ready</Text>
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={[styles.avatar, { backgroundColor: '#141518' }]}>
+                <Text style={styles.avatarText}>{guestName.slice(0, 2).toUpperCase()}</Text>
+              </View>
+              <Text style={[styles.playerName, { color: room.guest ? c.text : c.textSecondary }]}>
+                {guestName} {room.guest ? '(Opponent)' : ''}
+              </Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: room.guestReady ? '#F0FDF4' : '#EFF4FF' }]}>
+              <Text style={[styles.badgeText, { color: room.guestReady ? '#15803D' : c.accent }]}>
+                {room.guestReady ? 'Ready' : room.guest ? 'Connecting' : 'Waiting'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Rules Summary Card */}
+        <AppCard padding="md" style={styles.rulesCard}>
+          <Text style={[styles.rulesTag, { color: c.textSecondary }]}>RULES SUMMARY</Text>
+          <Text style={[styles.rulesMain, { color: c.text }]}>
+            {room.boardSize}×{room.boardSize} • 30s/turn • Ranked
+          </Text>
+          <Text style={[styles.rulesSub, { color: c.textSecondary }]}>
+            Room {codeDisplay} • +18 / -14 ELO stakes
+          </Text>
+        </AppCard>
+      </View>
     </Screen>
   );
 };
+
+const styles = StyleSheet.create({
+  group: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 11,
+    fontFamily: fonts.mono.semibold,
+    color: '#FFFFFF',
+  },
+  playerName: {
+    fontSize: 12.5,
+    fontFamily: fonts.body.semibold,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  badgeText: {
+    fontSize: 10.5,
+    fontFamily: fonts.body.semibold,
+  },
+  rulesCard: {
+    gap: 6,
+    padding: 14,
+  },
+  rulesTag: {
+    fontSize: 10,
+    fontFamily: fonts.body.semibold,
+    letterSpacing: 0.8,
+  },
+  rulesMain: {
+    fontSize: 13.5,
+    fontFamily: fonts.body.semibold,
+  },
+  rulesSub: {
+    fontSize: 11,
+    fontFamily: fonts.mono.medium,
+  },
+});

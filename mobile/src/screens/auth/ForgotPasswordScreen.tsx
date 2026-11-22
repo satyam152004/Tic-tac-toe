@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { AppInput } from '../../components/common/AppInput';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
@@ -107,19 +106,22 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
   if (step === 'email') {
     return (
       <Screen
-        title="Forgot Password"
+        title="Reset Password"
         onBack={back}
         testID="forgot-screen"
-        footer={<AppButton testID="forgot-send" title="Send Reset Code" fullWidth loading={busy} onPress={() => void sendCode()} />}
+        contentStyle={styles.screenContent}
       >
-        <View style={{ gap: 4, paddingTop: 8 }}>
-          <Text style={[type.headline, { color: c.text }]}>Recover Access</Text>
-          <Text style={[type.small, { color: c.textSecondary }]}>Enter the email address of your account and we will send you a 6-digit reset code.</Text>
+        <View style={styles.headerBlock}>
+          <Text style={[styles.title, { color: c.text }]}>Reset Password</Text>
+          <Text style={[styles.sub, { color: c.textSecondary }]}>
+            Enter your email address and we will send you a 6-digit recovery code.
+          </Text>
         </View>
-        <AppCard>
+
+        <View style={styles.inputGroup}>
           <AppInput
             testID="forgot-email"
-            label="Email Address"
+            label="Email"
             value={email}
             onChangeText={(t) => {
               setEmail(t);
@@ -134,7 +136,18 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
             autoCorrect={false}
             onSubmitEditing={() => void sendCode()}
           />
-        </AppCard>
+        </View>
+
+        <View style={styles.actionBlock}>
+          <AppButton
+            testID="forgot-send"
+            title="Send Reset Code"
+            size="lg"
+            fullWidth
+            loading={busy}
+            onPress={() => void sendCode()}
+          />
+        </View>
       </Screen>
     );
   }
@@ -144,36 +157,50 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
       title="Reset Password"
       onBack={() => setStep('email')}
       testID="forgot-reset-screen"
-      footer={<AppButton testID="reset-submit" title="Reset Password" fullWidth loading={busy} disabled={locked} onPress={() => void reset()} />}
+      contentStyle={styles.screenContent}
     >
-      <View style={{ gap: 4, paddingTop: 8 }}>
-        <Text style={[type.headline, { color: c.text }]}>Check Your Email</Text>
-        <Text testID="forgot-neutral" style={[type.small, { color: c.textSecondary }]}>
+      <View style={styles.headerBlock}>
+        <Text style={[styles.title, { color: c.text }]}>Check Your Email</Text>
+        <Text testID="forgot-neutral" style={[styles.sub, { color: c.textSecondary }]}>
           If an account exists for <Text style={{ color: c.text, fontFamily: fonts.body.semibold }}>{target}</Text>, we have sent a 6-digit code. Enter it below with your new password.
         </Text>
       </View>
 
-      <View style={{ gap: 10 }}>
-        <OtpInput
-          digits={digits}
-          onChange={(d) => {
-            setDigits(d);
-            setErrors((e) => ({ ...e, code: undefined }));
-          }}
-          disabled={busy || locked}
-          hasError={!!errors.code}
-          shakeKey={shakeKey}
-          autoFocus
-          testIDPrefix="reset-otp"
+      {/* 6-Digit Code Input matching View #9 */}
+      <View style={styles.inputGroup}>
+        {/* Email with Code Sent Badge */}
+        <AppInput
+          label="Email"
+          value={target}
+          editable={false}
+          labelRight={
+            <View style={[styles.badgePill, { backgroundColor: '#EFF4FF', borderColor: '#BFDBFE' }]}>
+              <Text style={[styles.badgeText, { color: c.accent }]}>Code Sent</Text>
+            </View>
+          }
         />
-        {errors.code ? (
-          <Text testID="reset-code-error" accessibilityRole="alert" style={[type.small, { color: c.danger, textAlign: 'center' }]}>
-            {errors.code}
-          </Text>
-        ) : null}
-      </View>
 
-      <AppCard style={{ gap: 12 }}>
+        <View style={{ gap: 8 }}>
+          <Text style={[type.smallStrong, { color: c.textSecondary }]}>6-Digit Code</Text>
+          <OtpInput
+            digits={digits}
+            onChange={(d) => {
+              setDigits(d);
+              setErrors((e) => ({ ...e, code: undefined }));
+            }}
+            disabled={busy || locked}
+            hasError={!!errors.code}
+            shakeKey={shakeKey}
+            autoFocus
+            testIDPrefix="reset-otp"
+          />
+          {errors.code ? (
+            <Text testID="reset-code-error" accessibilityRole="alert" style={[type.small, { color: c.danger, textAlign: 'center' }]}>
+              {errors.code}
+            </Text>
+          ) : null}
+        </View>
+
         <AppInput
           testID="reset-password"
           label="New Password"
@@ -184,11 +211,15 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
           }}
           error={errors.password}
           secureToggle
+          placeholder="New password"
           autoCapitalize="none"
           autoComplete="new-password"
           textContentType="newPassword"
         />
+
+        {/* Password Rules Card matching View #9 */}
         <PasswordRules value={password} />
+
         <AppInput
           testID="reset-confirm"
           label="Confirm New Password"
@@ -199,11 +230,12 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
           }}
           error={errors.confirm}
           secureToggle
+          placeholder="Confirm new password"
           autoCapitalize="none"
           autoComplete="new-password"
           textContentType="newPassword"
         />
-      </AppCard>
+      </View>
 
       {errors.form ? (
         <Text testID="reset-error" accessibilityRole="alert" style={[type.small, { color: c.danger }]}>
@@ -211,17 +243,77 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
         </Text>
       ) : null}
 
-      <View style={{ alignItems: 'center' }}>
-        {left > 0 ? (
-          <Text testID="reset-countdown" style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>
-            Resend code in {mmss(left)}
-          </Text>
-        ) : (
-          <Pressy testID="reset-resend" accessibilityLabel="Resend code" disabled={busy} onPress={() => void sendCode(true)} style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Text style={[type.smallStrong, { color: c.accent }]}>{locked ? 'Request a new code' : 'Resend code'}</Text>
-          </Pressy>
-        )}
+      {/* Primary Action Button matching View #9: Update Password */}
+      <View style={styles.actionBlock}>
+        <AppButton
+          testID="reset-submit"
+          title="Update Password"
+          size="lg"
+          fullWidth
+          loading={busy}
+          disabled={locked}
+          onPress={() => void reset()}
+        />
+
+        <View style={{ alignItems: 'center', marginTop: 12 }}>
+          {left > 0 ? (
+            <Text testID="reset-countdown" style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>
+              Resend code in {mmss(left)}
+            </Text>
+          ) : (
+            <Pressy
+              testID="reset-resend"
+              accessibilityLabel="Resend code"
+              disabled={busy}
+              onPress={() => void sendCode(true)}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text style={[type.smallStrong, { color: c.accent }]}>
+                {locked ? 'Request a new code' : 'Resend code'}
+              </Text>
+            </Pressy>
+          )}
+        </View>
       </View>
     </Screen>
   );
 };
+
+const styles = StyleSheet.create({
+  screenContent: {
+    flexGrow: 1,
+    gap: 16,
+  },
+  headerBlock: {
+    gap: 2,
+    marginTop: 2,
+  },
+  title: {
+    fontFamily: fonts.body.semibold,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: -0.3,
+  },
+  sub: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  inputGroup: {
+    gap: 14,
+  },
+  badgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontFamily: fonts.body.semibold,
+    fontSize: 10.5,
+  },
+  actionBlock: {
+    marginTop: 'auto',
+    paddingTop: 16,
+  },
+});

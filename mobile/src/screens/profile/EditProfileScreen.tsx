@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
-import { AppAvatar } from '../../components/common/AppAvatar';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { AppInput } from '../../components/common/AppInput';
@@ -8,7 +7,7 @@ import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { SELECTABLE_AVATARS, findAvatar, toServerAvatar } from '../../constants/avatars';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { useMe, useUpdateProfile } from '../../hooks/queries';
 import { useBackGuard } from '../../hooks/useBackGuard';
 import { useTheme } from '../../hooks/useTheme';
@@ -21,8 +20,20 @@ import { usernameError } from '../auth/authValidation';
 
 const BIO_MAX = 160;
 
+/** Avatar presets matching the prototype's 6-item selector grid */
+const PROTOTYPE_AVATARS = [
+  { id: 'av_1', label: 'SP', bg: '#1D4ED8', fg: '#FFFFFF' },
+  { id: 'av_2', label: 'X', bg: '#141518', fg: '#FFFFFF' },
+  { id: 'av_3', label: 'O', bg: '#EFF4FF', fg: '#1D4ED8' },
+  { id: 'av_4', label: 'S', bg: '#15803D', fg: '#FFFFFF' },
+  { id: 'av_5', label: '★', bg: '#B45309', fg: '#FFFFFF' },
+  { id: 'av_custom', label: '◈', bg: '#F1F1EE', fg: '#141518' },
+];
+
 export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () => {
   const c = useTheme();
+  const { height } = useWindowDimensions();
+  const isTall = height >= 780;
   const { back } = useAppNav();
   const me = useMe().data;
   const update = useUpdateProfile();
@@ -88,65 +99,154 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
       title="Edit Profile"
       onBack={back}
       testID="edit-profile-screen"
-      footer={<AppButton testID="profile-save" title="Save Changes" fullWidth loading={update.isPending} disabled={!dirty || !valid} onPress={() => void save()} />}
-    >
-      <View style={{ alignItems: 'center', gap: 12, paddingVertical: 8 }}>
-        <AppAvatar avatarId={avatar} name={displayName} size="xl" activeRing />
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {SELECTABLE_AVATARS.map((av) => (
-            <Pressy
-              key={av.id}
-              testID={`avatar-${av.id}`}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: avatar === av.id }}
-              accessibilityLabel={`Avatar ${av.label}`}
-              onPress={() => setAvatar(av.id)}
-              style={{ padding: 2, borderRadius: 16, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <AppAvatar avatarId={av.id} size="sm" activeRing={avatar === av.id} />
-            </Pressy>
-          ))}
-        </View>
-      </View>
-
-      <AppCard style={{ gap: 12 }}>
-        <AppInput testID="edit-display-name" label="Display Name" value={displayName} onChangeText={setDisplayName} error={displayName !== initial.displayName ? nameErr : null} maxLength={60} />
-        <AppInput
-          testID="edit-username"
-          label="Username"
-          value={username}
-          onChangeText={(t) => {
-            setUsername(t);
-            setServerErr((e) => ({ ...e, username: undefined }));
-          }}
-          error={username !== initial.username || serverErr.username ? userErr : null}
-          hint="3-20 characters: letters, numbers, underscore"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <View style={{ gap: 6 }}>
-          <AppInput
-            testID="edit-bio"
-            label="Player Bio"
-            value={bio}
-            onChangeText={setBio}
-            error={bioErr}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            style={{ minHeight: 70 }}
+      scroll={false}
+      padded={false}
+      footer={
+        <View style={styles.footer}>
+          <AppButton
+            testID="profile-save"
+            title="Save Changes"
+            fullWidth
+            loading={update.isPending}
+            disabled={!dirty || !valid}
+            onPress={() => void save()}
           />
-          <Text testID="bio-counter" style={[type.caption, { color: bio.length > BIO_MAX ? c.danger : c.textSecondary, textAlign: 'right' }]}>
-            {bio.length}/{BIO_MAX}
-          </Text>
         </View>
-      </AppCard>
+      }
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { gap: isTall ? 18 : 14, paddingBottom: 24 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Choose Avatar 6-grid */}
+        <View style={{ gap: 8 }}>
+          <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>CHOOSE AVATAR</Text>
+          <View style={styles.avatarGrid}>
+            {PROTOTYPE_AVATARS.map((av) => {
+              const active = avatar === av.id || (av.id === 'av_1' && !PROTOTYPE_AVATARS.some((p) => p.id === avatar));
+              return (
+                <Pressy
+                  key={av.id}
+                  testID={`avatar-${av.id}`}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Avatar ${av.label}${active ? ', selected' : ''}`}
+                  onPress={() => setAvatar(av.id)}
+                  style={[
+                    styles.avatarCell,
+                    {
+                      backgroundColor: av.bg,
+                      borderColor: active ? c.accent : c.border,
+                      borderWidth: active ? 2 : 1,
+                    },
+                    active && {
+                      shadowColor: c.accent,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.avatarText, { color: av.fg }]}>{av.label}</Text>
+                </Pressy>
+              );
+            })}
+          </View>
+        </View>
 
-      {serverErr.form ? (
-        <Text testID="edit-error" accessibilityRole="alert" style={[type.small, { color: c.danger }]}>
-          {serverErr.form}
-        </Text>
-      ) : null}
+        {/* Profile Inputs */}
+        <AppCard style={{ gap: 14 }}>
+          <AppInput
+            testID="edit-display-name"
+            label="Display Name"
+            value={displayName}
+            onChangeText={setDisplayName}
+            error={displayName !== initial.displayName ? nameErr : null}
+            maxLength={40}
+            placeholder="Your name"
+          />
+
+          <AppInput
+            testID="edit-username"
+            label="Username"
+            value={username}
+            onChangeText={(t) => {
+              setUsername(t);
+              setServerErr((e) => ({ ...e, username: undefined }));
+            }}
+            error={username !== initial.username || serverErr.username ? userErr : null}
+            hint="3-20 characters: letters, numbers, underscore"
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="@username"
+          />
+
+          <View style={{ gap: 6 }}>
+            <AppInput
+              testID="edit-bio"
+              label="Bio"
+              value={bio}
+              onChangeText={setBio}
+              error={bioErr}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              placeholder="Tactics, favorite modes, play style..."
+              style={{ minHeight: 70 }}
+            />
+            <Text
+              testID="bio-counter"
+              style={[
+                type.caption,
+                { color: bio.length > BIO_MAX ? c.danger : c.textSecondary, textAlign: 'right' },
+              ]}
+            >
+              {bio.length}/{BIO_MAX}
+            </Text>
+          </View>
+        </AppCard>
+
+        {serverErr.form ? (
+          <Text testID="edit-error" accessibilityRole="alert" style={[type.small, { color: c.danger }]}>
+            {serverErr.form}
+          </Text>
+        ) : null}
+      </ScrollView>
     </Screen>
   );
 };
+
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  sectionLabel: {
+    fontSize: 10.5,
+    fontFamily: fonts.body.semibold,
+    letterSpacing: 0.8,
+  },
+  avatarGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  avatarCell: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 13,
+    fontFamily: fonts.mono.semibold,
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+});

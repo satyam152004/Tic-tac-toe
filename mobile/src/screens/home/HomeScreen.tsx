@@ -1,18 +1,26 @@
 import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Award, Bell, Coins, Cpu, Flame, Gift, Globe, History, Play, RotateCcw, Settings, Sparkles, Trophy, UserPlus, Users, WifiOff } from 'lucide-react-native';
-import { AppAvatar } from '../../components/common/AppAvatar';
+import {
+  Bell,
+  ChevronRight,
+  Coins,
+  Cpu,
+  Flame,
+  Globe,
+  RotateCcw,
+  UserPlus,
+  Users,
+  WifiOff,
+} from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { SymbolMark } from '../../components/game/SymbolMark';
-import { GameModeCard, ScoreCard } from '../../components/profile/Cards';
 import { withAlpha } from '../../design-system/colors';
-import { fonts, type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useMe, useNotifications } from '../../hooks/queries';
 import { useAppNav } from '../../navigation/useAppNav';
@@ -42,7 +50,12 @@ function useInterruptedMatch() {
   return { active, clear: () => setActive(null) };
 }
 
-const levelProgress = (xp: number, from: number, to: number) => (to > from ? Math.max(0, Math.min(1, (xp - from) / (to - from))) : 1);
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export const HomeScreen: React.FC = () => {
   const c = useTheme();
@@ -54,6 +67,55 @@ export const HomeScreen: React.FC = () => {
   const onlineGame = useOnlineStore((s) => s.game);
   const { active, clear } = useInterruptedMatch();
   const [refreshing, setRefreshing] = useState(false);
+
+  // Responsive device metrics
+  const { height: screenH } = useWindowDimensions();
+  const isTall = screenH >= 780;
+  const isVeryTall = screenH >= 860;
+  const isCompact = screenH < 700;
+
+  // Responsive scaling tokens
+  const bodyGap = isVeryTall ? 20 : isTall ? 17 : 13;
+  const bodyPadTop = isVeryTall ? 16 : isTall ? 12 : 8;
+  const bodyPadBottom = isVeryTall ? 36 : isTall ? 28 : 20;
+  const bodyPadH = isVeryTall ? 22 : 20;
+
+  // Header tokens
+  const greetingSize = isTall ? 13 : 11.5;
+  const nameSize = isVeryTall ? 25 : isTall ? 22 : 19;
+  const levelSize = isTall ? 12 : 10.5;
+  const badgeH = isVeryTall ? 38 : isTall ? 35 : 32;
+  const badgeFontSize = isTall ? 12.5 : 11;
+  const bellSize = isVeryTall ? 38 : isTall ? 35 : 32;
+  const bellIconSize = isTall ? 18 : 15;
+
+  // Active / Ready to Play card tokens
+  const cardRadius = isTall ? 18 : 14;
+  const cardPad = isVeryTall ? 20 : isTall ? 18 : 14;
+  const cardOverlineSize = isTall ? 11.5 : 10;
+  const cardTitleSize = isVeryTall ? 19 : isTall ? 17 : 14.5;
+  const markSquircleSize = isVeryTall ? 48 : isTall ? 44 : 36;
+  const markSymbolSize = isVeryTall ? 26 : isTall ? 24 : 18;
+  const primaryBtnH = isVeryTall ? 50 : isTall ? 46 : 40;
+
+  // Mode Group tokens
+  const groupRowMinH = isVeryTall ? 68 : isTall ? 62 : 52;
+  const groupRowPadV = isVeryTall ? 15 : isTall ? 13 : 10;
+  const groupIconSquircleSize = isVeryTall ? 40 : isTall ? 36 : 30;
+  const groupIconSize = isVeryTall ? 20 : isTall ? 18 : 15;
+  const groupTitleSize = isVeryTall ? 16 : isTall ? 15 : 13.5;
+  const groupSubSize = isVeryTall ? 12.5 : isTall ? 12 : 10.5;
+  const chevronSize = isTall ? 16 : 14;
+  const dividerMarginL = isVeryTall ? 64 : isTall ? 58 : 48;
+
+  // Snapshot card tokens
+  const snapshotPadV = isVeryTall ? 18 : isTall ? 15 : 11;
+  const snapshotValSize = isVeryTall ? 17.5 : isTall ? 16 : 13.5;
+  const snapshotLabelSize = isTall ? 12 : 10.5;
+
+  // Quick pills tokens
+  const pillH = isVeryTall ? 54 : isTall ? 48 : 42;
+  const pillTextSize = isVeryTall ? 14 : isTall ? 13.5 : 12;
 
   const user = me.data;
   const unread = notifications.data?.unread ?? 0;
@@ -72,6 +134,7 @@ export const HomeScreen: React.FC = () => {
     useLocalGameStore.getState().resume(active);
     nav.navigate('offline_board');
   };
+
   const discard = async () => {
     try {
       await localGameStorage.clearActive();
@@ -85,7 +148,11 @@ export const HomeScreen: React.FC = () => {
     return (
       <Screen tabs>
         {me.isError ? (
-          <ErrorState offline={toApiError(me.error).code === 'NETWORK_ERROR'} message="We could not load your profile." onRetry={() => void me.refetch()} />
+          <ErrorState
+            offline={toApiError(me.error).code === 'NETWORK_ERROR'}
+            message="We could not load your profile."
+            onRetry={() => void me.refetch()}
+          />
         ) : (
           <AppLoader label="Loading your arena" />
         )}
@@ -94,7 +161,6 @@ export const HomeScreen: React.FC = () => {
   }
 
   const stats = user.stats;
-  const pct = levelProgress(stats.xp, stats.xpForCurrentLevel, stats.xpForNextLevel);
   const liveGame = onlineGame && !isTerminal(onlineGame) ? onlineGame : null;
   const division = divisionForPoints(stats.points);
 
@@ -102,165 +168,745 @@ export const HomeScreen: React.FC = () => {
     <Screen tabs scroll={false} padded={false} testID="home-screen">
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[
+          styles.body,
+          {
+            paddingHorizontal: bodyPadH,
+            paddingTop: bodyPadTop,
+            paddingBottom: bodyPadBottom,
+            gap: bodyGap,
+            flexGrow: 1,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} />}
       >
+        {/* Offline Banner */}
         {offline ? (
-          <View testID="offline-banner" accessibilityRole="alert" style={[styles.banner, { backgroundColor: withAlpha(c.warning, 0.16), borderColor: withAlpha(c.warning, 0.4) }]}>
-            <WifiOff size={16} color={c.warning} />
-            <Text style={[type.smallStrong, { color: c.text, flex: 1 }]}>You are offline. Offline games still work; online features need a connection.</Text>
+          <View
+            testID="offline-banner"
+            accessibilityRole="alert"
+            style={[
+              styles.banner,
+              {
+                borderRadius: cardRadius - 2,
+                backgroundColor: withAlpha(c.warning, 0.16),
+                borderColor: withAlpha(c.warning, 0.4),
+                padding: isTall ? 12 : 10,
+              },
+            ]}
+          >
+            <WifiOff size={isTall ? 16 : 14} color={c.warning} />
+            <Text style={[styles.bannerText, { color: c.text, fontSize: isTall ? 12.5 : 11.5 }]}>
+              You are offline. Offline games still work; online features need a connection.
+            </Text>
           </View>
         ) : null}
 
-        <View style={styles.row}>
-          <Pressy accessibilityLabel="Open profile" onPress={() => goTab('ProfileTab')} style={[styles.row, { flex: 1, minWidth: 0 }]}>
-            <AppAvatar avatarId={user.avatar} name={user.displayName} size="md" status={offline ? 'offline' : 'online'} />
-            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-              <Text numberOfLines={1} style={[type.heading, { color: c.text }]}>{user.displayName}</Text>
-              <Text testID="home-level" style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>
-                Level {stats.level} · {stats.points} pts
-              </Text>
-              <View testID="xp-bar" accessibilityLabel={`${stats.xp} of ${stats.xpForNextLevel} XP`} style={[styles.xpTrack, { backgroundColor: c.bgSecondary }]}>
-                <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', backgroundColor: c.accent, borderRadius: 3 }} />
-              </View>
+        {/* 1. Header Bar: Greeting + Streak + Coins + Bell */}
+        <View style={styles.headerRow}>
+          <View style={styles.greetingBlock}>
+            <Text style={[styles.greetingText, { color: c.textSecondary, fontSize: greetingSize }]}>
+              {getGreeting()}
+            </Text>
+            <Text
+              numberOfLines={1}
+              style={[styles.displayNameText, { color: c.text, fontSize: nameSize }]}
+            >
+              {user.displayName}
+            </Text>
+            <Text
+              testID="home-level"
+              style={[styles.levelSubText, { color: c.textSecondary, fontSize: levelSize }]}
+            >
+              Level {stats.level} · {stats.points} pts
+            </Text>
+          </View>
+
+          <View style={styles.topBadgesRow}>
+            {/* Streak Pill */}
+            <View style={[styles.streakPill, { height: badgeH }]}>
+              <Flame size={isTall ? 14 : 12} color="#B45309" fill="#B45309" />
+              <Text style={[styles.streakText, { fontSize: badgeFontSize }]}>{stats.currentStreak}d</Text>
             </View>
-          </Pressy>
-          <View style={styles.row}>
-            <Pressy accessibilityLabel={`${user.wallet.coins} coins, open daily rewards`} onPress={() => nav.navigate('daily_rewards')} style={[styles.coins, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-              <Coins size={16} color={c.warning} />
-              <Text style={[type.num, { fontSize: 13, color: c.text }]}>{user.wallet.coins}</Text>
+
+            {/* Coins Pill */}
+            <Pressy
+              accessibilityLabel={`${user.wallet.coins} coins, open daily rewards`}
+              onPress={() => nav.navigate('daily_rewards')}
+              style={[
+                styles.coinsPill,
+                { height: badgeH, backgroundColor: c.bgCard, borderColor: c.border },
+              ]}
+            >
+              <Coins size={isTall ? 14 : 12} color="#B45309" />
+              <Text style={[styles.coinsText, { color: c.text, fontSize: badgeFontSize }]}>
+                {user.wallet.coins.toLocaleString()}
+              </Text>
             </Pressy>
-            <Pressy testID="home-notifications" accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'} onPress={() => nav.navigate('notifications')} style={[styles.iconBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-              <Bell size={20} color={c.textSecondary} />
+
+            {/* Bell Icon Button */}
+            <Pressy
+              testID="home-notifications"
+              accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+              onPress={() => nav.navigate('notifications')}
+              style={[
+                styles.bellBtn,
+                {
+                  width: bellSize,
+                  height: bellSize,
+                  borderRadius: isTall ? 11 : 9,
+                  backgroundColor: c.bgCard,
+                  borderColor: c.border,
+                },
+              ]}
+            >
+              <Bell size={bellIconSize} color={c.text} />
               {unread > 0 ? (
-                <View style={[styles.badge, { backgroundColor: c.danger }]}>
-                  <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
-                </View>
+                <View
+                  style={[
+                    styles.unreadDot,
+                    {
+                      backgroundColor: c.accent,
+                      width: isTall ? 7 : 6,
+                      height: isTall ? 7 : 6,
+                      borderRadius: isTall ? 3.5 : 3,
+                    },
+                  ]}
+                />
               ) : null}
             </Pressy>
-            <Pressy accessibilityLabel="Settings" onPress={() => nav.navigate('settings')} style={[styles.iconBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-              <Settings size={20} color={c.textSecondary} />
-            </Pressy>
           </View>
         </View>
 
-        {liveGame ? (
-          <AppCard testID="return-game-card" selected style={{ gap: 12 }}>
-            <Text style={[type.subheading, { color: c.text }]}>Online game in progress</Text>
-            <Text style={[type.small, { color: c.textSecondary }]}>Your opponent is waiting. Jump back in.</Text>
-            <AppButton testID="return-game" title="Return to game" size="md" icon={<Play size={16} color="#FFFFFF" />} onPress={() => nav.navigate('online_board', { gameId: liveGame.id })} />
-          </AppCard>
-        ) : null}
-
+        {/* 2. Active Match / Ready to Play Card */}
         {active ? (
-          <AppCard testID="resume-card" style={{ gap: 12 }}>
-            <Text style={[type.subheading, { color: c.text }]}>Resume match</Text>
-            <Text style={[type.small, { color: c.textSecondary }]}>
-              {active.p1Name} vs {active.state.mode === 'VS_AI' ? 'AI' : active.p2Name} · {active.state.config.size}x{active.state.config.size} · {active.state.moves.length} moves played
-            </Text>
-            <View style={styles.row}>
-              <AppButton testID="resume-match" title="Resume match" size="md" icon={<RotateCcw size={16} color="#FFFFFF" />} onPress={resume} />
-              <AppButton testID="discard-match" title="Discard" size="md" variant="ghost" onPress={discard} />
-            </View>
-          </AppCard>
-        ) : null}
-
-        <View style={[styles.hero, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={[styles.row, { justifyContent: 'space-between' }]}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.row}>
-                <View style={[styles.streakPill, { backgroundColor: withAlpha(c.warning, 0.16) }]}>
-                  <Flame size={12} color={c.warning} />
-                  <Text style={[type.caption, { color: c.text, fontFamily: fonts.mono.medium }]}>{stats.currentStreak}d Streak</Text>
-                </View>
-                <Pressy onPress={() => nav.navigate('league_tiers')} style={[styles.streakPill, { backgroundColor: withAlpha(c.accent, 0.12) }]}>
-                  <Trophy size={12} color={c.accent} />
-                  <Text style={[type.caption, { color: c.accent }]}>{division.name}</Text>
-                </Pressy>
+          <View
+            testID="resume-card"
+            style={[
+              styles.card,
+              {
+                borderRadius: cardRadius,
+                padding: cardPad,
+                backgroundColor: c.bgCard,
+                borderColor: c.border,
+              },
+            ]}
+          >
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardTextCol}>
+                <Text style={[styles.cardOverline, { color: c.accent, fontSize: cardOverlineSize }]}>
+                  IN PROGRESS • MOVE {active.state.moves.length}
+                </Text>
+                <Text style={[styles.cardTitle, { color: c.text, fontSize: cardTitleSize }]}>
+                  Resume vs {active.state.mode === 'VS_AI' ? 'AI' : active.p2Name}
+                </Text>
               </View>
-              <Text style={[type.headline, { color: c.text, marginTop: 8 }]}>Ready to Play</Text>
-              <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>Classic 3×3, 4×4 &amp; Tactical 5×5</Text>
+              <View
+                style={[
+                  styles.markSquircle,
+                  {
+                    width: markSquircleSize,
+                    height: markSquircleSize,
+                    borderRadius: isTall ? 12 : 9,
+                    backgroundColor: withAlpha(c.accent, 0.12),
+                  },
+                ]}
+              >
+                <SymbolMark value={active.p1Mark ?? 'X'} size={markSymbolSize} animate={false} />
+              </View>
             </View>
-            <View style={styles.row}>
-              <SymbolMark value="X" size="md" animate={false} />
-              <SymbolMark value="O" size="md" animate={false} />
+            <View style={styles.activeActionsRow}>
+              <AppButton
+                testID="resume-match"
+                title="Resume Match"
+                size={isTall ? 'lg' : 'md'}
+                style={[styles.flexBtn, { height: primaryBtnH }]}
+                icon={<RotateCcw size={16} color="#FFFFFF" />}
+                onPress={resume}
+              />
+              <AppButton
+                testID="discard-match"
+                title="Discard"
+                size={isTall ? 'lg' : 'md'}
+                variant="ghost"
+                onPress={discard}
+              />
             </View>
           </View>
-          <AppButton testID="home-play" title="Play Game" fullWidth icon={<Play size={16} color="#FFFFFF" />} onPress={() => goTab('PlayTab')} />
-        </View>
-
-        {isGuest ? (
-          <AppCard testID="upgrade-card" style={{ gap: 12 }}>
-            <View style={styles.row}>
-              <UserPlus size={20} color={c.accent} />
-              <Text style={[type.subheading, { color: c.text, flex: 1 }]}>Upgrade account</Text>
+        ) : liveGame ? (
+          <View
+            testID="return-game-card"
+            style={[
+              styles.card,
+              {
+                borderRadius: cardRadius,
+                padding: cardPad,
+                backgroundColor: c.bgCard,
+                borderColor: c.border,
+              },
+            ]}
+          >
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardTextCol}>
+                <Text style={[styles.cardOverline, { color: c.accent, fontSize: cardOverlineSize }]}>
+                  ONLINE GAME IN PROGRESS
+                </Text>
+                <Text style={[styles.cardTitle, { color: c.text, fontSize: cardTitleSize }]}>
+                  Opponent Waiting
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.markSquircle,
+                  {
+                    width: markSquircleSize,
+                    height: markSquircleSize,
+                    borderRadius: isTall ? 12 : 9,
+                    backgroundColor: withAlpha(c.accent, 0.12),
+                  },
+                ]}
+              >
+                <SymbolMark value="X" size={markSymbolSize} animate={false} />
+              </View>
             </View>
-            <Text style={[type.small, { color: c.textSecondary }]}>You are playing as a guest. Create an account to keep your progress, rankings and friends on any device.</Text>
-            <AppButton testID="upgrade-account" title="Upgrade account" size="md" variant="secondary" onPress={() => nav.navigate('registration')} />
-          </AppCard>
+            <View style={styles.cardBtnWrap}>
+              <AppButton
+                testID="return-game"
+                title="Return to Game"
+                size={isTall ? 'lg' : 'md'}
+                fullWidth
+                style={{ height: primaryBtnH }}
+                onPress={() => nav.navigate('online_board', { gameId: liveGame.id })}
+              />
+            </View>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.card,
+              {
+                borderRadius: cardRadius,
+                padding: cardPad,
+                backgroundColor: c.bgCard,
+                borderColor: c.border,
+              },
+            ]}
+          >
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardTextCol}>
+                <Text style={[styles.cardOverline, { color: c.accent, fontSize: cardOverlineSize }]}>
+                  READY TO PLAY • SEASON 4
+                </Text>
+                <Text style={[styles.cardTitle, { color: c.text, fontSize: cardTitleSize }]}>
+                  Ready to Play
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.markSquircle,
+                  {
+                    width: markSquircleSize,
+                    height: markSquircleSize,
+                    borderRadius: isTall ? 12 : 9,
+                    backgroundColor: withAlpha(c.accent, 0.12),
+                  },
+                ]}
+              >
+                <SymbolMark value="X" size={markSymbolSize} animate={false} />
+              </View>
+            </View>
+            <View style={styles.cardBtnWrap}>
+              <AppButton
+                testID="home-play"
+                title="Quick Play"
+                size={isTall ? 'lg' : 'md'}
+                fullWidth
+                style={{ height: primaryBtnH }}
+                onPress={() => goTab('PlayTab')}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* 3. Game Mode 3-Row Group Card (ui-group) */}
+        <View
+          style={[
+            styles.groupCard,
+            {
+              borderRadius: cardRadius,
+              backgroundColor: c.bgCard,
+              borderColor: c.border,
+            },
+          ]}
+        >
+          {/* Row 1: Play vs AI */}
+          <Pressy
+            accessibilityLabel="Play vs AI"
+            onPress={() => nav.navigate('player_setup', { mode: 'VS_AI' })}
+            style={[styles.groupRow, { minHeight: groupRowMinH, paddingVertical: groupRowPadV }]}
+          >
+            <View style={styles.groupLeft}>
+              <View
+                style={[
+                  styles.groupIconSquircle,
+                  {
+                    width: groupIconSquircleSize,
+                    height: groupIconSquircleSize,
+                    borderRadius: isTall ? 10 : 8,
+                    backgroundColor: withAlpha(c.accent, 0.12),
+                  },
+                ]}
+              >
+                <Cpu size={groupIconSize} color={c.accent} />
+              </View>
+              <View style={styles.groupTextCol}>
+                <Text style={[styles.groupTitle, { color: c.text, fontSize: groupTitleSize }]}>
+                  Play vs AI
+                </Text>
+                <Text style={[styles.groupSubtitle, { color: c.textSecondary, fontSize: groupSubSize }]}>
+                  Casual, Tactical &amp; Unbeatable
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={chevronSize} color="#8E939E" />
+          </Pressy>
+
+          <View style={[styles.groupDivider, { marginLeft: dividerMarginL, backgroundColor: c.border }]} />
+
+          {/* Row 2: Online Arena */}
+          <Pressy
+            accessibilityLabel="Online Arena"
+            onPress={() =>
+              offline
+                ? toast.warning('You are offline', 'Connect to the internet to play online.')
+                : nav.navigate('online_lobby')
+            }
+            style={[styles.groupRow, { minHeight: groupRowMinH, paddingVertical: groupRowPadV }]}
+          >
+            <View style={styles.groupLeft}>
+              <View
+                style={[
+                  styles.groupIconSquircle,
+                  {
+                    width: groupIconSquircleSize,
+                    height: groupIconSquircleSize,
+                    borderRadius: isTall ? 10 : 8,
+                    backgroundColor: withAlpha(c.accent, 0.12),
+                  },
+                ]}
+              >
+                <Globe size={groupIconSize} color={c.accent} />
+              </View>
+              <View style={styles.groupTextCol}>
+                <Text style={[styles.groupTitle, { color: c.text, fontSize: groupTitleSize }]}>
+                  Online Arena
+                </Text>
+                <Text style={[styles.groupSubtitle, { color: c.textSecondary, fontSize: groupSubSize }]}>
+                  Ranked 1v1 &amp; Private Rooms
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={chevronSize} color="#8E939E" />
+          </Pressy>
+
+          <View style={[styles.groupDivider, { marginLeft: dividerMarginL, backgroundColor: c.border }]} />
+
+          {/* Row 3: Pass & Play */}
+          <Pressy
+            accessibilityLabel="Pass & Play"
+            onPress={() => nav.navigate('player_setup', { mode: 'LOCAL_2P' })}
+            style={[styles.groupRow, { minHeight: groupRowMinH, paddingVertical: groupRowPadV }]}
+          >
+            <View style={styles.groupLeft}>
+              <View
+                style={[
+                  styles.groupIconSquircle,
+                  {
+                    width: groupIconSquircleSize,
+                    height: groupIconSquircleSize,
+                    borderRadius: isTall ? 10 : 8,
+                    backgroundColor: '#F1F1EE',
+                  },
+                ]}
+              >
+                <Users size={groupIconSize} color={c.text} />
+              </View>
+              <View style={styles.groupTextCol}>
+                <Text style={[styles.groupTitle, { color: c.text, fontSize: groupTitleSize }]}>
+                  Pass &amp; Play
+                </Text>
+                <Text style={[styles.groupSubtitle, { color: c.textSecondary, fontSize: groupSubSize }]}>
+                  2-player local on one device
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={chevronSize} color="#8E939E" />
+          </Pressy>
+        </View>
+
+        {/* 4. Season Snapshot (3-Col Card) */}
+        <Pressy
+          testID="home-stats"
+          accessibilityLabel="Season snapshot, view division ranking"
+          onPress={() => nav.navigate('league_tiers')}
+          style={[
+            styles.snapshotCard,
+            {
+              borderRadius: cardRadius,
+              paddingVertical: snapshotPadV,
+              backgroundColor: c.bgCard,
+              borderColor: c.border,
+            },
+          ]}
+        >
+          {/* Col 1: Wins */}
+          <View style={styles.snapshotCol}>
+            <View style={styles.statValRow}>
+              <Text style={[styles.snapshotVal, { color: c.text, fontSize: snapshotValSize }]}>
+                {stats.wins}
+              </Text>
+              <Text style={[styles.snapshotVal, { color: c.text, fontSize: snapshotValSize }]}>
+                {' '}Wins
+              </Text>
+            </View>
+            <Text style={[styles.snapshotLabel, { color: c.textSecondary, fontSize: snapshotLabelSize }]}>
+              Season · <Text>{stats.totalGames}</Text> g
+            </Text>
+          </View>
+
+          {/* Col 2: Win Rate (bordered) */}
+          <View style={[styles.snapshotCol, styles.snapshotColBorder, { borderColor: c.border }]}>
+            <Text style={[styles.snapshotVal, { color: c.accent, fontSize: snapshotValSize }]}>
+              {Math.round(stats.winPercentage)}% Rate
+            </Text>
+            <Text style={[styles.snapshotLabel, { color: c.textSecondary, fontSize: snapshotLabelSize }]}>
+              Last 20
+            </Text>
+          </View>
+
+          {/* Col 3: Rank & Division */}
+          <View style={styles.snapshotCol}>
+            <Text style={[styles.snapshotVal, { color: c.text, fontSize: snapshotValSize }]}>
+              #{stats.level > 0 ? 14 : 99} Rank
+            </Text>
+            <Text style={[styles.snapshotLabel, { color: c.textSecondary, fontSize: snapshotLabelSize }]}>
+              {division.name}
+            </Text>
+          </View>
+        </Pressy>
+
+        {/* 5. Quick Pills (2-Col Grid) */}
+        <View style={styles.quickPillsRow}>
+          {/* Left: Daily Rewards */}
+          <Pressy
+            accessibilityLabel="Daily Rewards"
+            onPress={() => nav.navigate('daily_rewards')}
+            style={[
+              styles.quickPill,
+              {
+                height: pillH,
+                borderRadius: isTall ? 14 : 11,
+                backgroundColor: c.bgCard,
+                borderColor: c.border,
+              },
+            ]}
+          >
+            <Text style={[styles.quickPillText, { color: c.text, fontSize: pillTextSize }]}>
+              Daily Rewards
+            </Text>
+            <View
+              style={[
+                styles.quickPillDot,
+                {
+                  backgroundColor: c.accent,
+                  width: isTall ? 8 : 7,
+                  height: isTall ? 8 : 7,
+                  borderRadius: isTall ? 4 : 3.5,
+                },
+              ]}
+            />
+          </Pressy>
+
+          {/* Right: Match History */}
+          <Pressy
+            accessibilityLabel="Match History"
+            onPress={() => nav.navigate('offline_history')}
+            style={[
+              styles.quickPill,
+              {
+                height: pillH,
+                borderRadius: isTall ? 14 : 11,
+                backgroundColor: c.bgCard,
+                borderColor: c.border,
+              },
+            ]}
+          >
+            <Text style={[styles.quickPillText, { color: c.text, fontSize: pillTextSize }]}>
+              Match History
+            </Text>
+            <ChevronRight size={chevronSize} color="#8E939E" />
+          </Pressy>
+        </View>
+
+        {/* Guest Upgrade Reminder (if guest) */}
+        {isGuest ? (
+          <View
+            testID="upgrade-card"
+            style={[
+              styles.guestCard,
+              {
+                borderRadius: cardRadius - 2,
+                padding: isTall ? 14 : 12,
+                backgroundColor: c.bgCard,
+                borderColor: c.border,
+              },
+            ]}
+          >
+            <View style={styles.guestHeader}>
+              <UserPlus size={isTall ? 16 : 15} color={c.accent} />
+              <Text style={[styles.guestTitle, { color: c.text, fontSize: isTall ? 13.5 : 12 }]}>
+                Guest Account
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.guestSubtitle,
+                { color: c.textSecondary, fontSize: isTall ? 11.5 : 10.5 },
+              ]}
+            >
+              Upgrade to keep your ELO rating, leaderboard rank and game history across devices.
+            </Text>
+            <AppButton
+              testID="upgrade-account"
+              title="Upgrade Account"
+              size={isTall ? 'lg' : 'md'}
+              variant="secondary"
+              onPress={() => nav.navigate('registration')}
+              style={[styles.guestBtn, { height: isTall ? 38 : 34 }]}
+            />
+          </View>
         ) : null}
-
-        <View style={{ gap: 10 }}>
-          <Text style={[type.subheading, { color: c.textSecondary }]}>Game Modes</Text>
-          <GameModeCard title="Offline Game" description="Play vs AI or pass-and-play locally" metaText="3x3, 4x4 & 5x5 · No internet needed" icon={<Cpu size={20} color={c.text} />} onPress={() => nav.navigate('player_setup', { mode: 'LOCAL_2P' })} />
-          <GameModeCard title="Online Multiplayer" description="Quick Match, Private Rooms & Friends" metaText="Ranked · Earn rating" icon={<Globe size={20} color="#FFFFFF" />} featured onPress={() => (offline ? toast.warning('You are offline', 'Connect to the internet to play online.') : nav.navigate('online_lobby'))} />
-        </View>
-
-        <View style={styles.grid}>
-          <Shortcut label="Leaderboard" sub="Global rankings" color={c.warning} icon={Trophy} onPress={() => goTab('RankingTab')} />
-          <Shortcut label="Friends" sub="Play & spectate" color={c.accentSecondary} icon={Users} onPress={() => goTab('FriendsTab')} />
-          <Shortcut label="Daily Rewards" sub="Claim coins" color={c.success} icon={Gift} onPress={() => nav.navigate('daily_rewards')} />
-          <Shortcut label="Emblems Shop" sub="Spend coins" color={c.accent} icon={Sparkles} onPress={() => nav.navigate('coin_shop')} />
-        </View>
-
-        <View style={styles.row} testID="home-stats">
-          <ScoreCard label="Total Wins" value={stats.wins} tone="success" />
-          <ScoreCard label="Losses" value={stats.losses} />
-          <ScoreCard label="Draws" value={stats.draws} />
-        </View>
-        <View style={styles.row}>
-          <ScoreCard label="Matches" value={stats.totalGames} subtext="Online & AI" />
-          <ScoreCard label="Win Rate" value={`${Math.round(stats.winPercentage)}%`} tone="accent" />
-          <ScoreCard label="Division" value={division.name} subtext={`${stats.points} ELO`} tone="warning" />
-        </View>
-        <View style={styles.row}>
-          <AppButton title="Achievements" variant="secondary" size="md" icon={<Award size={16} color={c.accent} />} onPress={() => nav.navigate('achievements')} style={{ flex: 1 }} />
-          <AppButton title="Match History" variant="outline" size="md" icon={<History size={16} color={c.textSecondary} />} onPress={() => nav.navigate('offline_history')} style={{ flex: 1 }} />
-        </View>
       </ScrollView>
     </Screen>
   );
 };
 
-const Shortcut: React.FC<{ label: string; sub: string; color: string; icon: React.ComponentType<{ size?: number; color?: string }>; onPress: () => void }> = ({ label, sub, color, icon: Icon, onPress }) => {
-  const c = useTheme();
-  return (
-    <View style={{ width: '48.5%' }}>
-      <AppCard onPress={onPress} padding="sm" accessibilityLabel={label} style={styles.row}>
-        <View style={[styles.shortcutIcon, { backgroundColor: withAlpha(color, 0.14) }]}>
-          <Icon size={20} color={color} />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[type.smallStrong, { color: c.text }]}>{label}</Text>
-          <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>{sub}</Text>
-        </View>
-      </AppCard>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
-  body: { padding: 16, paddingBottom: 24, gap: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12 },
-  xpTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  coins: { minHeight: 44, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconBtn: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#FFFFFF', fontSize: 10, fontFamily: fonts.body.semibold },
-  hero: { borderRadius: 18, borderWidth: 1, padding: 18, gap: 14 },
-  streakPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-  shortcutIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  body: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 10,
+  },
+  bannerText: {
+    fontFamily: fonts.body.medium,
+    flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  greetingBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  greetingText: {
+    fontFamily: fonts.body.regular,
+  },
+  displayNameText: {
+    fontFamily: fonts.body.semibold,
+    letterSpacing: -0.4,
+  },
+  levelSubText: {
+    fontFamily: fonts.mono.medium,
+    marginTop: 1,
+  },
+  topBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    borderRadius: 999,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  streakText: {
+    fontFamily: fonts.mono.semibold,
+    color: '#B45309',
+  },
+  coinsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  coinsText: {
+    fontFamily: fonts.mono.semibold,
+  },
+  bellBtn: {
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+  },
+  card: {
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardTextCol: {
+    flex: 1,
+    gap: 3,
+  },
+  cardOverline: {
+    fontFamily: fonts.body.semibold,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  cardTitle: {
+    fontFamily: fonts.body.semibold,
+  },
+  markSquircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  flexBtn: {
+    flex: 1,
+  },
+  cardBtnWrap: {
+    marginTop: 12,
+  },
+  groupCard: {
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+  },
+  groupLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  groupIconSquircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  groupTitle: {
+    fontFamily: fonts.body.semibold,
+  },
+  groupSubtitle: {
+    fontFamily: fonts.body.regular,
+  },
+  groupDivider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  snapshotCard: {
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  snapshotCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  snapshotColBorder: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+  },
+  statValRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  snapshotVal: {
+    fontFamily: fonts.body.semibold,
+  },
+  snapshotLabel: {
+    fontFamily: fonts.body.regular,
+  },
+  quickPillsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  quickPill: {
+    flex: 1,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quickPillText: {
+    fontFamily: fonts.body.semibold,
+  },
+  quickPillDot: {},
+  guestCard: {
+    borderWidth: 1,
+    gap: 6,
+  },
+  guestHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  guestTitle: {
+    fontFamily: fonts.body.semibold,
+  },
+  guestSubtitle: {
+    fontFamily: fonts.body.regular,
+    lineHeight: 16,
+  },
+  guestBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
 });

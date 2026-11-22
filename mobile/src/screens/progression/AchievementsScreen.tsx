@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { Award, Lock, Zap } from 'lucide-react-native';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Award, Check, Trophy } from 'lucide-react-native';
 import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
@@ -16,43 +16,58 @@ import type { AchievementItem } from '../../services/api/types';
 
 const titleCase = (s: string) => s.toLowerCase().replace(/(^|[_\s])(\w)/g, (_m, sep: string, ch: string) => (sep ? ' ' : '') + ch.toUpperCase());
 
-/**
- * Local variant of the shared AchievementCard: achievements pay XP (and ranking points), never coins,
- * so the reward chip uses a bolt icon instead of the shared card's coin.
- */
-const XpAchievementCard: React.FC<{ item: AchievementItem }> = ({ item: a }) => {
+const AchievementRow: React.FC<{ item: AchievementItem }> = ({ item: a }) => {
   const c = useTheme();
   const pct = Math.min(100, Math.round((a.progress / Math.max(1, a.target)) * 100));
+  const done = a.unlocked || pct >= 100;
+
   return (
-    <AppCard selected={a.unlocked} testID={`achievement-${a.key}`} style={{ gap: 10 }} accessibilityLabel={`${a.name}, ${a.unlocked ? 'unlocked' : `${pct} percent`}`}>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
+    <View
+      testID={`achievement-${a.key}`}
+      accessibilityLabel={`${a.name}, ${done ? 'unlocked' : `${pct}% completed`}`}
+      style={[styles.row, { borderBottomColor: c.border }]}
+    >
+      <View style={styles.rowTop}>
+        <View style={styles.rowLeft}>
+          <View
+            style={[
+              styles.iconBox,
+              {
+                backgroundColor: done ? '#F0FDF4' : '#EFF4FF',
+                borderColor: done ? '#DCFCE7' : '#DBEAFE',
+              },
+            ]}
+          >
+            {done ? <Check size={16} color="#15803D" strokeWidth={2.5} /> : <Trophy size={16} color="#1D4ED8" />}
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} style={[styles.itemTitle, { color: c.text }]}>
+              {a.name}
+            </Text>
+            <Text numberOfLines={1} style={[styles.itemDesc, { color: c.textSecondary }]}>
+              {a.description}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.itemProg, { color: c.textSecondary }]}>
+          {Math.min(a.progress, a.target)}/{a.target}
+        </Text>
+      </View>
+
+      {/* Progress Track */}
+      <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
         <View
-          style={{
-            width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center',
-            backgroundColor: a.unlocked ? c.success + '33' : c.bgElevated, borderColor: a.unlocked ? c.success + '66' : c.border,
-          }}
-        >
-          {a.unlocked ? <Award size={20} color={c.success} /> : <Lock size={20} color={c.textSecondary} />}
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[type.subheading, { color: c.text }]}>{a.name}</Text>
-          <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>{a.description}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 4, alignItems: 'flex-start' }}>
-          <Zap size={14} color={c.warning} />
-          <Text style={[type.num, { fontSize: 12, color: c.warning }]}>+{a.reward.xp} XP</Text>
-        </View>
+          style={[
+            styles.fill,
+            {
+              width: `${Math.max(4, pct)}%`,
+              backgroundColor: done ? '#15803D' : '#1D4ED8',
+            },
+          ]}
+        />
       </View>
-      <View style={{ gap: 4 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={[type.caption, { color: c.textSecondary }]}>{titleCase(a.category)} · {a.unlocked ? 'Unlocked' : 'In Progress'}</Text>
-          <Text style={[type.caption, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{Math.min(a.progress, a.target)}/{a.target}</Text>
-        </View>
-        <View style={{ height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: c.bgSecondary }}>
-          <View style={{ width: `${pct}%`, height: '100%', borderRadius: 4, backgroundColor: a.unlocked ? c.success : c.accent }} />
-        </View>
-      </View>
-    </AppCard>
+    </View>
   );
 };
 
@@ -68,16 +83,32 @@ export const AchievementsScreen: React.FC<RootScreenProps<'achievements'>> = () 
   const shown = category === 'All' ? items : items.filter((i) => i.category === category);
   const err = q.error && !q.data ? toApiError(q.error) : null;
 
+  const total = q.data?.total ?? items.length;
+  const unlockedCount = q.data?.unlockedCount ?? items.filter((i) => i.unlocked).length;
+  const overallPct = total > 0 ? Math.round((unlockedCount / total) * 100) : 0;
+
   const onRefresh = async () => {
     setRefreshing(true);
     await q.refetch();
     setRefreshing(false);
   };
 
-  const subtitle = q.data ? `${q.data.unlockedCount} of ${q.data.total} unlocked` : undefined;
-
   return (
-    <Screen title="Achievements" subtitle={subtitle} onBack={back} scroll={false} padded={false}>
+    <Screen
+      title="Achievements"
+      onBack={back}
+      scroll={false}
+      padded={false}
+      rightAction={
+        q.data ? (
+          <View style={styles.headerRight}>
+            <Text style={[styles.headerCount, { color: c.accent }]}>
+              {unlockedCount} / {total}
+            </Text>
+          </View>
+        ) : undefined
+      }
+    >
       {err ? (
         <View style={{ padding: 16 }}>
           <ErrorState offline={err.code === 'NETWORK_ERROR'} message={friendlyMessage(err)} onRetry={() => void q.refetch()} />
@@ -89,33 +120,150 @@ export const AchievementsScreen: React.FC<RootScreenProps<'achievements'>> = () 
           testID="achievement-list"
           data={shown}
           keyExtractor={(i) => i.key}
-          renderItem={({ item }) => <XpAchievementCard item={item} />}
+          renderItem={({ item }) => <AchievementRow item={item} />}
           ListHeaderComponent={
-            categories.length > 1 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} style={{ marginBottom: 4 }}>
-                {categories.map((cat) => {
-                  const active = cat === category;
-                  return (
-                    <Pressy
-                      key={cat}
-                      testID={`ach-filter-${cat}`}
-                      accessibilityLabel={cat === 'All' ? 'All' : titleCase(cat)}
-                      accessibilityState={{ selected: active }}
-                      onPress={() => setCategory(cat)}
-                      style={{ minHeight: 38, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center', backgroundColor: active ? c.accent : c.bgCard, borderWidth: active ? 0 : 1, borderColor: c.border }}
-                    >
-                      <Text style={[type.smallStrong, { color: active ? '#fff' : c.textSecondary }]}>{cat === 'All' ? 'All' : titleCase(cat)}</Text>
-                    </Pressy>
-                  );
-                })}
-              </ScrollView>
-            ) : undefined
+            <View style={{ gap: 12, marginBottom: 8 }}>
+              {/* Overall Completion Card */}
+              <AppCard padding="md" style={styles.overviewCard}>
+                <View style={styles.overviewHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Award size={18} color={c.accent} />
+                    <Text style={[styles.overviewTitle, { color: c.text }]}>Overall Completion</Text>
+                  </View>
+                  <Text style={[styles.overviewPct, { color: c.accent }]}>{overallPct}%</Text>
+                </View>
+                <View style={[styles.overviewTrack, { backgroundColor: c.bgSecondary }]}>
+                  <View style={[styles.overviewFill, { width: `${Math.max(2, overallPct)}%`, backgroundColor: c.accent }]} />
+                </View>
+              </AppCard>
+
+              {/* Category Pills */}
+              {categories.length > 1 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  {categories.map((cat) => {
+                    const active = cat === category;
+                    return (
+                      <Pressy
+                        key={cat}
+                        testID={`ach-filter-${cat}`}
+                        accessibilityLabel={cat === 'All' ? 'All' : titleCase(cat)}
+                        onPress={() => setCategory(cat)}
+                        style={[
+                          styles.filterChip,
+                          {
+                            backgroundColor: active ? c.accent : c.bgCard,
+                            borderColor: active ? c.accent : c.border,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.filterChipText, { color: active ? '#FFFFFF' : c.textSecondary }]}>
+                          {cat === 'All' ? 'All' : titleCase(cat)}
+                        </Text>
+                      </Pressy>
+                    );
+                  })}
+                </ScrollView>
+              ) : null}
+            </View>
           }
           ListEmptyComponent={<EmptyState title="No achievements yet" description="Play games to start unlocking achievements." />}
-          contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={c.accent} />}
         />
       )}
     </Screen>
   );
 };
+
+const styles = StyleSheet.create({
+  headerRight: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  headerCount: {
+    fontSize: 12,
+    fontFamily: fonts.mono.semibold,
+  },
+  overviewCard: {
+    gap: 10,
+  },
+  overviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overviewTitle: {
+    fontSize: 13,
+    fontFamily: fonts.body.semibold,
+  },
+  overviewPct: {
+    fontSize: 12,
+    fontFamily: fonts.mono.semibold,
+  },
+  overviewTrack: {
+    height: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  overviewFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  filterChip: {
+    minHeight: 32,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 11.5,
+    fontFamily: fonts.body.semibold,
+  },
+  row: {
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  rowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  rowLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginRight: 10,
+  },
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemTitle: {
+    fontSize: 12.5,
+    fontFamily: fonts.body.semibold,
+  },
+  itemDesc: {
+    fontSize: 10.5,
+    marginTop: 1,
+  },
+  itemProg: {
+    fontSize: 11,
+    fontFamily: fonts.mono.medium,
+  },
+  track: {
+    height: 4,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+});

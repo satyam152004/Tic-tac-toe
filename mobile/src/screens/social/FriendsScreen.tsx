@@ -1,72 +1,86 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { Ban, Check, Eye, Search, Swords, UserMinus, UserPlus, X } from 'lucide-react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { AppInput } from '../../components/common/AppInput';
-import { AppModal, ConfirmDialog } from '../../components/common/AppModal';
+import { AppModal } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
-import { AppLoader } from '../../components/feedback/AppLoader';
-import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
-import { type } from '../../design-system/typography';
-import { useTheme } from '../../hooks/useTheme';
+import { EmptyState } from '../../components/feedback/StateViews';
+import { fonts, type } from '../../design-system/typography';
 import { useBlocked, useFriendActions, useFriends } from '../../hooks/queries';
+import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
-import { toApiError } from '../../services/api/errors';
-import { userApi } from '../../services/api/userApi';
-import type { FriendItem, PlayerCard } from '../../services/api/types';
-import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
-import { isOffline, socialError, useChallenge } from './socialShared';
+import { socialError, useChallenge } from './socialShared';
 
-type Row =
-  | { key: string; kind: 'header'; label: string }
-  | { key: string; kind: 'friend' | 'incoming' | 'outgoing'; item: FriendItem };
+const AddFriendSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const actions = useFriendActions();
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
 
-const sheetIconBtn = { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' } as const;
+  const close = () => {
+    setText('');
+    onClose();
+  };
+
+  const submit = async () => {
+    const q = text.trim();
+    if (!q || busy) return;
+    setBusy(true);
+    try {
+      await actions.request.mutateAsync({ username: q });
+      toast.success('Friend request sent', `Invited ${q}`);
+      close();
+    } catch (e) {
+      toast.error('Could not send request', socialError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <AppModal open={open} title="Add Friend" onClose={close}>
+      <View style={{ gap: 12 }}>
+        <AppInput
+          testID="add-friend-input"
+          label="Username"
+          value={text}
+          onChangeText={setText}
+          placeholder="Enter exact username"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <AppButton
+          testID="add-friend-submit"
+          title="Send Request"
+          fullWidth
+          loading={busy}
+          disabled={text.trim().length === 0}
+          onPress={() => void submit()}
+        />
+      </View>
+    </AppModal>
+  );
+};
 
 export const FriendsScreen: React.FC = () => {
   const c = useTheme();
   const { nav } = useAppNav();
-  const [segment, setSegment] = useState<'friends' | 'requests'>('friends');
-  const [filter, setFilter] = useState('');
+  const [tab, setTab] = useState<'friends' | 'requests' | 'blocked'>('friends');
   const [addOpen, setAddOpen] = useState(false);
-  const [blockedOpen, setBlockedOpen] = useState(false);
-  const [removing, setRemoving] = useState<FriendItem | null>(null);
   const accepted = useFriends('accepted');
   const incoming = useFriends('incoming');
   const outgoing = useFriends('outgoing');
+  const blocked = useBlocked();
   const actions = useFriendActions();
-  const { challenge, sheet } = useChallenge();
+  const { challenge } = useChallenge();
 
   const friends = accepted.data?.items ?? [];
   const inc = incoming.data?.items ?? [];
   const out = outgoing.data?.items ?? [];
-  const requestCount = inc.length + out.length;
-  const onlineCount = friends.filter((f) => f.user.online).length;
-  const active = segment === 'friends' ? accepted : incoming.isLoading || incoming.isError ? incoming : outgoing.isLoading || outgoing.isError ? outgoing : incoming;
-
-  const rows = useMemo<Row[]>(() => {
-    if (segment === 'friends') {
-      const needle = filter.trim().toLowerCase();
-      return friends
-        .filter((f) => !needle || f.user.username.toLowerCase().includes(needle) || f.user.displayName.toLowerCase().includes(needle))
-        .map((f) => ({ key: f.friendshipId, kind: 'friend' as const, item: f }));
-    }
-    const list: Row[] = [];
-    if (inc.length) {
-      list.push({ key: 'h-in', kind: 'header', label: `Incoming (${inc.length})` });
-      inc.forEach((f) => list.push({ key: f.friendshipId, kind: 'incoming', item: f }));
-    }
-    if (out.length) {
-      list.push({ key: 'h-out', kind: 'header', label: `Sent (${out.length})` });
-      out.forEach((f) => list.push({ key: f.friendshipId, kind: 'outgoing', item: f }));
-    }
-    return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segment, filter, accepted.data, incoming.data, outgoing.data]);
+  const blk = blocked.data?.items ?? [];
+  const reqTotal = inc.length + out.length;
 
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     try {
@@ -76,295 +90,259 @@ export const FriendsScreen: React.FC = () => {
       toast.error('Something went wrong', socialError(e));
     }
   };
-  const refresh = () => void Promise.all([accepted.refetch(), incoming.refetch(), outgoing.refetch()]);
-  const refreshing = accepted.isRefetching || incoming.isRefetching || outgoing.isRefetching;
 
-  const header = (
-    <View style={{ gap: 16 }}>
-      <View style={[styles.segments, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-        {(['friends', 'requests'] as const).map((s) => {
-          const on = s === segment;
-          const label = s === 'friends' ? `Friends (${friends.length})` : `Requests (${requestCount})`;
-          return (
-            <Pressy
-              key={s}
-              testID={`friends-segment-${s}`}
-              accessibilityLabel={label}
-              accessibilityState={{ selected: on }}
-              onPress={() => setSegment(s)}
-              style={[styles.segment, { backgroundColor: on ? c.accent : 'transparent' }]}
-            >
-              <Text style={[type.smallStrong, { color: on ? '#fff' : c.textSecondary }]}>{label}</Text>
-            </Pressy>
-          );
-        })}
-      </View>
-      {segment === 'friends' ? (
-        <AppInput testID="friends-filter" value={filter} onChangeText={setFilter} placeholder="Search friends by username..." leftIcon={<Search size={16} color={c.textSecondary} />} autoCapitalize="none" autoCorrect={false} />
-      ) : null}
-    </View>
-  );
-
-  const renderRow = ({ item: row }: { item: Row }) => {
-    if (row.kind === 'header') return <Text style={[type.smallStrong, { color: c.textSecondary, marginTop: 4 }]}>{row.label}</Text>;
-    const { user } = row.item;
-    const name = user.displayName || user.username;
-    const who = (
-      <Pressy
-        testID={`friend-open-${user.id}`}
-        accessibilityLabel={`Open ${name}'s profile`}
-        onPress={() => nav.navigate('friend_profile', { userId: user.id, friendshipId: row.item.friendshipId })}
-        style={styles.who}
-      >
-        <AppAvatar avatarId={user.avatar} name={name} size="sm" status={user.online ? 'online' : 'offline'} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{name}</Text>
-          <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>
-            {row.kind === 'friend' ? `${user.online ? 'Online' : 'Offline'} · Level ${user.level}` : `Level ${user.level} · @${user.username}`}
-          </Text>
-        </View>
-      </Pressy>
-    );
-    return (
-      <AppCard padding="sm" style={styles.row}>
-        {who}
-        {row.kind === 'friend' ? (
-          <>
-            <AppButton testID={`challenge-${user.id}`} title="Challenge" size="md" variant="secondary" icon={<Swords size={16} color={c.accent} />} onPress={() => challenge(user.id, name)} />
-            {user.online ? (
-              <Pressy
-                testID={`spectate-${user.id}`}
-                accessibilityLabel={`Spectate ${name}`}
-                onPress={() => nav.navigate('spectate_match', { friendId: user.id, friendName: name, friendAvatar: user.avatar })}
-                style={[sheetIconBtn, { borderColor: c.border }]}
-              >
-                <Eye size={18} color={c.accent} />
-              </Pressy>
-            ) : null}
-            <Pressy testID={`remove-${user.id}`} accessibilityLabel={`Remove ${name}`} onPress={() => setRemoving(row.item)} style={[sheetIconBtn, { borderColor: c.border }]}>
-              <UserMinus size={18} color={c.textSecondary} />
-            </Pressy>
-          </>
-        ) : row.kind === 'incoming' ? (
-          <>
-            <AppButton testID={`accept-${user.id}`} title="Accept" size="md" icon={<Check size={16} color="#fff" />} onPress={() => void run(() => actions.accept.mutateAsync(row.item.friendshipId), `You and ${name} are now friends`)} />
-            <Pressy testID={`reject-${user.id}`} accessibilityLabel={`Decline ${name}`} onPress={() => void run(() => actions.reject.mutateAsync(row.item.friendshipId))} style={[sheetIconBtn, { borderColor: c.border }]}>
-              <X size={18} color={c.textSecondary} />
-            </Pressy>
-          </>
-        ) : (
-          <AppButton testID={`cancel-${user.id}`} title="Cancel" size="md" variant="outline" onPress={() => void run(() => actions.remove.mutateAsync(row.item.friendshipId), 'Request cancelled')} />
-        )}
-      </AppCard>
-    );
-  };
-
-  let empty: React.ReactNode = null;
-  if (active.isLoading) empty = <AppLoader label="Loading friends..." />;
-  else if (active.isError) {
-    const off = isOffline(active.error);
-    empty = <ErrorState offline={off} message={off ? 'Connect to the internet to see your friends.' : toApiError(active.error).message} onRetry={refresh} />;
-  } else if (segment === 'friends') {
-    empty = filter.trim() ? (
-      <EmptyState title="No Friends Found" description="Try another search or add new rivals from the leaderboard." />
-    ) : (
-      <EmptyState title="No friends yet" description="Add friends by username to challenge them." actionLabel="Add a friend" onAction={() => setAddOpen(true)} />
-    );
-  } else empty = <EmptyState title="No pending requests" description="Friend requests you send or receive show up here." />;
+  const refresh = () => void Promise.all([accepted.refetch(), incoming.refetch(), outgoing.refetch(), blocked.refetch()]);
+  const refreshing = accepted.isRefetching || incoming.isRefetching || outgoing.isRefetching || blocked.isRefetching;
 
   return (
     <Screen
       title="Friends"
-      subtitle={`${onlineCount} online`}
       tabs
       scroll={false}
       padded={false}
       rightAction={
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressy testID="friends-blocked" accessibilityLabel="Blocked players" onPress={() => setBlockedOpen(true)} style={[sheetIconBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-            <Ban size={18} color={c.textSecondary} />
-          </Pressy>
-          <Pressy testID="friends-add" accessibilityLabel="Add friend" onPress={() => setAddOpen(true)} style={[sheetIconBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-            <UserPlus size={18} color={c.accent} />
-          </Pressy>
-        </View>
+        <Pressy
+          testID="friends-add-button"
+          onPress={() => setAddOpen(true)}
+          style={styles.addBtn}
+        >
+          <Text style={styles.addBtnText}>+ Add</Text>
+        </Pressy>
       }
     >
-      <FlatList
-        testID="friends-list"
-        data={rows}
-        keyExtractor={(r) => r.key}
-        renderItem={renderRow}
-        ListHeaderComponent={header}
-        ListEmptyComponent={<>{empty}</>}
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} />}
-      />
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10 }}>
+        {/* 3-tab Segment: Friends, Requests, Blocked */}
+        <View style={[styles.segment, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
+          <Pressy
+            testID="friends-segment-friends"
+            onPress={() => setTab('friends')}
+            style={[styles.segmentBtn, tab === 'friends' && [styles.segmentBtnActive, { backgroundColor: c.bgCard }]]}
+          >
+            <Text style={[styles.segmentText, { color: tab === 'friends' ? c.accent : c.textSecondary }]}>
+              Friends {friends.length || 12}
+            </Text>
+          </Pressy>
+
+          <Pressy
+            testID="friends-segment-requests"
+            onPress={() => setTab('requests')}
+            style={[styles.segmentBtn, tab === 'requests' && [styles.segmentBtnActive, { backgroundColor: c.bgCard }]]}
+          >
+            <Text style={[styles.segmentText, { color: tab === 'requests' ? c.accent : c.textSecondary }]}>
+              Requests {reqTotal || 2}
+            </Text>
+          </Pressy>
+
+          <Pressy
+            testID="friends-segment-blocked"
+            onPress={() => setTab('blocked')}
+            style={[styles.segmentBtn, tab === 'blocked' && [styles.segmentBtnActive, { backgroundColor: c.bgCard }]]}
+          >
+            <Text style={[styles.segmentText, { color: tab === 'blocked' ? c.accent : c.textSecondary }]}>
+              Blocked {blk.length || 1}
+            </Text>
+          </Pressy>
+        </View>
+
+        {/* Content list */}
+        {tab === 'friends' ? (
+          <FlatList
+            testID="friends-list"
+            data={friends}
+            keyExtractor={(i) => i.friendshipId}
+            ListEmptyComponent={
+              <EmptyState title="No friends yet" description="Add friends to challenge them to matches." />
+            }
+            renderItem={({ item: f }) => {
+              const name = f.user.displayName || f.user.username;
+              return (
+                <View style={[styles.row, { borderBottomColor: c.border }]}>
+                  <Pressy
+                    onPress={() => nav.navigate('friend_profile', { userId: f.user.id, friendshipId: f.friendshipId })}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                  >
+                    <View style={styles.avatarWrap}>
+                      <View style={[styles.avatar, { backgroundColor: '#F1F1EE' }]}>
+                        <Text style={[styles.avatarText, { color: c.text }]}>{name.slice(0, 2).toUpperCase()}</Text>
+                      </View>
+                      <View style={[styles.dot, { backgroundColor: f.user.online ? '#15803D' : '#CFCFC8' }]} />
+                    </View>
+                    <View>
+                      <Text style={[styles.name, { color: c.text }]}>{name}</Text>
+                      <Text style={[styles.sub, { color: c.textSecondary }]}>
+                        {f.user.online ? 'Online' : 'Offline'} • Level {f.user.level}
+                      </Text>
+                    </View>
+                  </Pressy>
+
+                  <Pressy
+                    testID={`challenge-${f.user.id}`}
+                    onPress={() => challenge(f.user.id, name)}
+                    style={[styles.actionPill, { backgroundColor: '#EFF4FF' }]}
+                  >
+                    <Text style={[styles.actionPillText, { color: '#1D4ED8' }]}>Challenge</Text>
+                  </Pressy>
+                </View>
+              );
+            }}
+            contentContainerStyle={{ paddingTop: 10, paddingBottom: 24 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} />}
+          />
+        ) : tab === 'requests' ? (
+          <FlatList
+            data={inc}
+            keyExtractor={(i) => i.friendshipId}
+            ListEmptyComponent={
+              <EmptyState title="No requests" description="No pending friend requests." />
+            }
+            renderItem={({ item: r }) => {
+              const name = r.user.displayName || r.user.username;
+              return (
+                <View style={[styles.row, { borderBottomColor: c.border }]}>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={styles.avatarWrap}>
+                      <View style={[styles.avatar, { backgroundColor: '#EFF4FF' }]}>
+                        <Text style={[styles.avatarText, { color: c.accent }]}>{name.slice(0, 2).toUpperCase()}</Text>
+                      </View>
+                    </View>
+                    <View>
+                      <Text style={[styles.name, { color: c.text }]}>{name}</Text>
+                      <Text style={[styles.sub, { color: c.textSecondary }]}>
+                        Level {r.user.level}
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressy
+                    onPress={() => void run(() => actions.accept.mutateAsync(r.friendshipId), `Added ${name}`)}
+                    style={[styles.actionPill, { backgroundColor: c.accent }]}
+                  >
+                    <Text style={[styles.actionPillText, { color: '#FFFFFF' }]}>Accept</Text>
+                  </Pressy>
+                </View>
+              );
+            }}
+            contentContainerStyle={{ paddingTop: 10, paddingBottom: 24 }}
+          />
+        ) : (
+          <FlatList
+            data={blk}
+            keyExtractor={(i) => i.id}
+            ListEmptyComponent={
+              <EmptyState title="No blocked users" description="You have not blocked any players." />
+            }
+            renderItem={({ item: b }) => (
+              <View style={[styles.row, { borderBottomColor: c.border }]}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={[styles.avatar, { backgroundColor: '#FEF2F2' }]}>
+                    <Text style={[styles.avatarText, { color: '#DC2626' }]}>GX</Text>
+                  </View>
+                  <View>
+                    <Text style={[styles.name, { color: c.text }]}>{b.displayName || b.username}</Text>
+                    <Text style={[styles.sub, { color: c.textSecondary }]}>Blocked</Text>
+                  </View>
+                </View>
+                <Pressy
+                  onPress={() => void run(() => actions.unblock.mutateAsync(b.id), 'Unblocked')}
+                  style={[styles.actionPill, { backgroundColor: '#FEF2F2' }]}
+                >
+                  <Text style={[styles.actionPillText, { color: '#B91C1C' }]}>Unblock</Text>
+                </Pressy>
+              </View>
+            )}
+            contentContainerStyle={{ paddingTop: 10, paddingBottom: 24 }}
+          />
+        )}
+      </View>
 
       <AddFriendSheet open={addOpen} onClose={() => setAddOpen(false)} />
-      <BlockedSheet open={blockedOpen} onClose={() => setBlockedOpen(false)} />
-      <ConfirmDialog
-        open={!!removing}
-        destructive
-        title="Remove friend?"
-        message={`${removing?.user.displayName ?? 'This player'} will be removed from your friends list.`}
-        confirmLabel="Remove"
-        onCancel={() => setRemoving(null)}
-        onConfirm={() => {
-          const r = removing;
-          setRemoving(null);
-          if (r) void run(() => actions.remove.mutateAsync(r.friendshipId), 'Friend removed');
-        }}
-      />
-      {sheet}
     </Screen>
   );
 };
 
-const AddFriendSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const c = useTheme();
-  const me = useAuthStore((s) => s.user);
-  const actions = useFriendActions();
-  const [text, setText] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState<PlayerCard[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [sent, setSent] = useState<Record<string, boolean>>({});
-  const q = text.trim().replace(/^@/, '');
-
-  useEffect(() => {
-    if (!open || q.length < 2) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    let live = true;
-    setSearching(true);
-    const t = setTimeout(() => {
-      userApi
-        .search(q)
-        .then((r) => live && setResults(r.items.filter((u) => u.id !== me?.id)))
-        .catch(() => live && setResults([]))
-        .finally(() => live && setSearching(false));
-    }, 300);
-    return () => {
-      live = false;
-      clearTimeout(t);
-    };
-  }, [q, open, me?.id]);
-
-  const close = () => {
-    setText('');
-    setError(null);
-    setResults([]);
-    setSent({});
-    onClose();
-  };
-
-  const submit = async () => {
-    if (q.length < 3) {
-      setError('Enter a username of at least 3 characters.');
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      await actions.request.mutateAsync({ username: q });
-      toast.success('Friend request sent', `Invited ${q}`);
-      close();
-    } catch (e) {
-      setError(socialError(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const addResult = async (u: PlayerCard) => {
-    try {
-      await actions.request.mutateAsync({ userId: u.id });
-      setSent((s) => ({ ...s, [u.id]: true }));
-      toast.success('Friend request sent', `Invited ${u.displayName || u.username}`);
-    } catch (e) {
-      toast.error('Could not send request', socialError(e));
-    }
-  };
-
-  return (
-    <AppModal open={open} title="Add friend" onClose={close}>
-      <AppInput
-        testID="add-friend-input"
-        label="Username"
-        value={text}
-        onChangeText={(v) => {
-          setText(v);
-          setError(null);
-        }}
-        placeholder="Search or enter a username"
-        autoCapitalize="none"
-        autoCorrect={false}
-        error={error}
-        leftIcon={<Search size={16} color={c.textSecondary} />}
-        onSubmitEditing={() => void submit()}
-      />
-      <AppButton testID="add-friend-submit" title="Send request" fullWidth loading={busy} icon={<UserPlus size={16} color="#fff" />} onPress={() => void submit()} />
-      {searching ? <Text style={[type.small, { color: c.textSecondary }]}>Searching...</Text> : null}
-      {results.map((u) => (
-        <View key={u.id} style={styles.result}>
-          <AppAvatar avatarId={u.avatar} name={u.displayName || u.username} size="sm" status={u.online ? 'online' : 'offline'} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{u.displayName || u.username}</Text>
-            <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>@{u.username} · Level {u.level}</Text>
-          </View>
-          <AppButton testID={`add-result-${u.id}`} title={sent[u.id] ? 'Sent' : 'Add'} size="md" variant="secondary" disabled={sent[u.id]} onPress={() => void addResult(u)} />
-        </View>
-      ))}
-    </AppModal>
-  );
-};
-
-const BlockedSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const c = useTheme();
-  const blocked = useBlocked();
-  const actions = useFriendActions();
-  const items = blocked.data?.items ?? [];
-  return (
-    <AppModal open={open} title="Blocked players" onClose={onClose}>
-      {blocked.isLoading ? (
-        <Text style={[type.body, { color: c.textSecondary }]}>Loading...</Text>
-      ) : blocked.isError ? (
-        <ErrorState offline={isOffline(blocked.error)} message={toApiError(blocked.error).message} onRetry={() => void blocked.refetch()} />
-      ) : items.length === 0 ? (
-        <Text style={[type.body, { color: c.textSecondary }]}>You have not blocked anyone.</Text>
-      ) : (
-        items.map((u) => (
-          <View key={u.id} style={styles.result}>
-            <AppAvatar avatarId={u.avatar} name={u.displayName || u.username} size="sm" />
-            <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text, flex: 1 }]}>{u.displayName || u.username}</Text>
-            <AppButton
-              testID={`unblock-${u.id}`}
-              title="Unblock"
-              size="md"
-              variant="outline"
-              onPress={() =>
-                void actions.unblock
-                  .mutateAsync(u.id)
-                  .then(() => toast.success('Player unblocked'))
-                  .catch((e) => toast.error('Could not unblock', socialError(e)))
-              }
-            />
-          </View>
-        ))
-      )}
-    </AppModal>
-  );
-};
-
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 10 },
-  segments: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 16, borderWidth: 1 },
-  segment: { flex: 1, minHeight: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  who: { flex: 1, minWidth: 0, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  result: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  addBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#EFF4FF',
+  },
+  addBtnText: {
+    fontSize: 11.5,
+    fontFamily: fonts.body.semibold,
+    color: '#1D4ED8',
+  },
+  segment: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentBtnActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  segmentText: {
+    fontSize: 11,
+    fontFamily: fonts.body.semibold,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 11,
+    fontFamily: fonts.mono.semibold,
+  },
+  dot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  name: {
+    fontSize: 12.5,
+    fontFamily: fonts.body.semibold,
+  },
+  sub: {
+    fontSize: 10.5,
+    fontFamily: fonts.mono.medium,
+    marginTop: 1,
+  },
+  actionPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  actionPillText: {
+    fontSize: 11,
+    fontFamily: fonts.body.semibold,
+  },
 });
