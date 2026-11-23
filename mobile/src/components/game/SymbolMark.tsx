@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { ms } from '../../design-system/responsive';
 import { useTheme } from '../../hooks/useTheme';
 
 export type SymbolSize = 'sm' | 'md' | 'lg' | 'xl';
-const DIM: Record<SymbolSize, number> = { sm: 16, md: 28, lg: 44, xl: 56 };
+const DIM: Record<SymbolSize, number> = { sm: ms(18), md: ms(28), lg: ms(44), xl: ms(56) };
 
 /** Crisp flat vector X / O glyphs from the Clean & Minimal UI Kit (48x48 viewBox, 5.5px round stroke). */
 export const SymbolMark: React.FC<{ value: 'X' | 'O'; size?: SymbolSize | number; glow?: boolean; animate?: boolean }> = ({

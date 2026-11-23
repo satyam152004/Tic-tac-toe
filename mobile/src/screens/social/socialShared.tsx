@@ -4,6 +4,7 @@ import { Swords } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppModal } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
+import { ms } from '../../design-system/responsive';
 import { type } from '../../design-system/typography';
 import type { BoardSize } from '../../game-engine';
 import { useTheme } from '../../hooks/useTheme';
@@ -14,15 +15,15 @@ import { useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 
 const SOCIAL_ERRORS: Record<string, string> = {
-  USER_NOT_FOUND: 'No player found with that username.',
+  USER_NOT_FOUND: "We can't find a player with that username.",
   SELF_REQUEST: "You can't add yourself.",
-  ALREADY_FRIENDS: 'You are already friends with this player.',
-  REQUEST_ALREADY_SENT: 'A friend request is already pending.',
-  BLOCKED: "You can't interact with this player.",
+  ALREADY_FRIENDS: "You're already friends.",
+  REQUEST_ALREADY_SENT: 'You already sent a friend request.',
+  BLOCKED: "You can't do that with this player.",
   NOT_FRIENDS: 'You can only challenge friends.',
-  ALREADY_IN_GAME: 'You are already in a game.',
+  ALREADY_IN_GAME: "You're already in a game.",
   SELF_REPORT: "You can't report yourself.",
-  REPORT_LIMIT: 'You have reported this player too many times.',
+  REPORT_LIMIT: "You've already reported this player too many times.",
 };
 
 export const socialError = (e: unknown): string => SOCIAL_ERRORS[toApiError(e).code] ?? friendlyMessage(e);
@@ -47,7 +48,7 @@ export function useChallenge() {
         toast.success('Challenge sent', `Waiting for ${target.name} to join`);
         nav.navigate('online_board', { gameId: game.id });
       } catch (e) {
-        toast.error('Could not send challenge', socialError(e));
+        toast.error("Couldn't send the challenge", socialError(e));
       } finally {
         setBusy(false);
       }
@@ -64,7 +65,7 @@ const ChallengeSheet: React.FC<{ name: string | null; busy: boolean; onClose: ()
   const [size, setSize] = useState<BoardSize>(3);
   return (
     <AppModal open={!!name} title={`Challenge ${name ?? ''}`} onClose={onClose}>
-      <Text style={[type.body, { color: c.textSecondary }]}>Pick a board size. They get an invite and the match starts when they join.</Text>
+      <Text style={[type.body, { color: c.textSecondary }]}>Pick a board size. They'll get an invite, and the match starts when they join.</Text>
       <View style={styles.sizes}>
         {SIZES.map((s) => {
           const on = s === size;
@@ -82,7 +83,7 @@ const ChallengeSheet: React.FC<{ name: string | null; busy: boolean; onClose: ()
           );
         })}
       </View>
-      <AppButton testID="challenge-send" title="Send challenge" fullWidth loading={busy} icon={<Swords size={16} color="#fff" />} onPress={() => onSend(size)} />
+      <AppButton testID="challenge-send" title="Send challenge" fullWidth loading={busy} icon={<Swords size={ms(18)} color="#fff" />} onPress={() => onSend(size)} />
     </AppModal>
   );
 };

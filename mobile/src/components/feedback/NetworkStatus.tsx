@@ -6,6 +6,7 @@ import { WifiOff } from 'lucide-react-native';
 import { fonts } from '../../design-system/typography';
 import { useNetworkStore } from '../../store/networkStore';
 
+import { fs, ms } from '../../design-system/responsive';
 const AMBER = '#B45309';
 
 /** Compact amber banner docked below the status bar while the device is offline. Local games keep working. */
@@ -24,7 +25,7 @@ export const NetworkStatus: React.FC = () => {
     >
       <View style={styles.banner}>
         <View style={styles.left}>
-          <WifiOff size={14} color={AMBER} />
+          <WifiOff size={ms(18)} color={AMBER} />
           <Text numberOfLines={1} style={styles.text}>Offline · Reconnecting...</Text>
         </View>
         <ActivityIndicator size="small" color={AMBER} />
@@ -35,7 +36,7 @@ export const NetworkStatus: React.FC = () => {
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 16, right: 16, zIndex: 200 },
-  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 10, borderWidth: 1, borderColor: '#FDE68A', backgroundColor: '#FFFBEB', paddingHorizontal: 12, paddingVertical: 8 },
+  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 10, borderWidth: 1, borderColor: '#FDE68A', backgroundColor: '#FFFBEB', paddingHorizontal: 12, paddingVertical: ms(10) },
   left: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 },
-  text: { fontSize: 11, fontFamily: fonts.body.semibold, color: AMBER },
+  text: { fontSize: fs(11), fontFamily: fonts.body.semibold, color: AMBER },
 });

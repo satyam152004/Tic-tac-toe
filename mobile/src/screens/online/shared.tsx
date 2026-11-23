@@ -20,6 +20,7 @@ import { useTheme } from '../../hooks/useTheme';
 import type { BoardSize } from '../../services/api/types';
 import { toApiError } from '../../services/api/errors';
 import { socketClient, type SocketStatus } from '../../services/socket/socketClient';
+import { ch, ms } from '../../design-system/responsive';
 
 /** One public room from GET /rooms/open (host opted in; still waiting for a guest). */
 export interface OpenRoom {
@@ -103,7 +104,7 @@ export async function shareRoomCode(room: Pick<Room, 'code' | 'boardSize' | 'win
   try {
     await Share.share({ message: `Join my ${room.boardSize}x${room.boardSize} Tic Tac Toe room! Room code: ${room.code}` });
   } catch {
-    toast.error('Could not open the share sheet');
+    toast.error("Couldn't open sharing");
   }
 }
 
@@ -168,7 +169,7 @@ export const PlayerSlot: React.FC<{ card: PlayerCard | null; role: string; mark:
         </View>
         {card ? (
           <View style={styles.status}>
-            {ready ? <Check size={16} color={c.success} /> : null}
+            {ready ? <Check size={ms(20)} color={c.success} /> : null}
             <Text style={[type.caption, { color: ready ? c.success : c.warning }]}>{status ?? (ready ? 'Ready' : 'Not ready')}</Text>
           </View>
         ) : null}
@@ -203,9 +204,9 @@ export const InviteFriendsModal: React.FC<{ open: boolean; roomId: string; onClo
       {friends.isLoading ? (
         <ActivityIndicator color={c.accent} />
       ) : items.length === 0 ? (
-        <EmptyState title="No friends yet" description="Add friends to invite them straight to your room." />
+        <EmptyState title="No friends yet" description="Add friends to invite them to your room." />
       ) : (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: ms(8) }}>
           {items.map((f) => (
             <View key={f.friendshipId} style={styles.slot} testID={`invite-row-${f.user.id}`}>
               <AppAvatar avatarId={f.user.avatar} name={f.user.displayName} size="sm" status={f.user.online ? 'online' : 'offline'} />
@@ -215,7 +216,7 @@ export const InviteFriendsModal: React.FC<{ open: boolean; roomId: string; onClo
                 title={sent[f.user.id] ? 'Invited' : 'Invite'}
                 size="md"
                 variant="secondary"
-                icon={sent[f.user.id] ? <Check size={14} color={c.success} /> : <Send size={14} color={c.text} />}
+                icon={sent[f.user.id] ? <Check size={ms(18)} color={c.success} /> : <Send size={ms(18)} color={c.text} />}
                 disabled={!!sent[f.user.id]}
                 loading={busy === f.user.id}
                 onPress={() => void invite(f.user.id)}
@@ -232,7 +233,7 @@ export const InviteFriendsModal: React.FC<{ open: boolean; roomId: string; onClo
 export const RoomEnded: React.FC<{ reason: 'EXPIRED' | 'CANCELLED'; onLeave: () => void }> = ({ reason, onLeave }) => (
   <ErrorState
     title={reason === 'EXPIRED' ? 'Room expired' : 'Room closed'}
-    message={reason === 'EXPIRED' ? 'Nobody joined in time, so the room was closed.' : 'This room was cancelled.'}
+    message={reason === 'EXPIRED' ? 'Nobody joined in time, so the room was closed.' : 'This room was closed.'}
     retryLabel="Back to Lobby"
     onRetry={onLeave}
   />
@@ -249,8 +250,8 @@ export async function copyText(text: string, label: string): Promise<void> {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10 },
-  slot: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  empty: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  row: { flexDirection: 'row', gap: ms(10) },
+  slot: { flexDirection: 'row', alignItems: 'center', gap: ms(12) },
+  empty: { width: ms(44), height: ch(44), borderRadius: ms(14), borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  status: { flexDirection: 'row', alignItems: 'center', gap: ms(4) },
 });

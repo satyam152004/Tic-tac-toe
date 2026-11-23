@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { BrandMark, MUTED } from '../auth/protoUi';
 
+import { fs, ms } from '../../design-system/responsive';
 export const SPLASH_MIN_MS = 1400;
 
 export const SplashScreen: React.FC<RootScreenProps<'splash'>> = () => {
@@ -45,16 +46,16 @@ export const SplashScreen: React.FC<RootScreenProps<'splash'>> = () => {
     >
       <View style={styles.center}>
         <View style={[styles.logo, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <BrandMark size={34} />
+          <BrandMark size={ms(40)} />
         </View>
         <Text style={[styles.title, { color: c.text }]}>Tic-Tac-Toe</Text>
-        <Text style={[styles.subtitle, { color: c.textSecondary }]}>Tactical 3×3, 4×4 &amp; 5×5</Text>
+        <Text style={[styles.subtitle, { color: c.textSecondary }]}>Play 3×3, 4×4 and 5×5</Text>
       </View>
-      <View style={styles.footer} accessibilityRole="progressbar" accessibilityLabel="Loading arena...">
+      <View style={styles.footer} accessibilityRole="progressbar" accessibilityLabel="Loading...">
         <View style={[styles.track, { backgroundColor: c.border }]}>
           <Animated.View style={[styles.fill, { backgroundColor: c.accent }, bar]} />
         </View>
-        <Text style={[styles.loadingText, { color: MUTED }]}>Loading arena...</Text>
+        <Text style={[styles.loadingText, { color: MUTED }]}>Loading...</Text>
       </View>
     </View>
   );
@@ -73,9 +74,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+    width: ms(76),
+    height: ms(76),
+    borderRadius: ms(20),
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -88,15 +89,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.body.semibold,
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: fs(22),
+    lineHeight: Math.round(fs(22) * 1.3),
     letterSpacing: -0.44,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: fonts.body.regular,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: fs(13),
+    lineHeight: Math.round(fs(13) * 1.3),
     marginTop: 4,
     textAlign: 'center',
   },
@@ -107,8 +108,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   track: {
-    width: 96,
-    height: 4,
+    width: ms(120),
+    height: ms(5),
     borderRadius: 9999,
     overflow: 'hidden',
   },
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: fonts.body.regular,
-    fontSize: 10.5,
-    lineHeight: 14,
+    fontSize: fs(10.5),
+    lineHeight: Math.round(fs(10.5) * 1.3),
   },
 });

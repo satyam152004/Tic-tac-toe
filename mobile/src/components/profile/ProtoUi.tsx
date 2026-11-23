@@ -5,6 +5,7 @@ import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from '../common/Pressy';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 /** `ui-section-label` from the prototype: 10px bold uppercase caption above a group. */
 export const SectionLabel: React.FC<{ children: string }> = ({ children }) => {
   const c = useTheme();
@@ -38,7 +39,7 @@ export const GroupRow: React.FC<{
   onPress?: () => void;
   testID?: string;
   minHeight?: number;
-}> = ({ label, labelColor, labelWeight = 'medium', right, value, valueColor, chevron, onPress, testID, minHeight = 34 }) => {
+}> = ({ label, labelColor, labelWeight = 'medium', right, value, valueColor, chevron, onPress, testID, minHeight = ch(40) }) => {
   const c = useTheme();
   const body = (
     <>
@@ -46,7 +47,7 @@ export const GroupRow: React.FC<{
       <View style={styles.rowRight}>
         {value ? <Text style={[styles.rowValue, { color: valueColor ?? c.textSecondary }]}>{value}</Text> : null}
         {right}
-        {chevron ? <ChevronRight size={14} color="#8E939E" /> : null}
+        {chevron ? <ChevronRight size={ms(18)} color="#8E939E" /> : null}
       </View>
     </>
   );
@@ -97,13 +98,13 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5, paddingLeft: 2 },
+  sectionLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5, paddingLeft: 2 },
   group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  row: { paddingVertical: 6, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  rowLabel: { fontSize: 12 },
+  row: { paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  rowLabel: { fontSize: fs(12) },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rowValue: { fontSize: 11.5, fontFamily: fonts.body.semibold },
+  rowValue: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
   segment: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 10, borderWidth: 1 },
-  segmentBtn: { flex: 1, paddingVertical: 4, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  segmentText: { fontSize: 11, fontFamily: fonts.body.semibold },
+  segmentBtn: { flex: 1, paddingVertical: 8, minHeight: ch(32), borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  segmentText: { fontSize: fs(11), fontFamily: fonts.body.semibold },
 });

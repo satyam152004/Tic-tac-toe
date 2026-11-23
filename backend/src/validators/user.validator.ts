@@ -21,7 +21,7 @@ export const updateMeBody = z
       .regex(/^(avatar_[a-z0-9_]{1,40}|https:\/\/[^\s]{1,280})$/, 'Use an avatar_* preset id or an https URL')
       .optional(),
     bio: z.string().trim().max(160).optional(),
-    timezone: z.string().max(64).refine(isTimeZone, 'Unknown IANA time zone').optional(),
+    timezone: z.string().max(64).refine(isTimeZone, 'Unknown time zone').optional(),
     theme: z.enum(THEMES).optional(),
     language: z.string().regex(/^[a-z]{2}(-[A-Za-z]{2,4})?$/).optional(),
     sound: z.object({ effects: z.boolean().optional(), music: z.boolean().optional(), volume: z.number().min(0).max(1).optional() }).strict().optional(),
@@ -29,7 +29,7 @@ export const updateMeBody = z
     privacy: z.object({ allowSpectating: z.boolean().optional() }).strict().optional(),
   })
   .strict()
-  .refine((v) => Object.keys(v).length > 0, 'At least one field is required');
+  .refine((v) => Object.keys(v).length > 0, 'Change at least one thing');
 
 export const deleteMeBody = z.object({ password: z.string().max(128).optional() });
 

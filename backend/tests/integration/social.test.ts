@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DeviceTokenModel, NotificationModel, UserModel } from '../../src/models/index.js';
+import { DeviceTokenModel, MoveModel, NotificationModel, UserModel } from '../../src/models/index.js';
 import { auth, clearDb, Env, playMoves, registerUser, startEnv, startOnlineGame, stopEnv, TestUser } from '../helpers.js';
 
 let env: Env;
@@ -200,6 +200,36 @@ describe('offline (local) match sync', () => {
     const hist = await api().get('/api/v1/statistics/me/history?type=LOCAL').set(auth(alice));
     expect(hist.body.data).toHaveLength(2);
     expect((await api().get('/api/v1/leaderboard/global').set(auth(alice))).body.data).toHaveLength(0);
+  });
+});
+
+describe('offline (local) match replay', () => {
+  const win = { size: 3, winLength: 3, mode: 'VS_AI', difficulty: 'EASY', humanMark: 'X', moves: [0, 3, 1, 4, 2], durationMs: 12000 };
+
+  it('stores the moves of an uploaded match so it can be replayed, and exposes its clientMatchId', async () => {
+    await api().post('/api/v1/statistics/me/local-matches').set(auth(alice)).send({ matches: [{ ...win, clientMatchId: 'local-bbbb-0001' }] });
+    const hist = (await api().get('/api/v1/statistics/me/history?type=LOCAL').set(auth(alice))).body.data;
+    expect(hist).toHaveLength(1);
+    expect(hist[0].clientMatchId).toBe('local-bbbb-0001');
+
+    const replay = await api().get(`/api/v1/games/${hist[0].id}/replay`).set(auth(alice));
+    expect(replay.status).toBe(200);
+    expect(replay.body.data.totalMoves).toBe(5);
+    expect(replay.body.data.frames).toHaveLength(6); // start + one frame per move
+    expect(replay.body.data.frames[5].board.slice(0, 3)).toEqual(['X', 'X', 'X']);
+    expect(replay.body.data.frames.map((f: { mark: string | null }) => f.mark)).toEqual([null, 'X', 'O', 'X', 'O', 'X']);
+  });
+
+  it('fills in the moves of a match uploaded before moves were stored (re-upload is a duplicate but repairs it)', async () => {
+    await api().post('/api/v1/statistics/me/local-matches').set(auth(alice)).send({ matches: [{ ...win, clientMatchId: 'local-bbbb-0002' }] });
+    const id = (await api().get('/api/v1/statistics/me/history?type=LOCAL').set(auth(alice))).body.data[0].id;
+    await MoveModel.deleteMany({ gameId: id }); // simulate an old upload without move records
+    expect((await api().get(`/api/v1/games/${id}/replay`).set(auth(alice))).body.data.totalMoves).toBe(0);
+
+    const again = await api().post('/api/v1/statistics/me/local-matches').set(auth(alice)).send({ matches: [{ ...win, clientMatchId: 'local-bbbb-0002' }] });
+    expect(again.body.data).toMatchObject({ accepted: 0, duplicates: 1 });
+    expect((await api().get(`/api/v1/games/${id}/replay`).set(auth(alice))).body.data.totalMoves).toBe(5);
+    expect((await UserModel.findById(alice.id).lean())!.stats!.localGames).toBe(1); // still counted once
   });
 });
 

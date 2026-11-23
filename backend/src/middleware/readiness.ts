@@ -16,7 +16,7 @@ export function readinessGate(state: Lifecycle): RequestHandler {
     if (!starting) res.setHeader('Connection', 'close');
     res.status(503).json({
       success: false,
-      error: { code: starting ? 'SERVICE_STARTING' : 'SERVICE_SHUTTING_DOWN', message: starting ? 'Service is starting, retry shortly' : 'Service is shutting down, retry shortly' },
+      error: { code: starting ? 'SERVICE_STARTING' : 'SERVICE_SHUTTING_DOWN', message: starting ? 'The server is starting. Try again in a moment.' : 'The server is restarting. Try again in a moment.' },
       requestId: req.requestId,
     });
   };

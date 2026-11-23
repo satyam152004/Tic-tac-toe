@@ -8,6 +8,7 @@ import { radius } from '../../design-system/radius';
 import { lift } from '../../design-system/shadows';
 import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
+import { ms } from '../../design-system/responsive';
 import { Pressy } from '../common/Pressy';
 
 const ICONS: Record<string, { label: string; Icon: React.ComponentType<{ size: number; color: string }> }> = {
@@ -42,16 +43,16 @@ export const AppTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) =>
             accessibilityState={{ selected: focused }}
             onPress={onPress}
             scaleTo={0.94}
-            style={[styles.item, isPlay && { marginTop: -16 }]}
+            style={[styles.item, isPlay && { marginTop: -ms(16) }]}
           >
             {isPlay ? (
               <View style={[styles.play, lift, { backgroundColor: c.accentFill, borderColor: focused ? c.onAccent : c.accentFill }]}>
-                <meta.Icon size={iconSize.lg} color={c.onAccent} />
+                <meta.Icon size={ms(iconSize.lg)} color={c.onAccent} />
               </View>
             ) : (
-              <meta.Icon size={iconSize.md} color={color} />
+              <meta.Icon size={ms(24)} color={color} />
             )}
-            <Text style={[type.caption, { color, fontFamily: focused ? fonts.body.semibold : fonts.body.medium, marginTop: isPlay ? 4 : 0 }]}>{meta.label}</Text>
+            <Text style={[type.caption, { color, fontFamily: focused ? fonts.body.semibold : fonts.body.medium, marginTop: isPlay ? ms(4) : 0 }]}>{meta.label}</Text>
           </Pressy>
         );
       })}
@@ -60,7 +61,7 @@ export const AppTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) =>
 };
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', minHeight: 68, borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 8 },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48 },
-  play: { width: 48, height: 48, borderRadius: radius.lg, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  bar: { flexDirection: 'row', minHeight: ms(68), borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 8 },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: ms(50) },
+  play: { width: ms(50), height: ms(50), borderRadius: radius.lg, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
 });

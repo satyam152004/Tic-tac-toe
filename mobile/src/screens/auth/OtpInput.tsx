@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { OTP_LENGTH } from './authValidation';
 import { ACCENT_SOFT, BORDER_STRONG, MUTED } from './protoUi';
 
+import { fs, ch as ctl } from '../../design-system/responsive';
 /**
  * Six single-digit boxes (48px, radius 10, 17px digits): auto-advance, backspace to previous, paste / autofill of a
  * full code. The focused box gets the cobalt highlight from the prototype, filled boxes a strong border.
@@ -92,7 +93,7 @@ export const OtpInput: React.FC<{
                 refs.current[i] = r;
               }}
               testID={`${testIDPrefix}-${i}`}
-              accessibilityLabel={`Verification code digit ${i + 1}`}
+              accessibilityLabel={`Code digit ${i + 1}`}
               value={d}
               placeholder="_"
               placeholderTextColor={active ? c.accent : MUTED}
@@ -122,5 +123,5 @@ export const emptyDigits = (): string[] => Array.from({ length: OTP_LENGTH }, ()
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6 },
-  box: { height: 48, borderRadius: 10, textAlign: 'center', fontSize: 17, padding: 0 },
+  box: { height: ctl(44), borderRadius: 10, textAlign: 'center', fontSize: fs(18), padding: 0 },
 });

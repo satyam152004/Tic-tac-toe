@@ -37,6 +37,7 @@ import {
   WARNING_SOFT,
 } from '../auth/protoUi';
 
+import { fs, ms, ch } from '../../design-system/responsive';
 /** Loads the interrupted offline match (if any) every time the screen gains focus. */
 function useInterruptedMatch() {
   const [active, setActive] = useState<ActiveLocalGame | null>(null);
@@ -110,7 +111,7 @@ export const HomeScreen: React.FC = () => {
       await localGameStorage.clearActive();
       clear();
     } catch {
-      toast.error('Could not discard match');
+      toast.error("Couldn't discard match");
     }
   };
 
@@ -132,11 +133,11 @@ export const HomeScreen: React.FC = () => {
         {me.isError ? (
           <ErrorState
             offline={toApiError(me.error).code === 'NETWORK_ERROR'}
-            message="We could not load your profile."
+            message="Couldn't load your profile."
             onRetry={() => void me.refetch()}
           />
         ) : (
-          <AppLoader label="Loading your arena" />
+          <AppLoader label="Loading..." />
         )}
       </Screen>
     );
@@ -169,9 +170,9 @@ export const HomeScreen: React.FC = () => {
             accessibilityRole="alert"
             style={[styles.banner, { backgroundColor: withAlpha(c.warning, 0.16), borderColor: withAlpha(c.warning, 0.4) }]}
           >
-            <WifiOff size={14} color={c.warning} />
+            <WifiOff size={ms(18)} color={c.warning} />
             <Text style={[styles.bannerText, { color: c.text }]}>
-              You are offline. Offline games still work; online features need a connection.
+              You're offline. Offline games still work. Online play needs internet.
             </Text>
           </View>
         ) : null}
@@ -184,7 +185,7 @@ export const HomeScreen: React.FC = () => {
           </View>
           <View style={styles.pills}>
             <View style={[styles.pill, { backgroundColor: WARNING_SOFT, borderColor: WARNING_BORDER }]} accessibilityLabel={`${stats.currentStreak} day streak`}>
-              <FlameIcon size={12} />
+              <FlameIcon size={ms(15)} />
               <Text style={[styles.pillText, { color: WARNING }]}>{stats.currentStreak}d</Text>
             </View>
             <Pressy
@@ -192,17 +193,17 @@ export const HomeScreen: React.FC = () => {
               onPress={() => nav.navigate('daily_rewards')}
               style={[styles.pill, { backgroundColor: c.bgCard, borderColor: c.border }]}
             >
-              <CoinIcon size={12} />
+              <CoinIcon size={ms(15)} />
               <Text style={[styles.pillText, { color: c.text }]}>{user.wallet.coins.toLocaleString()}</Text>
             </Pressy>
             <Pressy
               testID="home-notifications"
               accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'}
               onPress={() => nav.navigate('notifications')}
-              hitSlop={8}
+              hitSlop={6}
               style={[styles.bell, { backgroundColor: c.bgCard, borderColor: c.border }]}
             >
-              <BellIcon size={15} color={c.text} />
+              <BellIcon size={ms(20)} color={c.text} />
               {unread > 0 ? <View style={[styles.bellDot, { backgroundColor: c.accent }]} /> : null}
             </Pressy>
           </View>
@@ -221,9 +222,9 @@ export const HomeScreen: React.FC = () => {
                     : active.p2Name}
                 </Text>
               </View>
-              <View style={styles.cardMark}><MarkX size={16} stroke={2.4} /></View>
+              <View style={styles.cardMark}><MarkX size={ms(20)} stroke={2.4} /></View>
             </View>
-            <ProtoButton testID="resume-match" title="Resume Match" height={36} fontSize={12.5} onPress={resume} />
+            <ProtoButton testID="resume-match" title="Resume Match" height={36} fontSize={fs(12.5)} onPress={resume} />
             <Pressy testID="discard-match" accessibilityLabel="Discard" onPress={() => void discard()} hitSlop={10} style={styles.discard}>
               <Text style={[styles.discardText, { color: c.textSecondary }]}>Discard</Text>
             </Pressy>
@@ -235,13 +236,13 @@ export const HomeScreen: React.FC = () => {
                 <Text style={[styles.overline, { color: c.accent }]}>ONLINE GAME IN PROGRESS • MOVE {liveGame.moveCount}</Text>
                 <Text style={[styles.cardTitle, { color: c.text }]}>Return to your match</Text>
               </View>
-              <View style={styles.cardMark}><MarkX size={16} stroke={2.4} /></View>
+              <View style={styles.cardMark}><MarkX size={ms(20)} stroke={2.4} /></View>
             </View>
             <ProtoButton
               testID="return-game"
               title="Return to Game"
               height={36}
-              fontSize={12.5}
+              fontSize={fs(12.5)}
               onPress={() => nav.navigate('online_board', { gameId: liveGame.id })}
             />
           </View>
@@ -252,9 +253,9 @@ export const HomeScreen: React.FC = () => {
                 <Text style={[styles.overline, { color: c.accent }]}>READY TO PLAY</Text>
                 <Text style={[styles.cardTitle, { color: c.text }]}>Start a quick match</Text>
               </View>
-              <View style={styles.cardMark}><MarkX size={16} stroke={2.4} /></View>
+              <View style={styles.cardMark}><MarkX size={ms(20)} stroke={2.4} /></View>
             </View>
-            <ProtoButton testID="home-play" title="Quick Play" height={36} fontSize={12.5} onPress={() => goTab('PlayTab')} />
+            <ProtoButton testID="home-play" title="Quick Play" height={36} fontSize={fs(12.5)} onPress={() => goTab('PlayTab')} />
           </View>
         )}
 
@@ -262,23 +263,23 @@ export const HomeScreen: React.FC = () => {
         <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <ModeRow
             label="Play vs AI"
-            sub="Casual, Tactical & Unbeatable"
-            icon={<BotIcon size={15} />}
+            sub="From easy to unbeatable"
+            icon={<BotIcon size={ms(20)} />}
             iconBg={ACCENT_SOFT}
             onPress={() => nav.navigate('ai_difficulty')}
           />
           <ModeRow
-            label="Online Arena"
-            sub="Ranked 1v1 & Private Rooms"
-            icon={<GlobeIcon size={15} />}
+            label="Play Online"
+            sub="Ranked matches & private rooms"
+            icon={<GlobeIcon size={ms(20)} />}
             iconBg={ACCENT_SOFT}
             divider
             onPress={openOnline}
           />
           <ModeRow
             label="Pass & Play"
-            sub="2-player local on one device"
-            icon={<UsersIcon size={15} />}
+            sub="Two players, one phone"
+            icon={<UsersIcon size={ms(20)} />}
             iconBg={SUBTLE}
             divider
             onPress={() => nav.navigate('board_selection', { mode: 'LOCAL_2P' })}
@@ -288,7 +289,7 @@ export const HomeScreen: React.FC = () => {
         {/* Season snapshot */}
         <Pressy
           testID="home-stats"
-          accessibilityLabel="Season snapshot, view division ranking"
+          accessibilityLabel="Your stats. Opens the ranking."
           onPress={() => nav.navigate('league_tiers')}
           style={[styles.snapshot, { backgroundColor: c.bgCard, borderColor: c.border }]}
         >
@@ -322,7 +323,7 @@ export const HomeScreen: React.FC = () => {
             style={[styles.quick, { backgroundColor: c.bgCard, borderColor: c.border }]}
           >
             <Text style={[styles.quickText, { color: c.text }]}>Match History</Text>
-            <ChevronIcon size={13} />
+            <ChevronIcon size={ms(16)} />
           </Pressy>
         </View>
       </ScrollView>
@@ -363,7 +364,7 @@ const ModeRow: React.FC<{
           <Text style={[styles.modeSub, { color: c.textSecondary }]}>{sub}</Text>
         </View>
       </View>
-      <ChevronIcon size={13} />
+      <ChevronIcon size={ms(16)} />
     </Pressy>
   );
 };
@@ -372,35 +373,35 @@ const SHADOW = { shadowColor: '#141518', shadowOffset: { width: 0, height: 2 }, 
 
 const styles = StyleSheet.create({
   body: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 12 },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, padding: 10 },
-  bannerText: { fontFamily: fonts.body.medium, fontSize: 11.5, flex: 1 },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, padding: ms(12) },
+  bannerText: { fontFamily: fonts.body.medium, fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3), flex: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  greeting: { fontFamily: fonts.body.regular, fontSize: 11, lineHeight: 15 },
-  name: { fontFamily: fonts.body.semibold, fontSize: 17, lineHeight: 22, letterSpacing: -0.34 },
-  pills: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 9999, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  pillText: { fontFamily: fonts.body.semibold, fontSize: 10.5, lineHeight: 14, fontVariant: TABULAR },
-  bell: { width: 28, height: 28, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  bellDot: { position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: 3 },
-  card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, ...SHADOW },
+  greeting: { fontFamily: fonts.body.regular, fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3) },
+  name: { fontFamily: fonts.body.semibold, fontSize: fs(17), lineHeight: Math.round(fs(17) * 1.3), letterSpacing: -0.34 },
+  pills: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  pill: { paddingHorizontal: ms(10), paddingVertical: 6, minHeight: ms(32), borderRadius: 9999, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pillText: { fontFamily: fonts.body.semibold, fontSize: fs(10.5), lineHeight: Math.round(fs(10.5) * 1.3), fontVariant: TABULAR },
+  bell: { width: ms(36), height: ms(36), borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  bellDot: { position: 'absolute', top: ms(8), right: ms(8), width: ms(7), height: ms(7), borderRadius: 4 },
+  card: { borderWidth: 1, borderRadius: 14, padding: ms(14), gap: 10, ...SHADOW },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  overline: { fontFamily: fonts.body.semibold, fontSize: 9.5, lineHeight: 13, letterSpacing: 0.5 },
-  cardTitle: { fontFamily: fonts.body.semibold, fontSize: 14, lineHeight: 19, marginTop: 2 },
-  cardMark: { width: 32, height: 32, borderRadius: 9, backgroundColor: ACCENT_SOFT, alignItems: 'center', justifyContent: 'center' },
-  discard: { alignSelf: 'center' },
-  discardText: { fontFamily: fonts.body.semibold, fontSize: 11 },
+  overline: { fontFamily: fonts.body.semibold, fontSize: fs(10), lineHeight: Math.round(fs(10) * 1.3), letterSpacing: 0.5 },
+  cardTitle: { fontFamily: fonts.body.semibold, fontSize: fs(14), lineHeight: Math.round(fs(14) * 1.3), marginTop: 2 },
+  cardMark: { width: ms(38), height: ms(38), borderRadius: 11, backgroundColor: ACCENT_SOFT, alignItems: 'center', justifyContent: 'center' },
+  discard: { alignSelf: 'center', minHeight: 28, justifyContent: 'center' },
+  discardText: { fontFamily: fonts.body.semibold, fontSize: fs(12.5) },
   group: { borderWidth: 1, borderRadius: 14, overflow: 'hidden', ...SHADOW },
-  modeRow: { minHeight: 36, paddingHorizontal: 13, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  modeLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  modeIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  modeTitle: { fontFamily: fonts.body.semibold, fontSize: 12.5, lineHeight: 17 },
-  modeSub: { fontFamily: fonts.body.regular, fontSize: 10, lineHeight: 14 },
-  snapshot: { borderWidth: 1, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 8, flexDirection: 'row', ...SHADOW },
+  modeRow: { minHeight: ch(44), paddingHorizontal: ms(14), paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  modeLeft: { flexDirection: 'row', alignItems: 'center', gap: ms(12), flex: 1 },
+  modeIcon: { width: ms(36), height: ms(36), borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  modeTitle: { fontFamily: fonts.body.semibold, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3) },
+  modeSub: { fontFamily: fonts.body.regular, fontSize: fs(11), lineHeight: Math.round(fs(11) * 1.3) },
+  snapshot: { borderWidth: 1, borderRadius: 14, paddingVertical: ms(12), paddingHorizontal: 8, flexDirection: 'row', ...SHADOW },
   snapCol: { flex: 1, alignItems: 'center' },
-  snapVal: { fontFamily: fonts.body.semibold, fontSize: 12.5, lineHeight: 17, fontVariant: TABULAR },
-  snapLabel: { fontFamily: fonts.body.regular, fontSize: 9.5, lineHeight: 13 },
+  snapVal: { fontFamily: fonts.body.semibold, fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.3), fontVariant: TABULAR },
+  snapLabel: { fontFamily: fonts.body.regular, fontSize: fs(10), lineHeight: Math.round(fs(10) * 1.3) },
   quickRow: { flexDirection: 'row', gap: 10 },
-  quick: { flex: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 11, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  quickText: { fontFamily: fonts.body.semibold, fontSize: 11.5, lineHeight: 16 },
-  rewardDot: { width: 8, height: 8, borderRadius: 4 },
+  quick: { flex: 1, paddingHorizontal: ms(12), paddingVertical: 8, minHeight: ch(40), borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  quickText: { fontFamily: fonts.body.semibold, fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3) },
+  rewardDot: { width: ms(9), height: ms(9), borderRadius: 5 },
 });

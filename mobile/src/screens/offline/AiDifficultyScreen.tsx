@@ -11,12 +11,13 @@ import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { useLocalGameStore } from '../../store/localGameStore';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 export const AI_LEVELS: { id: Difficulty; title: string; note: string }[] = [
-  { id: 'EASY', title: 'Easy — Casual warmups', note: 'Plays relaxed legal openings' },
-  { id: 'MEDIUM', title: 'Medium — Blocks threats', note: 'Takes wins, blocks & prefers center' },
-  { id: 'HARD', title: 'Hard — 2-step lookahead', note: 'Evaluates tactical forks & traps' },
-  { id: 'EXPERT', title: 'Expert — Deep search', note: '6-ply depth search under 250ms' },
-  { id: 'IMPOSSIBLE', title: 'Unbeatable — Minimax', note: 'Zero-mistake full tree evaluation' },
+  { id: 'EASY', title: 'Easy', note: 'A relaxed game' },
+  { id: 'MEDIUM', title: 'Medium', note: 'Takes wins and blocks yours' },
+  { id: 'HARD', title: 'Hard', note: 'Thinks a few moves ahead' },
+  { id: 'EXPERT', title: 'Expert', note: 'Plans many moves ahead' },
+  { id: 'IMPOSSIBLE', title: 'Unbeatable', note: 'Never makes a mistake' },
 ];
 
 export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = () => {
@@ -35,7 +36,7 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
 
   return (
     <Screen
-      title="Bot Difficulty"
+      title="Difficulty"
       onBack={back}
       testID="ai-difficulty"
       footer={
@@ -108,7 +109,7 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
 
 const styles = StyleSheet.create({
   groupCard: {
-    borderRadius: 14,
+    borderRadius: ms(14),
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -116,27 +117,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    minHeight: 38,
+    paddingHorizontal: ms(13),
+    paddingVertical: ms(8),
+    minHeight: ch(38),
   },
   textCol: {
     flex: 1,
     gap: 0,
-    paddingRight: 8,
+    paddingRight: ms(8),
   },
   tierTitle: {
     fontFamily: fonts.body.semibold,
-    fontSize: 12,
+    fontSize: fs(12),
   },
   tierNote: {
     fontFamily: fonts.body.regular,
-    fontSize: 10,
+    fontSize: fs(10),
   },
   radioIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: ms(19.2),
+    height: ms(19.2),
+    borderRadius: 999,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

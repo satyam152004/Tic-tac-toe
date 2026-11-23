@@ -18,7 +18,7 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export async function getMe(userId: string) {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).lean();
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   return toSelf(user, await hasPassword(user._id));
 }
 
@@ -64,7 +64,7 @@ export async function updateMe(userId: string, input: UpdateMeInput) {
   }
   try {
     const user = await UserModel.findOneAndUpdate({ _id: userId, deletedAt: { $exists: false } }, { $set: set }, { new: true, runValidators: true }).lean();
-    if (!user) throw Errors.notFound('User not found');
+    if (!user) throw Errors.notFound('Player not found');
     return toSelf(user, await hasPassword(user._id));
   } catch (err) {
     if ((err as { code?: number }).code === 11000) throw Errors.conflict('Username is already taken', 'USERNAME_TAKEN');
@@ -74,10 +74,10 @@ export async function updateMe(userId: string, input: UpdateMeInput) {
 
 export async function getPublicProfile(viewerId: string, id: string) {
   const user = await UserModel.findOne({ _id: id, deletedAt: { $exists: false } }).lean();
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   if (String(user._id) !== viewerId) {
     const blocked = await BlockedUserModel.exists({ blockerId: user._id, blockedId: viewerId });
-    if (blocked) throw Errors.notFound('User not found');
+    if (blocked) throw Errors.notFound('Player not found');
   }
   return toPublic(user);
 }
@@ -101,9 +101,9 @@ export async function searchUsers(viewerId: string, q: { q: string; page: number
 /** Deletes the account: PII removed, credentials/tokens/social data dropped, finished games stay (anonymised). */
 export async function deleteAccount(userId: string, password: string | undefined, ip?: string) {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).select('+passwordHash');
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   if (user.accountType === 'REGISTERED' && user.passwordHash) {
-    if (!password || !(await verifyPassword(password, user.passwordHash))) throw Errors.unauthorized('Password confirmation failed', 'INVALID_CREDENTIALS');
+    if (!password || !(await verifyPassword(password, user.passwordHash))) throw Errors.unauthorized('Wrong password.', 'INVALID_CREDENTIALS');
   }
   const id = user._id;
   await Promise.all([
@@ -133,9 +133,9 @@ export async function deleteAccount(userId: string, password: string | undefined
 
 export async function reportUser(reporterId: string, reportedId: string, input: { reason: string; details?: string; gameId?: string }) {
   if (reporterId === reportedId) throw Errors.badRequest('You cannot report yourself', 'SELF_REPORT');
-  if (!(await UserModel.exists({ _id: reportedId, deletedAt: { $exists: false } }))) throw Errors.notFound('User not found');
+  if (!(await UserModel.exists({ _id: reportedId, deletedAt: { $exists: false } }))) throw Errors.notFound('Player not found');
   const recent = await ReportModel.countDocuments({ reporterId, reportedId, createdAt: { $gt: new Date(Date.now() - 24 * 3600_000) } });
-  if (recent >= 3) throw Errors.tooMany('You already reported this user recently', 'REPORT_LIMIT');
+  if (recent >= 3) throw Errors.tooMany('You already reported this player recently.', 'REPORT_LIMIT');
   const r = await ReportModel.create({ reporterId, reportedId, ...input });
   audit('user.reported', { userId: reporterId, meta: { reportedId, reason: input.reason } });
   return r.toJSON();

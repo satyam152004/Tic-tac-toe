@@ -12,6 +12,7 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { MarkX, MUTED, ProtoButton, SocialButton } from '../auth/protoUi';
 
+import { fs, ms } from '../../design-system/responsive';
 type Action = 'google' | 'apple' | 'guest';
 
 export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
@@ -27,7 +28,7 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
       resetTo('Main');
     } catch (e) {
       if (!(e instanceof Error && e.message === 'CANCELLED')) {
-        toast.error('Sign-in failed', friendlyMessage(e));
+        toast.error("Couldn't sign in", friendlyMessage(e));
       }
       setBusy(null);
     }
@@ -38,11 +39,11 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
       <View style={styles.screen}>
       <View style={styles.hero}>
         <View style={[styles.markCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <MarkX size={22} stroke={2.5} />
+          <MarkX size={ms(26)} stroke={2.5} />
         </View>
         <Text style={[styles.title, { color: c.text }]}>Ready to Play?</Text>
         <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-          Sync your ELO rating, match history, and friends across devices.
+          Keep your rating, match history and friends on any device.
         </Text>
       </View>
 
@@ -71,8 +72,8 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
           testID="welcome-guest"
           title="Continue as Guest"
           variant="ghost"
-          height={32}
-          fontSize={12}
+          height={36}
+          fontSize={fs(12.5)}
           loading={busy === 'guest'}
           disabled={!!busy}
           onPress={() => void run('guest', () => useAuthStore.getState().continueAsGuest())}
@@ -86,12 +87,12 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
 const styles = StyleSheet.create({
   screen: { flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, justifyContent: 'space-between' },
   hero: { alignItems: 'center', marginTop: 12 },
-  markCard: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  title: { fontFamily: fonts.body.semibold, fontSize: 21, lineHeight: 27, letterSpacing: -0.42, textAlign: 'center' },
-  subtitle: { fontFamily: fonts.body.regular, fontSize: 12.5, lineHeight: 18, marginTop: 4, maxWidth: 240, textAlign: 'center' },
+  markCard: { width: ms(60), height: ms(60), borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(21), lineHeight: Math.round(fs(21) * 1.3), letterSpacing: -0.42, textAlign: 'center' },
+  subtitle: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 6, maxWidth: ms(300), textAlign: 'center' },
   actions: { paddingTop: 12, gap: 10 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
   line: { flex: 1, height: 1 },
-  dividerText: { fontFamily: fonts.body.regular, fontSize: 10.5 },
+  dividerText: { fontFamily: fonts.body.regular, fontSize: fs(11) },
   socialRow: { flexDirection: 'row', gap: 8 },
 });

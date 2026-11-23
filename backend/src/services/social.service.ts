@@ -18,7 +18,7 @@ const asBool = (v: unknown) => v === true || v === 'true';
 export const socialVerifiers = {
   async google(idToken: string): Promise<SocialIdentity> {
     const audiences = env.GOOGLE_CLIENT_IDS.split(',').map((s) => s.trim()).filter(Boolean);
-    if (!audiences.length) throw new (await import('../utils/errors.js')).AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Google login is not configured');
+    if (!audiences.length) throw new (await import('../utils/errors.js')).AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Google sign-in is not available right now.');
     try {
       const { payload } = await jwtVerify(idToken, googleJwks, {
         issuer: ['https://accounts.google.com', 'accounts.google.com'],
@@ -32,11 +32,11 @@ export const socialVerifiers = {
         name: typeof payload.name === 'string' ? payload.name : undefined,
       };
     } catch {
-      throw Errors.unauthorized('Invalid Google token', 'INVALID_SOCIAL_TOKEN');
+      throw Errors.unauthorized('Couldn\'t sign in with Google. Try again.', 'INVALID_SOCIAL_TOKEN');
     }
   },
   async apple(identityToken: string): Promise<SocialIdentity> {
-    if (!env.APPLE_CLIENT_ID) throw new (await import('../utils/errors.js')).AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Apple login is not configured');
+    if (!env.APPLE_CLIENT_ID) throw new (await import('../utils/errors.js')).AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Apple sign-in is not available right now.');
     try {
       const { payload } = await jwtVerify(identityToken, appleJwks, {
         issuer: 'https://appleid.apple.com',
@@ -49,7 +49,7 @@ export const socialVerifiers = {
         emailVerified: asBool(payload.email_verified),
       };
     } catch {
-      throw Errors.unauthorized('Invalid Apple token', 'INVALID_SOCIAL_TOKEN');
+      throw Errors.unauthorized('Couldn\'t sign in with Apple. Try again.', 'INVALID_SOCIAL_TOKEN');
     }
   },
 };

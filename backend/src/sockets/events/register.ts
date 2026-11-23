@@ -36,13 +36,13 @@ export function registerEvent<T>(
     try {
       if (!bucket.take()) {
         if (bucket.violations > 25) socket.disconnect(true);
-        throw new AppError(429, 'RATE_LIMITED', 'Too many events');
+        throw new AppError(429, 'RATE_LIMITED', 'Too many actions. Slow down.');
       }
       let payload: T = undefined as T;
       if (schema) {
         const parsed = schema.safeParse(sanitizePayload(rawPayload ?? {}));
         if (!parsed.success) {
-          throw new AppError(400, 'VALIDATION_ERROR', 'Invalid payload', parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
+          throw new AppError(400, 'VALIDATION_ERROR', 'That request wasn\'t valid.', parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
         }
         payload = parsed.data;
       }

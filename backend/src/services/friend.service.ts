@@ -27,7 +27,7 @@ export async function sendRequest(userId: string, input: { userId?: string; user
   const pairKey = makePairKey(userId, targetId);
   const existing = await FriendshipModel.findOne({ pairKey });
   if (existing) {
-    if (existing.status === 'ACCEPTED') throw Errors.conflict('Already friends', 'ALREADY_FRIENDS');
+    if (existing.status === 'ACCEPTED') throw Errors.conflict('You\'re already friends.', 'ALREADY_FRIENDS');
     if (String(existing.requesterId) === userId) throw Errors.conflict('Friend request already sent', 'REQUEST_ALREADY_SENT');
     // They already asked me: sending a request back accepts theirs.
     return accept(userId, String(existing._id));
@@ -43,7 +43,7 @@ export async function sendRequest(userId: string, input: { userId?: string; user
   await notify(targetId, {
     type: 'FRIEND_REQUEST',
     title: 'New friend request',
-    body: `${me?.displayName ?? 'Someone'} wants to be your friend`,
+    body: `${me?.displayName ?? 'Someone'} sent you a friend request`,
     data: { friendshipId: String(doc._id), fromUserId: userId },
   });
   return { id: String(doc._id), status: 'PENDING' as const, recipientId: targetId };
@@ -78,7 +78,7 @@ export async function remove(userId: string, friendshipId: string): Promise<void
     _id: friendshipId,
     $or: [{ status: 'ACCEPTED', $or: [{ requesterId: uid }, { recipientId: uid }] }, { status: 'PENDING', requesterId: uid }],
   });
-  if (r.deletedCount === 0) throw Errors.notFound('Friendship not found', 'FRIENDSHIP_NOT_FOUND');
+  if (r.deletedCount === 0) throw Errors.notFound('You\'re not friends with this player.', 'FRIENDSHIP_NOT_FOUND');
 }
 
 export async function list(userId: string, q: { page: number; limit: number; status: 'accepted' | 'incoming' | 'outgoing' }) {
@@ -128,7 +128,7 @@ export async function block(userId: string, targetId: string) {
 
 export async function unblock(userId: string, targetId: string) {
   const r = await BlockedUserModel.deleteOne({ blockerId: userId, blockedId: targetId });
-  if (r.deletedCount === 0) throw Errors.notFound('Player is not blocked', 'NOT_BLOCKED');
+  if (r.deletedCount === 0) throw Errors.notFound('You haven\'t blocked this player.', 'NOT_BLOCKED');
   return { blocked: false };
 }
 

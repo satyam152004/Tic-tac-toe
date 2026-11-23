@@ -1,3 +1,4 @@
+import { ch, fs } from '../../design-system/responsive';
 import React from 'react';
 import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { fonts } from '../../design-system/typography';
@@ -29,9 +30,9 @@ export const ActionButton: React.FC<{
     danger: { text: c.dangerText, bg: c.dangerSoft, border: c.dangerBorder },
   }[variant];
   const box: ViewStyle = {
-    minHeight: compact ? 36 : tall ? 40 : 41,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    minHeight: ch(compact ? 36 : tall ? 40 : 41),
+    borderRadius: 12,
+    paddingHorizontal: 16,
     alignSelf: fullWidth ? 'stretch' : 'auto',
     opacity: off ? 0.45 : 1,
     backgroundColor: p.bg,
@@ -49,7 +50,7 @@ export const ActionButton: React.FC<{
     >
       <View style={styles.row}>
         {loading ? <ActivityIndicator color={p.text} size="small" /> : icon}
-        <Text numberOfLines={1} style={{ fontFamily: fonts.body.semibold, fontSize: compact ? 12 : 13, color: p.text }}>{title}</Text>
+        <Text numberOfLines={1} style={{ fontFamily: fonts.body.semibold, fontSize: fs(compact ? 12 : 13), color: p.text }}>{title}</Text>
       </View>
     </Pressy>
   );

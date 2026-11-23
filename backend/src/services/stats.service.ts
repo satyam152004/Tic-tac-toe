@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { GameModel, UserModel } from '../models/index.js';
+import { GameModel, MoveModel, UserModel } from '../models/index.js';
 import { replayMoves, MoveError } from '../game-engine/index.js';
 import { Errors } from '../utils/errors.js';
 import { paged, skipOf } from '../utils/pagination.js';
@@ -10,7 +10,7 @@ const HISTORY_STATUSES = ['COMPLETED', 'DRAW'];
 
 export async function myStats(userId: string) {
   const u = await UserModel.findById(userId).select('stats').lean();
-  if (!u) throw Errors.notFound('User not found');
+  if (!u) throw Errors.notFound('Player not found');
   return computeStats(u.stats);
 }
 
@@ -47,6 +47,8 @@ export async function myHistory(userId: string, q: HistoryQuery) {
       pointsAwarded: me?.pointsAwarded ?? 0,
       endReason: g.result?.reason ?? null,
       moveCount: g.moveCount,
+      // Offline matches: lets the app open the copy it still has on the phone.
+      clientMatchId: g.type === 'LOCAL' ? (g.clientMatchId ?? null) : null,
       durationMs: g.durationMs ?? null,
       opponent: opp ? (opp.isAI ? { isAI: true, difficulty: g.difficulty ?? null } : opp.userId ? (byId.get(String(opp.userId)) ?? null) : null) : null,
       playedAt: g.endedAt ?? (g as { createdAt?: Date }).createdAt,
@@ -57,7 +59,7 @@ export async function myHistory(userId: string, q: HistoryQuery) {
 
 export async function myStreaks(userId: string) {
   const u = await UserModel.findById(userId).select('stats.currentStreak stats.bestStreak').lean();
-  if (!u) throw Errors.notFound('User not found');
+  if (!u) throw Errors.notFound('Player not found');
   const recent = await GameModel.find({ playerIds: userId, status: { $in: HISTORY_STATUSES }, type: { $ne: 'LOCAL' } })
     .sort({ endedAt: -1 })
     .limit(10)
@@ -84,6 +86,23 @@ export interface LocalMatchUpload {
  * through the shared engine (the client's claimed result is ignored). Idempotent per clientMatchId.
  * Local results only touch the separate `local*` counters: they never award points/XP/leaderboards.
  */
+/**
+ * Stores the move list of an uploaded offline match so it can be replayed from the history list.
+ * X always moves first; in VS_AI only the human's moves carry the user id (the AI's are null, like online AI games).
+ */
+async function saveLocalMoves(gameId: Types.ObjectId, userId: string, m: LocalMatchUpload, humanMark: string, expireAt: Date): Promise<void> {
+  const docs = m.moves.map((position, i) => {
+    const mark = i % 2 === 0 ? 'X' : 'O';
+    return { gameId, moveNumber: i + 1, playerId: m.mode === 'VS_AI' && mark !== humanMark ? null : new Types.ObjectId(userId), mark, position, expireAt };
+  });
+  if (!docs.length) return;
+  try {
+    await MoveModel.insertMany(docs, { ordered: true });
+  } catch (err) {
+    if ((err as { code?: number }).code !== 11000) throw err; // already stored by a concurrent upload
+  }
+}
+
 export async function syncLocalMatches(userId: string, matches: LocalMatchUpload[]) {
   let accepted = 0;
   let duplicates = 0;
@@ -106,7 +125,8 @@ export async function syncLocalMatches(userId: string, matches: LocalMatchUpload
     const winner = replay.outcome.status === 'WIN' ? replay.outcome.winner : null;
     const outcome = replay.outcome.status === 'DRAW' ? 'DRAW' : m.mode === 'VS_AI' ? (winner === humanMark ? 'WIN' : 'LOSS') : null;
     try {
-      await GameModel.create({
+      const purgeAt = new Date(now.getTime() + 365 * 24 * 3600_000);
+      const game = await GameModel.create({
         type: 'LOCAL',
         status: replay.outcome.status === 'DRAW' ? 'DRAW' : 'COMPLETED',
         boardSize: m.size,
@@ -129,11 +149,17 @@ export async function syncLocalMatches(userId: string, matches: LocalMatchUpload
           reason: replay.outcome.status === 'DRAW' ? 'DRAW' : 'LINE',
         },
         finalizedAt: now,
-        purgeAt: new Date(now.getTime() + 365 * 24 * 3600_000),
+        purgeAt,
       });
+      await saveLocalMoves(game._id, userId, m, humanMark, purgeAt);
     } catch (err) {
       if ((err as { code?: number }).code === 11000) {
         duplicates++;
+        // Matches uploaded before moves were stored have no move records: fill them in so their replay works.
+        const existing = await GameModel.findOne({ createdBy: userId, clientMatchId: m.clientMatchId, type: 'LOCAL' }).select('_id purgeAt').lean();
+        if (existing && !(await MoveModel.exists({ gameId: existing._id }))) {
+          await saveLocalMoves(existing._id as Types.ObjectId, userId, m, humanMark, (existing.purgeAt as Date | undefined) ?? new Date(Date.now() + 365 * 24 * 3600_000));
+        }
         continue;
       }
       throw err;

@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useMemo } from 'react';
+import { Text, TextInput } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppToastHost } from '../components/feedback/AppToast';
@@ -18,6 +19,12 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useAppLifecycle } from './useAppLifecycle';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+// Respect the user's system font size, but cap it so large accessibility sizes cannot break fixed-height layouts.
+type WithDefaults = { defaultProps?: { maxFontSizeMultiplier?: number } };
+for (const C of [Text, TextInput] as unknown as WithDefaults[]) {
+  C.defaultProps = { ...C.defaultProps, maxFontSizeMultiplier: 1.3 };
+}
 
 function Shell() {
   const c = useTheme();

@@ -19,6 +19,7 @@ import type { NotificationItem } from '../../services/api/types';
 import { toast } from '../../store/toastStore';
 import { timeAgo } from '../../utils/format';
 
+import { fs, ms } from '../../design-system/responsive';
 interface Inbox { items: NotificationItem[]; unread: number; total: number }
 
 export const NotificationsScreen: React.FC<RootScreenProps<'notifications'>> = () => {
@@ -96,25 +97,25 @@ export const NotificationsScreen: React.FC<RootScreenProps<'notifications'>> = (
   const earlier = items.filter((i) => !!i.readAt);
 
   const renderRow = (n: NotificationItem) => (
-    <View key={n.id} testID={`notification-${n.id}`} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
+    <View key={n.id} testID={`notification-${n.id}`} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8, minHeight: 56 }}>
       <Pressy
         testID={`notification-open-${n.id}`}
         accessibilityLabel={`${n.title}. ${n.body}${n.readAt ? '' : '. Unread'}`}
         onPress={() => open(n)}
         onLongPress={() => void remove(n)}
         scaleTo={0.995}
-        style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 10, paddingLeft: 13 }}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: ms(10), paddingVertical: 12, paddingLeft: ms(14) }}
       >
-        <View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: n.readAt ? 'transparent' : c.accent }} />
+        <View style={{ width: ms(9), height: ms(9), borderRadius: 5, marginTop: ms(6), backgroundColor: n.readAt ? 'transparent' : c.accent }} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 12, fontFamily: n.readAt ? fonts.body.medium : fonts.body.semibold, color: n.readAt ? c.textSecondary : c.text }}>{n.title}</Text>
-          <Text style={{ fontSize: 10, fontFamily: fonts.mono.regular, color: '#8E939E' }}>
+          <Text style={{ fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.3), fontFamily: n.readAt ? fonts.body.medium : fonts.body.semibold, color: n.readAt ? c.textSecondary : c.text }}>{n.title}</Text>
+          <Text style={{ fontSize: fs(11), lineHeight: Math.round(fs(11) * 1.3), marginTop: 2, fontFamily: fonts.mono.regular, color: '#8E939E' }}>
             {timeAgo(n.createdAt)}
             {n.body ? ` • ${n.body}` : ''}
           </Text>
         </View>
       </Pressy>
-      <AppIconButton testID={`notification-delete-${n.id}`} label="Delete notification" icon={<Trash2 size={14} color="#8E939E" />} onPress={() => void remove(n)} />
+      <AppIconButton testID={`notification-delete-${n.id}`} label="Delete notification" icon={<Trash2 size={ms(18)} color="#8E939E" />} onPress={() => void remove(n)} />
     </View>
   );
 
@@ -126,8 +127,8 @@ export const NotificationsScreen: React.FC<RootScreenProps<'notifications'>> = (
       padded={false}
       rightAction={
         q.data ? (
-          <Pressy testID="mark-all-read" accessibilityLabel="Mark all read" disabled={unread === 0} onPress={() => void markAll()} style={{ opacity: unread > 0 ? 1 : 0.4 }}>
-            <Text style={{ fontSize: 10.5, fontFamily: fonts.body.semibold, color: c.accent }}>Mark all read</Text>
+          <Pressy testID="mark-all-read" accessibilityLabel="Mark all read" disabled={unread === 0} onPress={() => void markAll()} hitSlop={10} style={{ opacity: unread > 0 ? 1 : 0.4 }}>
+            <Text style={{ fontSize: fs(12), fontFamily: fonts.body.semibold, color: c.accent }} numberOfLines={1}>Mark all read</Text>
           </Pressy>
         ) : undefined
       }
@@ -139,7 +140,7 @@ export const NotificationsScreen: React.FC<RootScreenProps<'notifications'>> = (
       ) : q.isLoading ? (
         <AppLoader label="Loading notifications..." />
       ) : items.length === 0 ? (
-        <EmptyState icon={<Bell size={24} color={c.accent} />} title="No notifications" description="Friend requests, invites and rewards will show up here." />
+        <EmptyState icon={<Bell size={ms(28)} color={c.accent} />} title="No notifications" description="Friend requests, invites and rewards will show up here." />
       ) : (
         <ScrollView
           testID="notification-list"

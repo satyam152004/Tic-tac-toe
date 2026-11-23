@@ -17,6 +17,7 @@ import { PasswordRules } from './PasswordRules';
 import { MUTED, ProtoButton, ProtoHeader, ProtoInput, ProtoScreen } from './protoUi';
 import { useCountdown } from './useCountdown';
 
+import { fs } from '../../design-system/responsive';
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
 export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> = () => {
@@ -50,7 +51,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
       setLocked(false);
       setDigits(emptyDigits());
       setStep('reset');
-      if (isResend) toast.success('Code sent', 'If that account exists, a new code is on its way');
+      if (isResend) toast.success('Code sent', 'If that account exists, we sent a new code.');
     } catch (e) {
       const info = otpErrorInfo(e);
       if (info.code === 'OTP_COOLDOWN') {
@@ -70,7 +71,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
     const code = digits.join('');
     const next: typeof errors = {};
     if (code.length < OTP_LENGTH) next.code = 'Enter the 6-digit code from your email';
-    if (!passwordValid(password)) next.password = 'Password does not meet the requirements below';
+    if (!passwordValid(password)) next.password = "Password doesn't meet the rules below";
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -83,7 +84,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
       const info = otpErrorInfo(e);
       if (info.code === 'OTP_LOCKED') {
         setLocked(true);
-        setErrors({ code: 'Too many wrong attempts. Request a new code to continue.' });
+        setErrors({ code: 'Too many wrong tries. Get a new code.' });
       } else if (info.code === 'INVALID_OTP') {
         setErrors({
           code:
@@ -93,7 +94,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
         });
         setDigits(emptyDigits());
       } else if (toApiError(e).code === 'VALIDATION_ERROR') {
-        setErrors({ password: 'The server rejected that password. Check the requirements below.' });
+        setErrors({ password: "That password isn't allowed. Check the rules below." });
       } else {
         setErrors({ form: friendlyMessage(e) });
       }
@@ -109,7 +110,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
         <ProtoHeader title="Reset Password" onBack={back} />
         <View style={styles.body}>
           <Text style={[styles.note, { color: c.textSecondary }]}>
-            Enter your email address and we will send you a 6-digit recovery code.
+            Enter your email and we'll send you a 6-digit code.
           </Text>
           <ProtoInput
             testID="forgot-email"
@@ -129,7 +130,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
             onSubmitEditing={() => void sendCode()}
           />
           <View style={styles.footer}>
-            <ProtoButton testID="forgot-send" title="Send Reset Code" loading={busy} onPress={() => void sendCode()} />
+            <ProtoButton testID="forgot-send" title="Send Code" loading={busy} onPress={() => void sendCode()} />
           </View>
         </View>
       </ProtoScreen>
@@ -148,7 +149,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
             right={<Text style={[styles.badge, { color: c.accent }]}>Code Sent</Text>}
           />
           <Text testID="forgot-neutral" style={[styles.neutral, { color: MUTED }]}>
-            If an account exists for {target}, we have sent a 6-digit code.
+            If {target} has an account, we sent it a 6-digit code.
           </Text>
         </View>
 
@@ -158,7 +159,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
           label="6-Digit Code"
           value={digits.join('')}
           onChangeText={(t) => {
-            const clean = t.replace(/D/g, '').slice(0, OTP_LENGTH);
+            const clean = t.replace(/\D/g, '').slice(0, OTP_LENGTH);
             setDigits(Array.from({ length: OTP_LENGTH }, (_, i) => clean[i] ?? ''));
             setErrors((e) => ({ ...e, code: undefined }));
           }}
@@ -209,7 +210,7 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
             ) : (
               <Pressy testID="reset-resend" accessibilityLabel="Resend code" disabled={busy} onPress={() => void sendCode(true)} hitSlop={12}>
                 <Text style={[styles.resendText, { color: c.accent, fontFamily: fonts.body.semibold }]}>
-                  {locked ? 'Request a new code' : 'Resend code'}
+                  {locked ? 'Get a new code' : 'Resend code'}
                 </Text>
               </Pressy>
             )}
@@ -222,11 +223,11 @@ export const ForgotPasswordScreen: React.FC<RootScreenProps<'forgot_password'>> 
 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 14 },
-  note: { fontFamily: fonts.body.regular, fontSize: 12.5, lineHeight: 18 },
-  badge: { fontFamily: fonts.body.semibold, fontSize: 11 },
-  neutral: { fontFamily: fonts.body.regular, fontSize: 10.5, lineHeight: 14, marginTop: 4 },
-  error: { fontFamily: fonts.body.regular, fontSize: 11.5, lineHeight: 16 },
+  note: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3) },
+  badge: { fontFamily: fonts.body.semibold, fontSize: fs(12) },
+  neutral: { fontFamily: fonts.body.regular, fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3), marginTop: 4 },
+  error: { fontFamily: fonts.body.regular, fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3) },
   footer: { marginTop: 'auto', paddingTop: 8, gap: 8 },
-  resendRow: { alignItems: 'center', minHeight: 20, justifyContent: 'center' },
-  resendText: { fontSize: 11 },
+  resendRow: { alignItems: 'center', minHeight: 28, justifyContent: 'center' },
+  resendText: { fontSize: fs(12.5) },
 });

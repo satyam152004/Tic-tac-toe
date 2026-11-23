@@ -8,6 +8,7 @@ import { useAuthStore, useIsGuest } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { BORDER_STRONG, BotIcon, GlobeIcon, ProtoButton, ProtoHeader, ProtoScreen, UsersIcon } from '../auth/protoUi';
 
+import { fs, ms } from '../../design-system/responsive';
 type ModeKey = 'ai' | 'local' | 'online';
 
 interface ModeOption {
@@ -19,9 +20,9 @@ interface ModeOption {
 }
 
 const MODES: ModeOption[] = [
-  { key: 'ai', testID: 'mode-ai', title: 'vs AI Bot', sub: 'Offline practice against calibrated bot', icon: <BotIcon size={15} /> },
-  { key: 'local', testID: 'mode-local', title: 'Pass & Play', sub: 'Alternating turns on one device', icon: <UsersIcon size={15} /> },
-  { key: 'online', testID: 'mode-online', title: 'Online Ranked', sub: 'Rated 1v1 matchmaking near your ELO', icon: <GlobeIcon size={15} /> },
+  { key: 'ai', testID: 'mode-ai', title: 'vs AI Bot', sub: 'Practice offline against a bot', icon: <BotIcon size={ms(20)} /> },
+  { key: 'local', testID: 'mode-local', title: 'Pass & Play', sub: 'Take turns on one phone', icon: <UsersIcon size={ms(20)} /> },
+  { key: 'online', testID: 'mode-online', title: 'Online Ranked', sub: 'Ranked match with a similar rating', icon: <GlobeIcon size={ms(20)} /> },
 ];
 
 export const GameModeScreen: React.FC = () => {
@@ -58,7 +59,7 @@ export const GameModeScreen: React.FC = () => {
 
   return (
     <ProtoScreen testID="game-mode-screen" tabs>
-      <ProtoHeader title="Select Mode" onBack={back} />
+      <ProtoHeader title="Choose Mode" onBack={back} />
       <View style={styles.body}>
         {MODES.map((m) => {
           const active = selected === m.key;
@@ -116,12 +117,12 @@ export const GameModeScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 12 },
-  card: { padding: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  iconBox: { width: 32, height: 32, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  card: { padding: ms(14), minHeight: 64, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  left: { flexDirection: 'row', alignItems: 'center', gap: ms(12), flex: 1 },
+  iconBox: { width: ms(40), height: ms(40), borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   textCol: { flex: 1 },
-  title: { fontFamily: fonts.body.semibold, fontSize: 13, lineHeight: 18 },
-  sub: { fontFamily: fonts.body.regular, fontSize: 11, lineHeight: 15, marginTop: 2 },
-  radio: { width: 20, height: 20, borderRadius: 10, marginLeft: 8 },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.3) },
+  sub: { fontFamily: fonts.body.regular, fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3), marginTop: 2 },
+  radio: { width: ms(22), height: ms(22), borderRadius: ms(11), marginLeft: 8 },
   footer: { marginTop: 'auto', paddingTop: 8 },
 });

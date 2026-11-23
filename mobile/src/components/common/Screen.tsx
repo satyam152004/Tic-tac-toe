@@ -7,6 +7,9 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useTheme } from '../../hooks/useTheme';
 import { AppHeader } from './AppHeader';
 
+/** Content never stretches wider than this (tablets / large windows). */
+export const MAX_CONTENT_WIDTH = 560;
+
 /**
  * Standard screen wrapper: themed background, safe areas, optional header, keyboard avoidance and scrolling.
  * Screens that live under a tab bar pass `tabs` so the bottom inset is not applied twice.
@@ -35,7 +38,7 @@ export const Screen: React.FC<{
   const insets = useSafeAreaInsets();
   const light = THEME_LIST.find((t) => t.id === themeId)?.isLight;
   const bottom = tabs ? 0 : insets.bottom;
-  const body: ViewStyle = { padding: padded ? gutter : 0, paddingBottom: (padded ? gutter : 0) + (footer ? 0 : bottom), gap };
+  const body: ViewStyle = { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center', padding: padded ? gutter : 0, paddingBottom: (padded ? gutter : 0) + (footer ? 0 : bottom), gap };
 
   return (
     <View testID={testID} style={{ flex: 1, backgroundColor: c.bgPrimary, paddingTop: title ? 0 : insets.top }}>
@@ -50,7 +53,7 @@ export const Screen: React.FC<{
           <View style={[{ flex: 1 }, body, contentStyle]}>{children}</View>
         )}
         {overlay}
-        {footer ? <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 + bottom, gap: 10 }}>{footer}</View> : null}
+        {footer ? <View style={{ width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center', paddingHorizontal: gutter, paddingTop: 8, paddingBottom: 12 + bottom, gap: 10 }}>{footer}</View> : null}
       </KeyboardAvoidingView>
     </View>
   );

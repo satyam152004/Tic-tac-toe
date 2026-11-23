@@ -211,7 +211,7 @@ describe('OfflineHistoryScreen', () => {
 
   it('shows the empty state', async () => {
     await mount('offline_history');
-    expect(await screen.findByText('No Matches Played Yet')).toBeTruthy();
+    expect(await screen.findByText('No matches yet')).toBeTruthy();
     expect(screen.getByText('Play now')).toBeTruthy();
   });
 
@@ -226,7 +226,7 @@ describe('OfflineHistoryScreen', () => {
 
     await fireEvent.press(screen.getByTestId('history-clear'));
     await fireEvent.press(await screen.findByText('Clear History'));
-    expect(await screen.findByText('No Matches Played Yet')).toBeTruthy();
+    expect(await screen.findByText('No matches yet')).toBeTruthy();
     await act(async () => undefined);
   });
 });

@@ -4,6 +4,7 @@ import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { CoinIcon, ProtoButton, WARNING, WARNING_BORDER, WARNING_SOFT } from '../../screens/auth/protoUi';
 
+import { fs, ms } from '../../design-system/responsive';
 export interface GuestUpgradeModalProps {
   open: boolean;
   onUpgrade: () => void;
@@ -27,7 +28,7 @@ export const GuestUpgradeModal: React.FC<GuestUpgradeModalProps> = ({ open, onUp
         <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           {bonusCoins > 0 ? (
             <View style={styles.bonusBadge}>
-              <CoinIcon size={12} />
+              <CoinIcon size={ms(15)} />
               <Text style={styles.bonusText}>+{bonusCoins} Bonus Coins</Text>
             </View>
           ) : null}
@@ -35,7 +36,7 @@ export const GuestUpgradeModal: React.FC<GuestUpgradeModalProps> = ({ open, onUp
           <View style={styles.copy}>
             <Text accessibilityRole="header" style={[styles.title, { color: c.text }]}>Save Your Progress</Text>
             <Text style={[styles.desc, { color: c.textSecondary }]}>
-              Guest progress stays on this device only. Link an account to play Ranked 1v1
+              Guest progress stays on this device. Create an account to play ranked matches
               {coins > 0 ? (
                 <>
                   {' '}and keep your <Text style={{ fontFamily: fonts.body.semibold, color: c.text }}>{coins.toLocaleString()} Coins</Text>
@@ -46,8 +47,8 @@ export const GuestUpgradeModal: React.FC<GuestUpgradeModalProps> = ({ open, onUp
           </View>
 
           <View style={styles.actions}>
-            <ProtoButton testID="guest-upgrade-submit" title="Create Free Account" height={40} onPress={onUpgrade} />
-            <ProtoButton testID="guest-upgrade-dismiss" title="Keep Playing Offline" variant="secondary" height={36} fontSize={12} onPress={onDismiss} />
+            <ProtoButton testID="guest-upgrade-submit" title="Create Account" height={41} onPress={onUpgrade} />
+            <ProtoButton testID="guest-upgrade-dismiss" title="Keep Playing Offline" variant="secondary" height={40} fontSize={fs(12.5)} onPress={onDismiss} />
           </View>
         </View>
       </View>
@@ -59,10 +60,10 @@ const styles = StyleSheet.create({
   scrim: { flex: 1, backgroundColor: 'rgba(20, 21, 24, 0.36)', alignItems: 'center', justifyContent: 'center', padding: 16 },
   card: {
     width: '100%',
-    maxWidth: 288,
+    maxWidth: ms(340),
     borderRadius: 20,
     borderWidth: 1,
-    padding: 20,
+    padding: ms(22),
     alignItems: 'center',
     gap: 14,
     shadowColor: '#141518',
@@ -76,15 +77,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: 9999,
     backgroundColor: WARNING_SOFT,
     borderWidth: 1,
     borderColor: WARNING_BORDER,
   },
-  bonusText: { fontFamily: fonts.body.semibold, fontSize: 10.5, color: WARNING },
+  bonusText: { fontFamily: fonts.body.semibold, fontSize: fs(11.5), color: WARNING },
   copy: { alignItems: 'center', gap: 4 },
-  title: { fontFamily: fonts.body.semibold, fontSize: 17, lineHeight: 22, textAlign: 'center' },
-  desc: { fontFamily: fonts.body.regular, fontSize: 12, lineHeight: 17, textAlign: 'center' },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(17), lineHeight: Math.round(fs(17) * 1.3), textAlign: 'center' },
+  desc: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), textAlign: 'center' },
   actions: { width: '100%', gap: 8, paddingTop: 4 },
 });

@@ -9,6 +9,7 @@ import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 
+import { fs, ms } from '../../design-system/responsive';
 export interface DivisionInfo {
   name: string;
   min: number;
@@ -18,11 +19,11 @@ export interface DivisionInfo {
 }
 
 export const LEAGUE_DIVISIONS: DivisionInfo[] = [
-  { name: 'Platinum', min: 1700, max: 3000, range: '1,700+ ELO', reward: '' },
-  { name: 'Gold I', min: 1500, max: 1699, range: '1,500 – 1,699 ELO', reward: '' },
-  { name: 'Gold II', min: 1400, max: 1499, range: '1,400 – 1,499 ELO', reward: '' },
-  { name: 'Silver', min: 1200, max: 1399, range: '1,200 – 1,399 ELO', reward: '' },
-  { name: 'Bronze', min: 0, max: 1199, range: 'Below 1,200 ELO', reward: '' },
+  { name: 'Platinum', min: 1700, max: 3000, range: '1,700+ pts', reward: '' },
+  { name: 'Gold I', min: 1500, max: 1699, range: '1,500 – 1,699 pts', reward: '' },
+  { name: 'Gold II', min: 1400, max: 1499, range: '1,400 – 1,499 pts', reward: '' },
+  { name: 'Silver', min: 1200, max: 1399, range: '1,200 – 1,399 pts', reward: '' },
+  { name: 'Bronze', min: 0, max: 1199, range: 'Below 1,200 pts', reward: '' },
 ];
 
 export function divisionForPoints(points: number): DivisionInfo {
@@ -39,7 +40,7 @@ export const LeagueTiersScreen: React.FC<RootScreenProps<'league_tiers'>> = () =
   if (!me.data) {
     return (
       <Screen title="Ranked Leagues" onBack={back} testID="league-tiers-screen">
-        {me.isError ? <ErrorState message="Could not load your ranking." onRetry={() => void me.refetch()} /> : <AppLoader label="Loading league..." />}
+        {me.isError ? <ErrorState message="Couldn't load your ranking. Try again." onRetry={() => void me.refetch()} /> : <AppLoader label="Loading league..." />}
       </Screen>
     );
   }
@@ -53,20 +54,20 @@ export const LeagueTiersScreen: React.FC<RootScreenProps<'league_tiers'>> = () =
   const last20 = (history.data?.items ?? []).filter((g) => g.result).slice(0, 20);
   const last20Pct = last20.length > 0 ? Math.round((last20.filter((g) => g.result === 'WIN').length / last20.length) * 100) : null;
 
-  const rewardFor = (i: number) => (i === curIdx ? 'Current Division' : i > curIdx ? 'Completed' : 'Locked');
+  const rewardFor = (i: number) => (i === curIdx ? 'Your league' : i > curIdx ? 'Completed' : 'Locked');
 
   return (
     <Screen title="Ranked Leagues" onBack={back} testID="league-tiers-screen" gap={12}>
       {/* Division Progress Card */}
       <View style={[styles.heroCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
         <View style={styles.heroTop}>
-          <View>
+          <View style={{ flexShrink: 1, minWidth: 0 }}>
             <Text style={[styles.tierTag, { color: c.accent }]}>
               {current.name.toUpperCase()}
               {rank != null ? ` • RANK #${rank}` : ''}
             </Text>
             <Text style={[styles.eloText, { color: c.text }]}>
-              {points.toLocaleString()} ELO
+              {points.toLocaleString()} pts
               {next ? (
                 <Text style={[styles.eloSub, { color: c.textSecondary }]}>{`  (${(next.min - points).toLocaleString()} to ${next.name})`}</Text>
               ) : null}
@@ -93,7 +94,7 @@ export const LeagueTiersScreen: React.FC<RootScreenProps<'league_tiers'>> = () =
               key={div.name}
               style={[styles.divRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.border }, isCurrent && { backgroundColor: '#EFF4FFA6' }]}
             >
-              <View>
+              <View style={{ flexShrink: 1, minWidth: 0 }}>
                 <Text style={[styles.divName, { color: isCurrent ? c.accent : c.text }]}>{div.name}</Text>
                 <Text style={[styles.divRange, { color: c.textSecondary }]}>{div.range}</Text>
               </View>
@@ -108,47 +109,48 @@ export const LeagueTiersScreen: React.FC<RootScreenProps<'league_tiers'>> = () =
 
 const styles = StyleSheet.create({
   headerSeason: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   heroCard: {
-    padding: 12,
+    padding: ms(14),
     borderRadius: 14,
     borderWidth: 1,
-    gap: 8,
+    gap: ms(10),
   },
   heroTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   tierTag: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
   eloText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.mono.semibold,
     marginTop: 2,
   },
   eloSub: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.medium,
   },
   ratePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(5),
     borderRadius: 999,
     backgroundColor: '#F0FDF4',
   },
   ratePillText: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.mono.semibold,
     color: '#15803D',
   },
   track: {
-    height: 6,
+    height: ms(8),
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -165,21 +167,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    minHeight: 34,
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(10),
+    minHeight: 52,
+    gap: 8,
   },
   divName: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   divRange: {
-    fontSize: 10,
+    fontSize: fs(11),
     fontFamily: fonts.mono.medium,
-    marginTop: 0,
+    marginTop: 2,
   },
   divReward: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.mono.semibold,
   },
 });

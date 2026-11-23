@@ -5,6 +5,7 @@ import { findAvatar } from '../../constants/avatars';
 import { radius } from '../../design-system/radius';
 import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
+import { fs, ms } from '../../design-system/responsive';
 
 export type PresenceStatus = 'online' | 'in_game' | 'offline';
 
@@ -21,7 +22,9 @@ export const AppAvatar: React.FC<{
 }> = ({ avatarId, name, size = 'md', status, activeRing }) => {
   const c = useTheme();
   const preset = findAvatar(avatarId);
-  const d = DIM[size];
+  const d = ms(DIM[size]);
+  const fz = fs(FONT[size]);
+  const dotD = Math.max(12, ms(14));
   const dot = { online: c.success, in_game: c.warning, offline: c.textSecondary };
   return (
     <View style={{ width: d, height: d }} accessibilityLabel={name ? `${name} avatar` : 'avatar'}>
@@ -30,13 +33,13 @@ export const AppAvatar: React.FC<{
           <Image source={preset.image} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <View style={[styles.fill, { backgroundColor: preset.colors[0] }]}>
-            <Text style={{ fontFamily: fonts.body.semibold, fontSize: FONT[size], lineHeight: FONT[size] + 6, color: c.onAccent }}>
+            <Text style={{ fontFamily: fonts.body.semibold, fontSize: fz, lineHeight: Math.round(fz * 1.3), color: c.onAccent }}>
               {(name ? name.slice(0, 2) : preset.initials).toUpperCase()}
             </Text>
           </View>
         )}
       </View>
-      {status ? <View style={[styles.dot, { backgroundColor: dot[status], borderColor: c.bgPrimary }]} /> : null}
+      {status ? <View style={[styles.dot, { width: dotD, height: dotD, borderRadius: dotD / 2,  backgroundColor: dot[status], borderColor: c.bgPrimary }]} /> : null}
     </View>
   );
 };

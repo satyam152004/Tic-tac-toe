@@ -17,6 +17,7 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { copyText, isOfflineError, RoomEnded, shareRoomCode, useRoom } from './shared';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 export const WaitingRoomScreen: React.FC<RootScreenProps<'waiting_room'>> = ({ route }) => {
   const c = useTheme();
   const { roomId } = route.params;
@@ -85,7 +86,7 @@ export const WaitingRoomScreen: React.FC<RootScreenProps<'waiting_room'>> = ({ r
         />
       }
     >
-      <View style={{ gap: 14 }}>
+      <View style={{ gap: ms(14) }}>
         {/* Room Code Card */}
         <View style={[styles.codeCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <Text style={[styles.codeTag, { color: '#8E939E' }]}>ROOM CODE</Text>
@@ -97,7 +98,7 @@ export const WaitingRoomScreen: React.FC<RootScreenProps<'waiting_room'>> = ({ r
               onPress={() => void copyText(room.code, 'Room code')}
               style={[styles.codeBtn, { backgroundColor: c.bgElevated }]}
             >
-              <Copy size={13} color={c.accent} />
+              <Copy size={ms(16)} color={c.accent} />
               <Text style={[styles.codeBtnText, { color: c.accent }]}>Copy</Text>
             </Pressy>
             <Pressy
@@ -106,7 +107,7 @@ export const WaitingRoomScreen: React.FC<RootScreenProps<'waiting_room'>> = ({ r
               onPress={() => void shareRoomCode(room)}
               style={[styles.codeBtn, { backgroundColor: c.bgSecondary }]}
             >
-              <Share2 size={13} color={c.text} />
+              <Share2 size={ms(16)} color={c.text} />
               <Text style={[styles.codeBtnText, { color: c.text }]}>Share</Text>
             </Pressy>
           </View>
@@ -141,21 +142,21 @@ export const WaitingRoomScreen: React.FC<RootScreenProps<'waiting_room'>> = ({ r
 };
 
 const styles = StyleSheet.create({
-  codeCard: { borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 10 },
-  codeTag: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5 },
-  codeValue: { fontSize: 22, fontFamily: fonts.mono.semibold, letterSpacing: 2.6 },
-  codeActions: { flexDirection: 'row', gap: 8, alignSelf: 'stretch' },
-  codeBtn: { flex: 1, height: 32, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  codeBtnText: { fontSize: 11.5, fontFamily: fonts.body.semibold },
-  slotsGroup: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  slotRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 13, paddingVertical: 8, gap: 8 },
-  slotLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  avatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 10, fontFamily: fonts.body.semibold, color: '#FFFFFF' },
-  avatarEmpty: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#CFCFC8', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  avatarEmptyText: { fontSize: 10, fontFamily: fonts.body.regular },
-  slotName: { fontSize: 12.5, fontFamily: fonts.body.semibold },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  badgeText: { fontSize: 10, fontFamily: fonts.body.semibold },
-  pulsingDot: { width: 8, height: 8, borderRadius: 4 },
+  codeCard: { borderRadius: ms(14), borderWidth: 1, padding: ms(14), alignItems: 'center', gap: ms(10) },
+  codeTag: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5 },
+  codeValue: { fontSize: fs(22), fontFamily: fonts.mono.semibold, letterSpacing: 2.6 },
+  codeActions: { flexDirection: 'row', gap: ms(8), alignSelf: 'stretch' },
+  codeBtn: { flex: 1, height: ch(32), borderRadius: ms(8), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: ms(4) },
+  codeBtnText: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
+  slotsGroup: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
+  slotRow: { minHeight: ch(38), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: ms(13), paddingVertical: ms(8), gap: ms(8) },
+  slotLeft: { flexDirection: 'row', alignItems: 'center', gap: ms(8), flex: 1 },
+  avatar: { width: ms(28.8), height: ms(28.8), borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: fs(10), fontFamily: fonts.body.semibold, color: '#FFFFFF' },
+  avatarEmpty: { width: ms(28.8), height: ms(28.8), borderRadius: 999, borderWidth: 1, borderColor: '#CFCFC8', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  avatarEmptyText: { fontSize: fs(10), fontFamily: fonts.body.regular },
+  slotName: { fontSize: fs(12.5), fontFamily: fonts.body.semibold },
+  badge: { paddingHorizontal: ms(8), paddingVertical: ms(2), borderRadius: ms(6) },
+  badgeText: { fontSize: fs(10), fontFamily: fonts.body.semibold },
+  pulsingDot: { width: ms(9.6), height: ms(9.6), borderRadius: 999 },
 });

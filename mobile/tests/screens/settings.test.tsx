@@ -129,8 +129,8 @@ describe('SettingsScreen', () => {
     await wrap(<SettingsScreen {...props} />);
     await fireEvent.press(screen.getByTestId('logout'));
     expect(logout).not.toHaveBeenCalled();
-    expect(await screen.findByText('Log Out?')).toBeTruthy();
-    const buttons = screen.getAllByText('Log Out');
+    expect(await screen.findByText('Sign out?')).toBeTruthy();
+    const buttons = screen.getAllByText('Sign Out');
     await fireEvent.press(buttons[buttons.length - 1]);
     await waitFor(() => expect(logout).toHaveBeenCalled());
     await waitFor(() => expect(mockNav.resetTo).toHaveBeenCalledWith('welcome'));
@@ -139,7 +139,7 @@ describe('SettingsScreen', () => {
   it('logout from all devices confirms first', async () => {
     await wrap(<SettingsScreen {...props} />);
     await fireEvent.press(screen.getByTestId('logout-all'));
-    await fireEvent.press(await screen.findByText('Log Out All'));
+    await fireEvent.press(await screen.findByText('Sign Out All'));
     await waitFor(() => expect(logoutAll).toHaveBeenCalled());
     await waitFor(() => expect(mockNav.resetTo).toHaveBeenCalledWith('welcome'));
   });
@@ -314,6 +314,6 @@ describe('NotificationsScreen', () => {
     first.unmount();
     m(notificationApi.list).mockRejectedValue(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<NotificationsScreen {...props} />);
-    expect(await screen.findByText('No Internet Connection')).toBeTruthy();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
   });
 });

@@ -7,6 +7,7 @@ import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { ACCENT_SOFT, ProtoButton, ProtoHeader, ProtoScreen, SUBTLE } from '../auth/protoUi';
 
+import { fs, ms, ch } from '../../design-system/responsive';
 interface RuleItem {
   key: string;
   testID?: string;
@@ -28,35 +29,35 @@ const RULES: RuleItem[] = [
     key: '3',
     testID: 'rule-3',
     badge: '3×3',
-    title: `${WIN_3}-in-a-row Classic`,
-    desc: `Align ${WIN_3} marks horizontally, vertically, or diagonally.`,
+    title: `${WIN_3} in a row (classic)`,
+    desc: `Get ${WIN_3} in a row, across, down or diagonal.`,
     isBlue: true,
   },
   {
     key: '4',
     testID: 'rule-4',
     badge: '4×4',
-    title: `${WIN_4}-in-a-row Extended`,
-    desc: `Connect ${WIN_4} marks on 4×4 grids for deeper tactics.`,
+    title: `${WIN_4} in a row (bigger board)`,
+    desc: `Get ${WIN_4} in a row on a 4×4 board.`,
   },
   {
     key: '5',
     testID: 'rule-5',
     badge: '5×5',
-    title: `${WIN_5}-in-a-row Tactical`,
-    desc: `Connect ${WIN_5} marks on 5×5 boards with multi-fork lines.`,
+    title: `${WIN_5} in a row (biggest board)`,
+    desc: `Get ${WIN_5} in a row on a 5×5 board.`,
   },
   {
     key: 'timer',
     badge: '60s',
     title: 'Online Turn Timers',
-    desc: 'Each turn has a 15s–60s clock; timeout forfeits.',
+    desc: 'Each turn has a timer. Run out of time and you lose.',
   },
   {
     key: 'points',
     badge: 'PTS',
     title: 'Ranked Scoring',
-    desc: 'Earn +25 points per ranked victory, up to ×2 on bigger boards.',
+    desc: 'Win a ranked match for +25 points. Bigger boards give up to double.',
     isBlue: true,
   },
 ];
@@ -96,11 +97,11 @@ export const GameRulesScreen: React.FC<RootScreenProps<'game_rules'>> = () => {
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 16, gap: 12 },
   group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  row: { minHeight: 36, paddingHorizontal: 13, paddingVertical: 8, flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  badge: { width: 28, height: 24, borderRadius: 7, marginTop: 2, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontFamily: fonts.body.semibold, fontSize: 10 },
+  row: { minHeight: ch(36), paddingHorizontal: ms(14), paddingVertical: 10, flexDirection: 'row', alignItems: 'flex-start', gap: ms(10) },
+  badge: { minWidth: ms(38), height: ms(28), paddingHorizontal: 4, borderRadius: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: fonts.body.semibold, fontSize: fs(11) },
   textCol: { flex: 1 },
-  ruleTitle: { fontFamily: fonts.body.semibold, fontSize: 12, lineHeight: 16 },
-  ruleDesc: { fontFamily: fonts.body.regular, fontSize: 10.5, lineHeight: 14 },
+  ruleTitle: { fontFamily: fonts.body.semibold, fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.3) },
+  ruleDesc: { fontFamily: fonts.body.regular, fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3), marginTop: 2 },
   footer: { marginTop: 'auto', paddingTop: 8 },
 });

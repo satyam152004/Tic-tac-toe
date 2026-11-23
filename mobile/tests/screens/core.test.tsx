@@ -229,11 +229,11 @@ describe('HomeScreen', () => {
     expect(screen.getByLabelText('Notifications, 3 unread')).toBeTruthy();
   });
 
-  it('prompts guests to upgrade before Online Arena and shows the offline banner', async () => {
+  it('prompts guests to upgrade before Play Online and shows the offline banner', async () => {
     useAuthStore.setState({ user: makeMe({ accountType: 'GUEST' }), offline: false } as never);
     mockMe = { ...mockMe, data: makeMe({ accountType: 'GUEST' }) };
     await render(<HomeScreen />);
-    await fireEvent.press(screen.getByLabelText('Online Arena'));
+    await fireEvent.press(screen.getByLabelText('Play Online'));
     expect(mockNav.navigate).not.toHaveBeenCalledWith('online_lobby');
     await fireEvent.press(screen.getByTestId('guest-upgrade-submit'));
     expect(mockNav.navigate).toHaveBeenCalledWith('registration');
@@ -257,15 +257,15 @@ describe('HomeScreen', () => {
   it('shows a loader when there is no profile yet', async () => {
     mockMe = { ...mockMe, data: undefined };
     await render(<HomeScreen />);
-    expect(screen.getByLabelText('Loading your arena')).toBeTruthy();
+    expect(screen.getByLabelText('Loading...')).toBeTruthy();
   });
 });
 
 describe('GameRulesScreen', () => {
   it('lists the real win lengths', async () => {
     await render(<GameRulesScreen {...props('game_rules')} />);
-    expect(screen.getByTestId('rule-3').props.children).toContain('Align 3 marks');
-    expect(screen.getByTestId('rule-4').props.children).toContain('Connect 4 marks');
-    expect(screen.getByTestId('rule-5').props.children).toContain('Connect 4 marks');
+    expect(screen.getByTestId('rule-3').props.children).toContain('Get 3 in a row');
+    expect(screen.getByTestId('rule-4').props.children).toContain('Get 4 in a row');
+    expect(screen.getByTestId('rule-5').props.children).toContain('Get 4 in a row');
   });
 });

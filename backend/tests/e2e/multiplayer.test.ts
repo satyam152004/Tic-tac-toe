@@ -56,7 +56,7 @@ async function matchOverSockets(size = 3) {
 
 describe('socket authentication & authorization', () => {
   it('rejects connections without a valid token', async () => {
-    await expect(connect({})).rejects.toMatchObject({ message: expect.stringMatching(/token/i) });
+    await expect(connect({})).rejects.toMatchObject({ message: expect.stringMatching(/sign in/i) });
     await expect(connect({ token: 'garbage' })).rejects.toMatchObject({ data: { code: 'INVALID_TOKEN' } });
   });
 

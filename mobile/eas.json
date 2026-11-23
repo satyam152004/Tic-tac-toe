@@ -6,17 +6,26 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "ios": { "simulator": false },
-      "env": { "EXPO_PUBLIC_API_URL": "http://192.168.1.20:4000" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.20:4000",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "391407416765-uikk528e2vg1thqa5vvqf3cjq1mblafn.apps.googleusercontent.com"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://tictactoe-backend-fdlg.onrender.com" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tictactoe-backend-fdlg.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "391407416765-uikk528e2vg1thqa5vvqf3cjq1mblafn.apps.googleusercontent.com"
+      }
     },
     "production": {
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://tictactoe-backend-fdlg.onrender.com" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tictactoe-backend-fdlg.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "391407416765-uikk528e2vg1thqa5vvqf3cjq1mblafn.apps.googleusercontent.com"
+      }
     }
   },
   "submit": {

@@ -11,6 +11,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useLocalGameStore } from '../../store/localGameStore';
 import { MUTED, ProtoButton, ProtoHeader, ProtoInput, ProtoScreen, SUBTLE } from '../auth/protoUi';
 
+import { fs, ms, ch } from '../../design-system/responsive';
 const MAX_NAME = 20;
 
 type FirstMoveOption = 'p1' | 'p2' | 'random';
@@ -108,7 +109,7 @@ export const PlayerSetupScreen: React.FC<RootScreenProps<'player_setup'>> = ({ r
         </View>
 
         <View>
-          <Text style={[styles.sectionLabel, { color: MUTED }]}>SYMBOL PICKER</Text>
+          <Text style={[styles.sectionLabel, { color: MUTED }]}>PICK A SYMBOL</Text>
           <View style={styles.symbolGrid}>
             {(['X', 'O'] as const).map((m) => {
               const active = p1Mark === m;
@@ -130,7 +131,7 @@ export const PlayerSetupScreen: React.FC<RootScreenProps<'player_setup'>> = ({ r
         </View>
 
         <View>
-          <Text style={[styles.sectionLabel, { color: MUTED }]}>FIRST MOVE</Text>
+          <Text style={[styles.sectionLabel, { color: MUTED }]}>WHO GOES FIRST</Text>
           <View style={[styles.segmentTrack, { backgroundColor: SUBTLE, borderColor: c.border }]}>
             {(['p1', 'p2', 'random'] as const).map((opt) => {
               const active = firstMove === opt;
@@ -138,7 +139,7 @@ export const PlayerSetupScreen: React.FC<RootScreenProps<'player_setup'>> = ({ r
               return (
                 <Pressy
                   key={opt}
-                  accessibilityLabel={`First move ${label}`}
+                  accessibilityLabel={`${label} goes first`}
                   accessibilityState={{ selected: active }}
                   onPress={() => setFirstMove(opt)}
                   hitSlop={{ top: 4, bottom: 4 }}
@@ -165,14 +166,15 @@ export const PlayerSetupScreen: React.FC<RootScreenProps<'player_setup'>> = ({ r
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 14 },
   names: { gap: 10 },
-  tag: { fontFamily: fonts.body.semibold, fontSize: 11 },
-  sectionLabel: { fontFamily: fonts.body.semibold, fontSize: 10, lineHeight: 14, letterSpacing: 0.5, marginBottom: 5, paddingLeft: 2 },
+  tag: { fontFamily: fonts.body.semibold, fontSize: fs(12) },
+  sectionLabel: { fontFamily: fonts.body.semibold, fontSize: fs(11), lineHeight: Math.round(fs(11) * 1.3), letterSpacing: 0.5, marginBottom: 6, paddingLeft: 2 },
   symbolGrid: { flexDirection: 'row', gap: 8 },
-  symbolBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  symbolText: { fontFamily: fonts.body.semibold, fontSize: 12, lineHeight: 16, color: '#FFFFFF' },
+  symbolBtn: { flex: 1, minHeight: ch(40), paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  symbolText: { fontFamily: fonts.body.semibold, fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.3), color: '#FFFFFF' },
   segmentTrack: { flexDirection: 'row', gap: 6, padding: 4, borderRadius: 10, borderWidth: 1 },
   segment: {
     flex: 1,
+    minHeight: ch(34),
     paddingVertical: 6,
     borderRadius: 8,
     alignItems: 'center',
@@ -182,6 +184,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     shadowRadius: 2,
   },
-  segmentText: { fontSize: 12, lineHeight: 16 },
+  segmentText: { fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.3) },
   footer: { marginTop: 'auto', paddingTop: 8 },
 });

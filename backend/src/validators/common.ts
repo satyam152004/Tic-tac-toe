@@ -5,8 +5,8 @@ export const password = z
   .string()
   .min(8, 'Password must be at least 8 characters')
   .max(128)
-  .regex(/[A-Za-z]/, 'Password must contain a letter')
-  .regex(/\d/, 'Password must contain a digit');
+  .regex(/[A-Za-z]/, 'Password needs a letter')
+  .regex(/\d/, 'Password needs a number');
 
 export const username = z
   .string()

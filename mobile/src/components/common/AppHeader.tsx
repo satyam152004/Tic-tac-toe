@@ -8,6 +8,7 @@ import { layout } from '../../design-system/spacing';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
+import { ms } from '../../design-system/responsive';
 
 export const AppHeader: React.FC<{
   title: string;
@@ -21,7 +22,7 @@ export const AppHeader: React.FC<{
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { borderBottomColor: c.border, backgroundColor: c.bgPrimary, paddingTop: safeTop ? insets.top + 8 : 8 }]}>
-      <View style={styles.side}>
+      <View style={styles.left}>
         {onBack ? (
           <Pressy
             testID="header-back"
@@ -37,14 +38,16 @@ export const AppHeader: React.FC<{
         <Text accessibilityRole="header" numberOfLines={1} style={[type.heading, { color: c.text, textAlign: 'center' }]}>{title}</Text>
         {subtitle ? <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary, textAlign: 'center' }]}>{subtitle}</Text> : null}
       </View>
-      <View style={[styles.side, { alignItems: 'flex-end' }]}>{rightAction}</View>
+      <View style={styles.right}>{rightAction}</View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrap: { minHeight: 54, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
-  side: { width: 48, justifyContent: 'center' },
+  wrap: { minHeight: Math.max(54, ms(56)), paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
+  // Left holds the back button; right sizes to its content (a coin pill, "+ Add", "LIVE • 18") and never wraps it. The title takes what is left and truncates.
+  left: { minWidth: 52, justifyContent: 'center' },
+  right: { minWidth: 52, flexShrink: 0, maxWidth: '55%', alignItems: 'flex-end', justifyContent: 'center', marginLeft: 8 },
   mid: { flex: 1, minWidth: 0 },
   back: { width: layout.minTouch, height: layout.minTouch, borderRadius: radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 });

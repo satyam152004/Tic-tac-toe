@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { AppInput } from '../../components/common/AppInput';
 import { AppModal } from '../../components/common/AppModal';
@@ -11,6 +11,7 @@ import { userApi } from '../../services/api/userApi';
 import { toast } from '../../store/toastStore';
 import { socialError } from './socialShared';
 
+import { fs, ms } from '../../design-system/responsive';
 export interface AddFriendSearchSheetProps {
   open: boolean;
   onClose: () => void;
@@ -40,9 +41,9 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
     try {
       await actions.request.mutateAsync({ userId });
       setSentMap((s) => ({ ...s, [userId]: true }));
-      toast.success('Friend request sent', `Invited ${name}`);
+      toast.success('Friend request sent', `We sent a request to ${name}`);
     } catch (e) {
-      toast.error('Could not send request', socialError(e));
+      toast.error("Couldn't send the request", socialError(e));
     }
   };
 
@@ -54,7 +55,7 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
           label=""
           value={query}
           onChangeText={setQuery}
-          placeholder="Search by username..."
+          placeholder="Search by username"
           autoCapitalize="none"
           autoCorrect={false}
           labelRight={
@@ -68,16 +69,16 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
           }
         />
 
-        <View style={[styles.resultsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+        <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={[styles.resultsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           {results.length === 0 ? (
             <Text style={[styles.meta, { color: c.textSecondary, padding: 14, textAlign: 'center' }]}>
               {debounced.length < 2
-                ? 'Type at least 2 characters to search'
+                ? 'Type at least 2 letters to search'
                 : search.isError
-                  ? 'Search failed. Check your connection and try again.'
+                  ? "Search didn't work. Check your internet and try again."
                   : search.isFetching
-                    ? 'Searching…'
-                    : 'No players found'}
+                    ? 'Searching...'
+                    : "We can't find anyone with that name"}
             </Text>
           ) : null}
           {results.map((r, i) => {
@@ -90,13 +91,13 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
                   i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[styles.avatar, { backgroundColor: '#F1F1EE' }]}>
                     <Text style={[styles.avatarText, { color: c.text }]}>{r.displayName.slice(0, 2).toUpperCase()}</Text>
                   </View>
-                  <View>
-                    <Text style={[styles.name, { color: c.text }]}>{r.displayName}</Text>
-                    <Text style={[styles.meta, { color: c.textSecondary }]}>@{r.username} • Lv {r.level}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>{r.displayName}</Text>
+                    <Text numberOfLines={1} style={[styles.meta, { color: c.textSecondary }]}>@{r.username} • Lv {r.level}</Text>
                   </View>
                 </View>
 
@@ -120,7 +121,7 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
               </View>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
     </AppModal>
   );
@@ -128,10 +129,11 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
 
 const styles = StyleSheet.create({
   matchCount: {
-    fontSize: 10.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.body.semibold,
   },
   resultsGroup: {
+    maxHeight: ms(300),
     borderRadius: 14,
     borderWidth: 1,
     overflow: 'hidden',
@@ -141,35 +143,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: ms(10),
+    minHeight: 60,
+    gap: 8,
   },
   avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: ms(38),
+    height: ms(38),
+    borderRadius: ms(19),
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.mono.semibold,
   },
   name: {
-    fontSize: 12.5,
+    fontSize: fs(12.5),
     fontFamily: fonts.body.semibold,
   },
   meta: {
-    fontSize: 10,
+    fontSize: fs(11),
     fontFamily: fonts.mono.medium,
-    marginTop: 1,
+    marginTop: 2,
   },
   inviteBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: ms(16),
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: 10,
   },
   inviteBtnText: {
-    fontSize: 11,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
 });

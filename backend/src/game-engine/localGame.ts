@@ -145,7 +145,7 @@ export interface LocalMatchRecord {
 }
 
 export function toMatchRecord(s: LocalGameState, now: number = Date.now()): LocalMatchRecord {
-  if (s.outcome.status === 'IN_PROGRESS') throw new MoveError('GAME_FINISHED', 'Game is not finished');
+  if (s.outcome.status === 'IN_PROGRESS') throw new MoveError('GAME_FINISHED', 'This match isn\'t finished yet.');
   return {
     config: s.config,
     mode: s.mode,

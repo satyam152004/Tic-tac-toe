@@ -7,6 +7,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from '../common/Pressy';
 import { CHROME } from './boardLayout';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 /** One game control: icon over label (or icon beside label when the bar is stacked). Never truncates its label. */
 export const ControlTile: React.FC<{
   testID?: string;
@@ -31,7 +32,7 @@ export const ControlTile: React.FC<{
         styles.tile,
         row || inline ? styles.row : styles.column,
         inline && !row && styles.inline,
-        { minHeight: row ? CHROME.controlRow : inline ? 36 : CHROME.control, backgroundColor: c.bgCard, borderColor: c.border, opacity: disabled ? 0.45 : 1 },
+        { minHeight: row ? Math.max(CHROME.controlRow, ch(44)) : inline ? ch(38) : Math.max(CHROME.control, ch(48)), backgroundColor: c.bgCard, borderColor: c.border, opacity: disabled ? 0.45 : 1 },
       ]}
     >
       {icon}
@@ -60,6 +61,6 @@ const styles = StyleSheet.create({
   column: { flex: 1, flexDirection: 'column' },
   row: { flexDirection: 'row', gap: space.sm, alignSelf: 'stretch' },
   centered: { textAlign: 'center' },
-  inline: { flex: 1, borderRadius: 10, paddingVertical: 0, gap: 4 },
-  inlineLabel: { fontSize: 11.5, lineHeight: 16 },
+  inline: { flex: 1, borderRadius: 10, paddingVertical: 0, gap: ms(6) },
+  inlineLabel: { fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3) },
 });

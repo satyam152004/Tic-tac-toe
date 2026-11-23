@@ -15,6 +15,7 @@ import { joinRoomByCode } from '../../services/onlineActions';
 import { toast } from '../../store/toastStore';
 import { OPEN_ROOMS_KEY, fetchOpenRooms, timerLabel } from './shared';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 const CODE_LENGTH = 6;
 const clean = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH);
 
@@ -22,7 +23,7 @@ const JOIN_ERRORS: Record<string, string> = {
   ROOM_NOT_FOUND: 'Room code not found. Check the code and try again.',
   ROOM_EXPIRED: 'That room has expired. Ask your friend to create a new one.',
   ROOM_FULL: 'That room is already full.',
-  BLOCKED: 'You cannot join this room.',
+  BLOCKED: "You can't join this room.",
   ALREADY_IN_GAME: 'You are already in a game.',
   ALREADY_IN_ROOM: 'Leave your current room before joining another.',
 };
@@ -83,9 +84,9 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
         />
       }
     >
-      <View style={{ gap: 16 }}>
+      <View style={{ gap: ms(16) }}>
         {/* Code Input Header & Boxes */}
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: ms(8) }}>
           <View style={styles.headerRow}>
             <Text style={[styles.codeLabel, { color: c.textSecondary }]}>
               Room Code{code ? ` (${formattedCode})` : ''}
@@ -142,7 +143,7 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
 
         {/* Recent public rooms: real open rooms from GET /rooms/open; tapping one fills the code boxes */}
         <View>
-          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>RECENT PUBLIC ROOMS</Text>
+          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>PUBLIC ROOMS</Text>
           <View testID="public-rooms" style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
             {open.isLoading ? (
               <View style={styles.pubRow}>
@@ -190,16 +191,16 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  codeLabel: { fontSize: 11.5, fontFamily: fonts.body.semibold },
-  pasteText: { fontSize: 11.5, fontFamily: fonts.body.semibold },
-  codeBoxes: { flexDirection: 'row', gap: 6 },
-  box: { flex: 1, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  boxChar: { fontSize: 16, fontFamily: fonts.mono.semibold },
+  codeLabel: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
+  pasteText: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
+  codeBoxes: { flexDirection: 'row', gap: ms(6) },
+  box: { flex: 1, height: ch(44), borderRadius: ms(10), alignItems: 'center', justifyContent: 'center' },
+  boxChar: { fontSize: fs(16), fontFamily: fonts.mono.semibold },
   hiddenInput: { position: 'absolute', top: 24, left: 0, right: 0, bottom: 0, opacity: 0.01 },
-  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5 },
-  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  pubRow: { minHeight: 38, paddingVertical: 10, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  pubCode: { fontSize: 12, fontFamily: fonts.mono.semibold },
-  pubSub: { fontSize: 10.5, fontFamily: fonts.body.regular },
-  pubAction: { fontSize: 11.5, fontFamily: fonts.body.semibold },
+  sectionLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: ms(5) },
+  group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
+  pubRow: { minHeight: ch(38), paddingVertical: ms(10), paddingHorizontal: ms(13), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ms(8) },
+  pubCode: { fontSize: fs(12), fontFamily: fonts.mono.semibold },
+  pubSub: { fontSize: fs(10.5), fontFamily: fonts.body.regular },
+  pubAction: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
 });

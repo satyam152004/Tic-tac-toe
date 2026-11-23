@@ -16,10 +16,11 @@ import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { toast } from '../../store/toastStore';
 
+import { fs, ms } from '../../design-system/responsive';
 const DESCRIPTIONS: Partial<Record<ThemeId, string>> = {
-  light: 'Off-white #F8F8F6 with Cobalt accent',
-  classic: 'Soft ivory #F5F2EB editorial surface',
-  dark: 'Low-glare charcoal #141518 palette',
+  light: 'Light and clean with a blue accent',
+  classic: 'Soft cream background',
+  dark: 'Dark and easy on the eyes',
 };
 const PROTOTYPE_THEMES: ThemeId[] = ['light', 'classic', 'dark'];
 
@@ -54,7 +55,7 @@ export const ThemeSelectionScreen: React.FC<RootScreenProps<'theme_selection'>> 
           fullWidth
           title="Apply Theme"
           onPress={() => {
-            toast.success('Theme Applied', `${active.name} active`);
+            toast.success('Theme changed', `${active.name} is on`);
             back();
           }}
         />
@@ -95,7 +96,7 @@ export const ThemeSelectionScreen: React.FC<RootScreenProps<'theme_selection'>> 
               </View>
             </View>
             <View style={[styles.radio, sel ? { backgroundColor: c.accent } : { borderWidth: 1, borderColor: '#CFCFC8' }]}>
-              {sel ? <Check size={12} color="#FFFFFF" strokeWidth={3} /> : null}
+              {sel ? <Check size={ms(14)} color="#FFFFFF" strokeWidth={3} /> : null}
             </View>
           </Pressy>
         );
@@ -104,13 +105,20 @@ export const ThemeSelectionScreen: React.FC<RootScreenProps<'theme_selection'>> 
   );
 };
 
+// Swatch = 2x2 mini board. Cell size is computed in whole points (border-box): percent widths plus the gap overflow the
+// inner width and the second cell wraps, which turned the grid into a single column.
+const SWATCH = ms(60);
+const SWATCH_PAD = ms(8);
+const SWATCH_GAP = ms(5);
+const CELL = Math.floor((SWATCH - 2 - SWATCH_PAD * 2 - SWATCH_GAP) / 2);
+
 const styles = StyleSheet.create({
-  card: { padding: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  swatch: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, borderColor: '#CFCFC8', padding: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  cell: { width: '47%', height: '47%', borderRadius: 3, alignItems: 'center', justifyContent: 'center' },
-  cellText: { fontSize: 8, fontFamily: fonts.body.semibold, lineHeight: 10 },
-  name: { fontSize: 12.5, fontFamily: fonts.body.semibold },
-  desc: { fontSize: 10.5, marginTop: 2 },
-  radio: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  card: { padding: ms(14), borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  left: { flexDirection: 'row', alignItems: 'center', gap: ms(14), flex: 1 },
+  swatch: { width: SWATCH, height: SWATCH, borderRadius: 12, borderWidth: 1, borderColor: '#CFCFC8', padding: SWATCH_PAD, flexDirection: 'row', flexWrap: 'wrap', gap: SWATCH_GAP },
+  cell: { width: CELL, height: CELL, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  cellText: { fontSize: ms(11), fontFamily: fonts.body.semibold, lineHeight: ms(14) },
+  name: { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), fontFamily: fonts.body.semibold },
+  desc: { fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3), marginTop: 2 },
+  radio: { width: ms(24), height: ms(24), borderRadius: ms(12), alignItems: 'center', justifyContent: 'center' },
 });

@@ -10,6 +10,7 @@ import { useAppNav } from '../../navigation/useAppNav';
 import { seatsOf, useLocalGameStore } from '../../store/localGameStore';
 import { formatDurationMs } from '../../utils/format';
 
+import { fs, ms } from '../../design-system/responsive';
 export const GameResultScreen: React.FC<RootScreenProps<'game_result'>> = () => {
   const c = useTheme();
   const { nav, goHome, goTab } = useAppNav();
@@ -31,9 +32,9 @@ export const GameResultScreen: React.FC<RootScreenProps<'game_result'>> = () => 
   const vsAi = game.mode === 'VS_AI';
   const humanWon = vsAi && winner === game.humanMark;
   const humanLost = vsAi && winner !== null && winner !== game.humanMark;
-  const title = isDraw ? 'Match Draw' : vsAi ? (humanWon ? 'You Won!' : 'You Lost') : `${seats[winner!].name} Wins!`;
+  const title = isDraw ? "It's a draw" : vsAi ? (humanWon ? 'You Won!' : 'You Lost') : `${seats[winner!].name} Wins!`;
 
-  const badgeText = isDraw ? 'Draw' : vsAi ? (humanWon ? 'Victory' : 'Defeat') : 'Victory';
+  const badgeText = isDraw ? 'Draw' : vsAi ? (humanWon ? 'Win' : 'Loss') : 'Win';
   const badgeBg = isDraw ? '#F1F1EE' : humanLost ? '#FEF2F2' : '#F0FDF4';
   const badgeBorder = isDraw ? '#E4E4DF' : humanLost ? '#FECACA' : '#BBF7D0';
   const badgeColor = isDraw ? '#5C606A' : humanLost ? '#DC2626' : '#15803D';
@@ -46,7 +47,7 @@ export const GameResultScreen: React.FC<RootScreenProps<'game_result'>> = () => 
       contentStyle={styles.container}
       gap={14}
       footer={
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: ms(8) }}>
           <ActionButton
             testID="result-rematch"
             fullWidth
@@ -129,26 +130,26 @@ export const GameResultScreen: React.FC<RootScreenProps<'game_result'>> = () => 
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 12,
+    paddingTop: ms(12),
     alignItems: 'center',
   },
   heroBlock: {
     alignItems: 'center',
-    gap: 4,
+    gap: ms(4),
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 2,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(2),
     borderRadius: 999,
     borderWidth: 1,
   },
   statusBadgeText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   titleText: {
     fontFamily: fonts.body.semibold,
-    fontSize: 21,
+    fontSize: fs(21),
     letterSpacing: -0.3,
     textAlign: 'center',
   },
@@ -160,10 +161,10 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     width: '100%',
-    borderRadius: 14,
+    borderRadius: ms(14),
     borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: ms(10),
+    paddingHorizontal: ms(8),
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000000',
@@ -175,28 +176,28 @@ const styles = StyleSheet.create({
   statCol: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: ms(2),
   },
   statBorder: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
   },
   statVal: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.mono.semibold,
   },
   statSub: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.body.regular,
   },
   savedText: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.regular,
-    marginTop: 2,
+    marginTop: ms(2),
   },
   btnRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: ms(10),
   },
   flexBtn: {
     flex: 1,

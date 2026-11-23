@@ -5,6 +5,7 @@ import { layout } from '../../design-system/spacing';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
+import { ch, ms } from '../../design-system/responsive';
 
 export interface AppButtonProps {
   title: string;
@@ -20,7 +21,7 @@ export interface AppButtonProps {
   testID?: string;
 }
 
-const HEIGHT = { md: layout.minTouch, lg: 52 } as const;
+const HEIGHT = { md: Math.max(layout.minTouch, ch(40)), lg: Math.max(52, ch(44)) } as const;
 
 /** Flat, solid buttons. Variants differ by fill and border only; the label is always `type.button`. */
 export const AppButton: React.FC<AppButtonProps> = ({
@@ -40,7 +41,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   const box: ViewStyle = {
     minHeight: HEIGHT[size],
     borderRadius: radius.lg,
-    paddingHorizontal: size === 'lg' ? 20 : 16,
+    paddingHorizontal: size === 'lg' ? ms(20) : ms(16),
     alignSelf: fullWidth ? 'stretch' : 'auto',
     opacity: off ? 0.45 : 1,
     backgroundColor: palette.bg,
@@ -66,5 +67,5 @@ export const AppButton: React.FC<AppButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  row: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  row: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: ms(8) },
 });

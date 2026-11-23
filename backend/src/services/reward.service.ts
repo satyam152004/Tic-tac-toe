@@ -48,7 +48,7 @@ export interface DailyRewardView {
 
 export async function getDailyStatus(userId: string, now = new Date()) {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).lean();
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   const tz = user.timezone ?? 'UTC';
   const today = localDayKey(now, tz);
   const last = user.daily ?? {};
@@ -83,7 +83,7 @@ export async function getDailyStatus(userId: string, now = new Date()) {
 export async function claimDaily(userId: string, now = new Date()) {
   const status = await getDailyStatus(userId, now);
   if (!status.canClaim) {
-    throw Errors.conflict('Todays reward was already claimed', 'REWARD_ALREADY_CLAIMED', { nextClaimAt: status.nextClaimAt });
+    throw Errors.conflict('You already claimed today\'s reward.', 'REWARD_ALREADY_CLAIMED', { nextClaimAt: status.nextClaimAt });
   }
   const day = status.nextDay;
   const coins = DAILY_REWARD_COINS[day - 1]!;
@@ -96,7 +96,7 @@ export async function claimDaily(userId: string, now = new Date()) {
     { $set: { 'daily.lastKey': status.today, 'daily.day': day, 'daily.lastClaimAt': now }, $inc: { 'wallet.coins': coins } },
     { new: true },
   ).lean();
-  if (!updated) throw Errors.conflict('Todays reward was already claimed', 'REWARD_ALREADY_CLAIMED');
+  if (!updated) throw Errors.conflict('You already claimed today\'s reward.', 'REWARD_ALREADY_CLAIMED');
 
   try {
     await RewardClaimModel.create({ userId, dayKey: status.today, cycleDay: day, coins, timezone: status.timezone, claimedAt: now });

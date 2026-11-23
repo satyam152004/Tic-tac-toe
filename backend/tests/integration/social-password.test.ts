@@ -36,7 +36,7 @@ describe('Google account -> set a password', () => {
     // generic failure: no hint that the account exists or uses Google
     const noPw = await api().post('/api/v1/auth/login').send({ email: 'gina@example.com', password: 'Passw0rdOK' });
     expect(noPw.status).toBe(401);
-    expect(noPw.body.error.message).toBe('Invalid email or password');
+    expect(noPw.body.error.message).toBe('Wrong email or password.');
     expect(noPw.body.error.code).toBe('INVALID_CREDENTIALS');
 
     // "Change password" does not apply (nothing to confirm)

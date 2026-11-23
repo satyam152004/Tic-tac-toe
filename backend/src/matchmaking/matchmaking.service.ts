@@ -29,7 +29,7 @@ const ticketJson = (t: TicketDoc | Record<string, unknown>) => {
 export async function join(userId: string, input: { boardSize: number; winLength?: number }) {
   const config = resolveConfig(input.boardSize, input.winLength);
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).select('_id').lean();
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   await assertNoActiveOnlineGame(userId);
 
   const now = new Date();
@@ -120,7 +120,7 @@ export async function tryMatch(ticket: TicketDoc): Promise<ReturnType<typeof pre
     // The server places both players into the game room; clients then confirm with game:join.
     realtime.joinUserTo(uid, `game:${game._id}`);
     realtime.emitToUser(uid, 'matchmaking:found', { gameId: String(game._id), game: presented, opponent: card(oppId) });
-    void notify(uid, { type: 'MATCH_FOUND', title: 'Match found', body: 'An opponent is ready. Join now!', data: { gameId: String(game._id) } });
+    void notify(uid, { type: 'MATCH_FOUND', title: 'Match found', body: 'Your match is ready. Tap to play.', data: { gameId: String(game._id) } });
   }
   logger.info({ gameId: String(game._id) }, 'match created');
   return presented;

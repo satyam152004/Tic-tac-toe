@@ -84,12 +84,12 @@ describe('LoginScreen', () => {
   it('validates email and password before calling the store', async () => {
     await render(<LoginScreen {...(props() as any)} />);
     await press('login-submit');
-    expect(await screen.findByText('Enter your email address')).toBeTruthy();
+    expect(await screen.findByText('Enter your email')).toBeTruthy();
     expect(screen.getByText('Enter your password')).toBeTruthy();
     await type('login-email', 'nope');
     await type('login-password', 'x');
     await press('login-submit');
-    expect(await screen.findByText('Enter a valid email address')).toBeTruthy();
+    expect(await screen.findByText('Enter a valid email')).toBeTruthy();
     expect(signIn).not.toHaveBeenCalled();
   });
 
@@ -152,8 +152,8 @@ describe('RegistrationScreen', () => {
     await type('register-password', 'abcdefgh1');
     expect(screen.getByLabelText('1 number: met')).toBeTruthy();
     await press('register-submit');
-    expect(await screen.findByText('Username must be at least 3 characters')).toBeTruthy();
-    expect(screen.getByText('Enter your email address')).toBeTruthy();
+    expect(await screen.findByText('Use at least 3 characters')).toBeTruthy();
+    expect(screen.getByText('Enter your email')).toBeTruthy();
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -162,7 +162,7 @@ describe('RegistrationScreen', () => {
     await fill({ user: 'bad name!', pass: 'short' });
     await press('register-submit');
     expect(await screen.findByText('Only letters, numbers and underscores')).toBeTruthy();
-    expect(screen.getByText('Password does not meet the requirements below')).toBeTruthy();
+    expect(screen.getByText("Password doesn't meet the rules below")).toBeTruthy();
   });
 
   it('registers and goes to OTP verification', async () => {
@@ -260,7 +260,7 @@ describe('OtpVerificationScreen', () => {
     api.verifyEmail.mockRejectedValue(new ApiError('OTP_LOCKED', 'x', 429));
     await renderOtp();
     await fireEvent.changeText(screen.getByTestId('otp-0'), '222222');
-    expect(await screen.findByText(/Too many wrong attempts/)).toBeTruthy();
+    expect(await screen.findByText(/Too many wrong tries/)).toBeTruthy();
     expect(screen.getByTestId('otp-0').props.editable).toBe(false);
   });
 
@@ -295,7 +295,7 @@ describe('ForgotPasswordScreen', () => {
     api.forgotPassword.mockResolvedValue({ message: 'ok' });
     await render(<ForgotPasswordScreen {...(props() as any)} />);
     await press('forgot-send');
-    expect(await screen.findByText('Enter your email address')).toBeTruthy();
+    expect(await screen.findByText('Enter your email')).toBeTruthy();
     await type('forgot-email', 'me@example.com');
     await press('forgot-send');
     await waitFor(() => expect(api.forgotPassword).toHaveBeenCalledWith('me@example.com'));
@@ -325,14 +325,14 @@ describe('ForgotPasswordScreen', () => {
     await screen.findByTestId('reset-otp-0');
     await press('reset-submit');
     expect(await screen.findByText('Enter the 6-digit code from your email')).toBeTruthy();
-    expect(screen.getByText('Password does not meet the requirements below')).toBeTruthy();
+    expect(screen.getByText("Password doesn't meet the rules below")).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('reset-otp-0'), '000000');
     await type('reset-password', 'N3wPassword');
     await press('reset-submit');
     expect(await screen.findByText('Wrong code. 2 attempts left.')).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('reset-otp-0'), '111111');
     await press('reset-submit');
-    expect(await screen.findByText(/Too many wrong attempts/)).toBeTruthy();
+    expect(await screen.findByText(/Too many wrong tries/)).toBeTruthy();
     expect(screen.getByTestId('reset-otp-0').props.editable).toBe(false);
     expect(mockResetTo).not.toHaveBeenCalled();
   });
@@ -374,7 +374,7 @@ describe('EditProfileScreen', () => {
   it('blocks invalid values (bad username, over-long bio)', async () => {
     await render(withClient(<EditProfileScreen {...(props() as any)} />));
     await type('edit-username', 'a!');
-    expect(await screen.findByText('Username must be at least 3 characters')).toBeTruthy();
+    expect(await screen.findByText('Use at least 3 characters')).toBeTruthy();
     expect(screen.getByTestId('profile-save').props.accessibilityState?.disabled).toBe(true);
     await type('edit-username', 'aiden');
     await type('edit-bio', 'x'.repeat(161));
@@ -387,7 +387,7 @@ describe('UserProfileScreen', () => {
     useAuthStore.setState({ status: 'signedIn', user: makeMe() });
     await render(withClient(<UserProfileScreen />));
     expect(screen.getByText('Aiden Vance')).toBeTruthy();
-    expect(screen.getByText('@aiden • 1,337 ELO')).toBeTruthy();
+    expect(screen.getByText('@aiden • 1,337 pts')).toBeTruthy();
     expect(screen.getByText('20')).toBeTruthy();
     expect(screen.getByText('Played')).toBeTruthy();
     expect(screen.getByText('60%')).toBeTruthy();
@@ -434,7 +434,7 @@ describe('UserProfileScreen', () => {
     useAuthStore.setState({ status: 'signedIn', user: null });
     users.me.mockRejectedValue(new ApiError('NETWORK_ERROR', 'offline'));
     await render(withClient(<UserProfileScreen />));
-    expect(await screen.findByText('No Internet Connection')).toBeTruthy();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
   });
 });
 

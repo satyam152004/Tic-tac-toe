@@ -121,6 +121,8 @@ export interface HistoryItem {
   id: string; type: GameType; boardSize: BoardSize; winLength: number; difficulty: Difficulty | null;
   result: 'WIN' | 'LOSS' | 'DRAW' | null; myMark: Mark | null; pointsAwarded: number; endReason: string | null;
   moveCount: number; durationMs: number | null;
+  /** Offline (LOCAL) matches only: the id the phone used when it uploaded the match. */
+  clientMatchId?: string | null;
   opponent: (PlayerCard) | { isAI: true; difficulty: Difficulty | null } | null;
   playedAt: string;
 }

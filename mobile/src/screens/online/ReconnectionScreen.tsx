@@ -16,6 +16,7 @@ import { isTerminal, useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 import { useSocketStatus } from './shared';
 
+import { fs, ms } from '../../design-system/responsive';
 const MAX_ATTEMPTS = 5;
 const ATTEMPT_MS = 3000;
 const UNFINISHED = new Set(['IN_PROGRESS', 'READY', 'WAITING']);
@@ -59,7 +60,7 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
     try {
       const id = await currentId();
       if (!id) {
-        toast.info('No active game', 'Your match is no longer running.');
+        toast.info('No active game', 'This match has ended.');
         goHome();
         return;
       }
@@ -104,7 +105,7 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
         <View style={styles.footer}>
           <ActionButton
             testID="reconnect-retry"
-            title="Retry Now"
+            title="Try again"
             fullWidth
             loading={restoring}
             onPress={retry}
@@ -123,11 +124,11 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
         <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           {/* Connection Lost Pill */}
           <View style={styles.lostPill}>
-            <WifiOff size={13} color="#B45309" />
-            <Text style={styles.lostPillText}>Connection Lost</Text>
+            <WifiOff size={ms(16)} color="#B45309" />
+            <Text style={styles.lostPillText}>Connection lost</Text>
           </View>
 
-          <View style={{ alignItems: 'center', gap: 4 }}>
+          <View style={{ alignItems: 'center', gap: ms(4) }}>
             <Text style={[styles.title, { color: c.text }]}>Reconnecting to Match...</Text>
             <Text style={[styles.sub, { color: c.textSecondary }]}>
               Attempt {attempt} of {MAX_ATTEMPTS}{roomCode ? ` • Room ${roomCode}` : ''}
@@ -149,8 +150,8 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
       <ConfirmDialog
         open={confirmLeave}
         title="Leave the game?"
-        message="Leaving forfeits this online match to your opponent."
-        confirmLabel="Forfeit"
+        message="If you leave, your opponent wins."
+        confirmLabel="Leave match"
         cancelLabel="Keep waiting"
         destructive
         onConfirm={leave}
@@ -163,43 +164,43 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: ms(20),
     justifyContent: 'center',
   },
   card: {
     alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderRadius: 14,
+    gap: ms(12),
+    padding: ms(16),
+    borderRadius: ms(14),
     borderWidth: 1,
   },
   lostPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
+    gap: ms(6),
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(2),
     borderRadius: 999,
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
     borderColor: '#FDE68A',
   },
   lostPillText: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.semibold,
     color: '#B45309',
   },
   title: {
-    fontSize: 17,
+    fontSize: fs(17),
     fontFamily: fonts.body.semibold,
   },
   sub: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.regular,
   },
   track: {
     width: '100%',
-    height: 6,
+    height: ms(7.2),
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -208,9 +209,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    gap: 8,
+    paddingHorizontal: ms(20),
+    paddingTop: ms(8),
+    paddingBottom: ms(16),
+    gap: ms(8),
   },
 });

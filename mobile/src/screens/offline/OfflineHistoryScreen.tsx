@@ -18,6 +18,7 @@ import { StoredMatch, localGameStorage } from '../../services/storage/localGameS
 import { useLocalGameStore } from '../../store/localGameStore';
 import { formatDurationMs, formatShortDate } from '../../utils/format';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 const DIFF_LABEL: Record<string, string> = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard', EXPERT: 'Expert', IMPOSSIBLE: 'Unbeatable' };
 
 function dayLabel(iso: string): string {
@@ -61,7 +62,7 @@ export function describeMatch(m: StoredMatch): MatchView {
   };
 }
 
-const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => void }> = ({ match, onClose }) => {
+export const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => void }> = ({ match, onClose }) => {
   const c = useTheme();
   const total = match?.record.moves.length ?? 0;
   const [step, setStep] = useState(total);
@@ -108,7 +109,7 @@ const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => voi
           title="Prev"
           variant="outline"
           size="md"
-          icon={<ChevronLeft size={16} color={c.text} />}
+          icon={<ChevronLeft size={ms(20)} color={c.text} />}
           disabled={step === 0}
           onPress={() => setStep((s) => Math.max(0, s - 1))}
           style={{ flex: 1 }}
@@ -116,7 +117,7 @@ const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => voi
         <AppButton
           title="Next"
           size="md"
-          icon={<ChevronRight size={16} color="#FFFFFF" />}
+          icon={<ChevronRight size={ms(20)} color="#FFFFFF" />}
           disabled={step >= total}
           onPress={() => setStep((s) => Math.min(total, s + 1))}
           style={{ flex: 1 }}
@@ -196,7 +197,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
       rightAction={
         items && items.length > 0 ? (
           <Pressy testID="history-clear" accessibilityLabel="Clear all history" onPress={() => setConfirmClear(true)} hitSlop={10}>
-            <Text style={[styles.clearText, { color: c.dangerText }]}>Clear</Text>
+            <Text style={[styles.clearText, { color: c.dangerText }]} numberOfLines={1}>Clear</Text>
           </Pressy>
         ) : undefined
       }
@@ -244,7 +245,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
 
       {error ? (
         <View style={styles.pad}>
-          <ErrorState message="Could not read your match history." onRetry={() => void load()} />
+          <ErrorState message="Couldn't load your match history." onRetry={() => void load()} />
         </View>
       ) : items === null ? (
         <AppLoader />
@@ -255,8 +256,8 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
           contentContainerStyle={[styles.pad, { flexGrow: 1 }]}
           ListEmptyComponent={
             <EmptyState
-              title="No Matches Played Yet"
-              description="Complete an offline or AI match to see your round history here."
+              title="No matches yet"
+              description="Finish an offline match and it will show up here."
               actionLabel="Play now"
               onAction={() => goTab('PlayTab')}
             />
@@ -304,7 +305,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
                 </View>
                 <View style={styles.replayBtn}>
                   <Text style={[styles.replayText, { color: c.accent }]}>Replay</Text>
-                  <ChevronRight size={12} color={c.accent} />
+                  <ChevronRight size={ms(15)} color={c.accent} />
                 </View>
               </Pressy>
             );
@@ -317,7 +318,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
       <ConfirmDialog
         open={confirmClear}
         title="Clear Match History?"
-        message="This removes all recorded offline matches from your device."
+        message="This deletes all your offline matches from this phone."
         confirmLabel="Clear History"
         destructive
         onConfirm={clearAll}
@@ -329,89 +330,89 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
 
 const styles = StyleSheet.create({
   pad: {
-    paddingHorizontal: 20,
+    paddingHorizontal: ms(20),
     paddingTop: 0,
-    paddingBottom: 24,
+    paddingBottom: ms(24),
   },
   filterBar: {
     flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 14,
+    gap: ms(6),
+    paddingHorizontal: ms(20),
+    paddingTop: ms(8),
+    paddingBottom: ms(14),
   },
   filterPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(4),
+    borderRadius: ms(8),
     borderWidth: 1,
   },
   filterPillText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   row: {
-    minHeight: 38,
-    paddingVertical: 10,
-    paddingHorizontal: 13,
+    minHeight: ch(38),
+    paddingVertical: ms(10),
+    paddingHorizontal: ms(13),
     borderLeftWidth: 1,
     borderRightWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: ms(8),
   },
   cardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: ms(10),
     flex: 1,
   },
   badge: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
+    width: ms(28.8),
+    height: ms(28.8),
+    borderRadius: ms(7),
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   opponentName: {
-    fontSize: 12.5,
+    fontSize: fs(12.5),
     fontFamily: fonts.body.semibold,
   },
   replayBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: ms(4),
   },
   replayText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   clearText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   metaText: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.regular,
   },
   replaySubtitle: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.medium,
     textAlign: 'center',
   },
   replayStep: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.mono.medium,
     textAlign: 'center',
   },
   replayRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
+    gap: ms(10),
+    marginTop: ms(10),
   },
 });

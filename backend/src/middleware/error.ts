@@ -49,7 +49,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   } else if (anyErr?.type === 'entity.too.large') {
     status = 413;
     code = 'PAYLOAD_TOO_LARGE';
-    message = 'Request body too large';
+    message = 'That request is too large.';
   }
 
   if (status >= 500) {

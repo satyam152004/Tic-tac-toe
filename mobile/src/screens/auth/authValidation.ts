@@ -11,13 +11,13 @@ export const passwordValid = (v: string): boolean => v.length <= 128 && PASSWORD
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const emailError = (v: string): string | null => {
   const t = v.trim();
-  if (!t) return 'Enter your email address';
-  return EMAIL_RE.test(t) && t.length <= 254 ? null : 'Enter a valid email address';
+  if (!t) return 'Enter your email';
+  return EMAIL_RE.test(t) && t.length <= 254 ? null : 'Enter a valid email';
 };
 export const usernameError = (v: string): string | null => {
   const t = v.trim();
-  if (t.length < 3) return 'Username must be at least 3 characters';
-  if (t.length > 20) return 'Username can be at most 20 characters';
+  if (t.length < 3) return 'Use at least 3 characters';
+  if (t.length > 20) return 'Use 20 characters or fewer';
   if (!/^[A-Za-z0-9_]+$/.test(t)) return 'Only letters, numbers and underscores';
   return null;
 };

@@ -28,11 +28,11 @@ export async function logoutAll(c: Ctx) {
 }
 export async function forgotPassword(c: B<typeof v.forgotBody>) {
   await auth.forgotPassword(c.body.email);
-  return { message: 'If an account exists for that email, a reset link has been sent.' };
+  return { message: 'If that email has an account, we sent a reset code to it.' };
 }
 export async function resetPassword(c: B<typeof v.resetBody>) {
   await auth.resetPassword(c.body);
-  return { message: 'Password updated. Please log in again.' };
+  return { message: 'Password updated. Sign in again.' };
 }
 export async function verifyEmail(c: B<typeof v.verifyEmailBody>) {
   await auth.verifyEmail(c.body);
@@ -41,5 +41,5 @@ export async function verifyEmail(c: B<typeof v.verifyEmailBody>) {
 export const resendVerification = (c: Ctx) => auth.resendVerification(c.userId);
 export async function changePassword(c: B<typeof v.changePasswordBody>) {
   await auth.changePassword(c.userId, c.body.currentPassword, c.body.newPassword);
-  return { message: 'Password changed. Please log in again on other devices.' };
+  return { message: 'Password changed. Sign in again on your other devices.' };
 }

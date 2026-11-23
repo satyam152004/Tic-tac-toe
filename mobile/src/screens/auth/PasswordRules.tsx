@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { PASSWORD_RULES } from './authValidation';
 import { MUTED, RulePill } from './protoUi';
 
+import { fs, ms } from '../../design-system/responsive';
 /**
  * Live password-policy chips (rules mirror backend/src/validators/common.ts).
  * `card` = the bordered "Password Rules" box of the registration view; without it only the chips render (reset view).
@@ -22,21 +23,21 @@ export const PasswordRules: React.FC<{ value: string; card?: boolean }> = ({ val
   if (!card) {
     return (
       <View testID="password-rules" style={styles.bare}>
-        {pills(10)}
+        {pills(fs(10.5))}
       </View>
     );
   }
   return (
     <View testID="password-rules" style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
       <Text style={[styles.heading, { color: MUTED }]}>PASSWORD RULES</Text>
-      {pills(10.5)}
+      {pills(fs(10.5))}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   bare: { marginTop: 8 },
-  card: { padding: 12, borderRadius: 12, borderWidth: 1, gap: 6 },
-  heading: { fontFamily: fonts.body.semibold, fontSize: 10, lineHeight: 14, letterSpacing: 0.5 },
+  card: { padding: ms(12), borderRadius: 12, borderWidth: 1, gap: 8 },
+  heading: { fontFamily: fonts.body.semibold, fontSize: fs(11), lineHeight: Math.round(fs(11) * 1.3), letterSpacing: 0.5 },
   pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

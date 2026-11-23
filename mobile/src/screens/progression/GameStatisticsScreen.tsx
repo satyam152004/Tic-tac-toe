@@ -15,8 +15,11 @@ import { useAppNav } from '../../navigation/useAppNav';
 import { friendlyMessage, toApiError } from '../../services/api/errors';
 import type { HistoryItem } from '../../services/api/types';
 import { formatDurationMs, formatDurationSec, formatShortDate } from '../../utils/format';
+import { localGameStorage, type StoredMatch } from '../../services/storage/localGameStorage';
+import { LocalReplayModal } from '../offline/OfflineHistoryScreen';
 import { ReplaySheet } from './ReplaySheet';
 
+import { fs, ms } from '../../design-system/responsive';
 const MODE_TABS = [
   { key: 'all', label: 'All', type: undefined },
   { key: 'ai', label: 'AI', type: 'AI' },
@@ -28,6 +31,16 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
   const { nav, back } = useAppNav();
   const [selectedMode, setSelectedMode] = useState<'all' | 'ai' | 'online'>('all');
   const [replayId, setReplayId] = useState<string | null>(null);
+  const [localReplay, setLocalReplay] = useState<StoredMatch | null>(null);
+
+  // Offline matches are replayed from the copy on this phone (it has the moves); the server copy is the fallback.
+  const openReplay = async (item: HistoryItem) => {
+    if (item.type === 'LOCAL' && item.clientMatchId) {
+      const mine = await localGameStorage.findByClientId(item.clientMatchId).catch(() => null);
+      if (mine) return setLocalReplay(mine);
+    }
+    setReplayId(item.id);
+  };
   const [refreshing, setRefreshing] = useState(false);
 
   const filter = useMemo(() => {
@@ -140,7 +153,7 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
       {streaks.data && streaks.data.recentForm.length > 0 ? (
         <AppCard padding="sm" style={styles.formCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Flame size={14} color="#B45309" />
+            <Flame size={ms(18)} color="#B45309" />
             <Text style={[styles.formTitle, { color: c.text }]}>Recent Form</Text>
           </View>
           <View testID="recent-form" style={{ flexDirection: 'row', gap: 6 }}>
@@ -160,16 +173,17 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
       {/* Match History Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Trophy size={16} color={c.accent} />
+          <Trophy size={ms(20)} color={c.accent} />
           <Text style={[type.subheading, { color: c.text }]}>Match History</Text>
         </View>
         <Pressy
           testID="open-offline-history"
           onPress={() => nav.navigate('offline_history')}
+          hitSlop={12}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
         >
           <Text style={[type.caption, { color: c.accent, fontFamily: fonts.body.semibold }]}>Local History</Text>
-          <ChevronRight size={13} color={c.accent} />
+          <ChevronRight size={ms(16)} color={c.accent} />
         </Pressy>
       </View>
     </View>
@@ -204,7 +218,7 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
             return (
               <AppCard
                 padding="sm"
-                onPress={() => setReplayId(item.id)}
+                onPress={() => void openReplay(item)}
                 testID={`history-${item.id}`}
                 accessibilityLabel={`${isWin ? 'Win' : isLoss ? 'Loss' : 'Draw'} against ${name}. Open replay`}
                 style={styles.historyRow}
@@ -213,11 +227,11 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
                   <AppAvatar avatarId={player.avatar} name={player.displayName} size="sm" />
                 ) : (
                   <View style={[styles.avatarBox, { backgroundColor: c.bgElevated }]}>
-                    {ai ? <Bot size={18} color={c.accent} /> : <Users size={18} color={c.accent} />}
+                    {ai ? <Bot size={ms(20)} color={c.accent} /> : <Users size={ms(20)} color={c.accent} />}
                   </View>
                 )}
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={[type.bodyStrong, { fontSize: 13, color: c.text }]}>
+                  <Text numberOfLines={1} style={[type.bodyStrong, { fontSize: fs(13), color: c.text }]}>
                     {name}
                   </Text>
                   <Text style={[type.caption, { color: c.textSecondary }]}>
@@ -233,7 +247,7 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
                     {item.pointsAwarded} pts
                   </Text>
                 </View>
-                <ChevronRight size={14} color={c.textSecondary} />
+                <ChevronRight size={ms(18)} color={c.textSecondary} />
               </AppCard>
             );
           }}
@@ -246,16 +260,17 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
             ) : (
               <EmptyState
                 title="No matches found"
-                description={selectedMode === 'all' ? 'Play a game and it will show up here.' : 'No finished games match this filter.'}
+                description={selectedMode === 'all' ? 'Play a game and it will show up here.' : 'No games match this filter.'}
               />
             )
           }
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 560, alignSelf: 'center' }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} />}
         />
       )}
 
       {replayId ? <ReplaySheet gameId={replayId} onClose={() => setReplayId(null)} /> : null}
+      <LocalReplayModal match={localReplay} onClose={() => setLocalReplay(null)} />
     </Screen>
   );
 };
@@ -263,14 +278,14 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
 const styles = StyleSheet.create({
   segmentContainer: {
     flexDirection: 'row',
-    padding: 2,
-    borderRadius: 9,
+    padding: 3,
+    borderRadius: 10,
     borderWidth: 1,
   },
   segmentItem: {
     flex: 1,
-    paddingVertical: 4,
-    borderRadius: 7,
+    minHeight: 40,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -282,46 +297,47 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   segmentText: {
-    fontSize: 11,
+    fontSize: fs(12),
   },
   kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: ms(10),
   },
   kpiCard: {
-    width: '48.5%',
+    flexBasis: '45%',
     flexGrow: 1,
-    padding: 12,
+    padding: ms(14),
   },
   kpiVal: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.mono.semibold,
   },
   kpiLabel: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.medium,
     marginTop: 2,
   },
   barCard: {
-    gap: 8,
-    padding: 12,
+    gap: ms(10),
+    padding: ms(14),
   },
   barTitle: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
   barLegend: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 6,
   },
   barCount: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.mono.semibold,
   },
   multiBar: {
-    height: 8,
+    height: ms(10),
     borderRadius: 999,
     overflow: 'hidden',
     flexDirection: 'row',
@@ -335,22 +351,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
+    padding: ms(12),
   },
   formTitle: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   formChip: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
+    width: ms(30),
+    height: ms(30),
+    borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   formChipText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.mono.semibold,
   },
   historyRow: {
@@ -360,14 +376,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   avatarBox: {
-    width: 36,
-    height: 36,
+    width: ms(40),
+    height: ms(40),
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   resultBadge: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
 });

@@ -20,11 +20,11 @@ export function signAccessToken(claims: AccessClaims): string {
 export function verifyAccessToken(token: string): AccessClaims {
   try {
     const p = jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: ['HS256'], issuer: 'tictactoe-api' }) as jwt.JwtPayload;
-    if (p.typ !== 'access' || !p.sub || typeof p.sid !== 'string') throw Errors.unauthorized('Invalid token', 'INVALID_TOKEN');
+    if (p.typ !== 'access' || !p.sub || typeof p.sid !== 'string') throw Errors.unauthorized('Please sign in again.', 'INVALID_TOKEN');
     return { sub: p.sub, sid: p.sid, act: p.act === 'REGISTERED' ? 'REGISTERED' : 'GUEST' };
   } catch (err) {
-    if (err instanceof jwt.TokenExpiredError) throw Errors.unauthorized('Access token expired', 'TOKEN_EXPIRED');
+    if (err instanceof jwt.TokenExpiredError) throw Errors.unauthorized('Your sign-in has expired. Please sign in again.', 'TOKEN_EXPIRED');
     if (err instanceof Error && err.name === 'AppError') throw err;
-    throw Errors.unauthorized('Invalid token', 'INVALID_TOKEN');
+    throw Errors.unauthorized('Please sign in again.', 'INVALID_TOKEN');
   }
 }

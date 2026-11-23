@@ -18,6 +18,7 @@ import { friendlyMessage, toApiError } from '../../services/api/errors';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 export const UserProfileScreen: React.FC = () => {
   const c = useTheme();
   const { nav, goTab } = useAppNav();
@@ -46,13 +47,13 @@ export const UserProfileScreen: React.FC = () => {
     } catch (e) {
       const code = toApiError(e).code;
       if (code === 'OTP_COOLDOWN') {
-        toast.info('Code already sent', 'Use the code we emailed a moment ago');
+        toast.info('Code already sent', 'Use the code we just emailed you');
         nav.navigate('otp_verification', { email: user.email, purpose: 'verify' });
       } else if (code === 'ALREADY_VERIFIED') {
         await refreshUser();
         toast.info('Already verified');
       } else {
-        toast.error('Could not send code', friendlyMessage(e));
+        toast.error("Couldn't send the code", friendlyMessage(e));
       }
     } finally {
       setVerifying(false);
@@ -66,7 +67,7 @@ export const UserProfileScreen: React.FC = () => {
         {me.isError ? (
           <ErrorState
             offline={err?.code === 'NETWORK_ERROR'}
-            message={err ? friendlyMessage(err) : 'Could not load your profile.'}
+            message={err ? friendlyMessage(err) : "Couldn't load your profile. Try again."}
             onRetry={() => void me.refetch()}
           />
         ) : (
@@ -97,7 +98,7 @@ export const UserProfileScreen: React.FC = () => {
         <AppIconButton
           testID="profile-edit"
           label="Edit profile"
-          icon={<Edit2 size={16} color={c.text} />}
+          icon={<Edit2 size={ms(20)} color={c.text} />}
           onPress={() => nav.navigate('edit_profile')}
         />
       }
@@ -106,7 +107,7 @@ export const UserProfileScreen: React.FC = () => {
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.container, { paddingHorizontal: isTall ? 22 : 20, gap: isTall ? 14 : 11 }]}
+        contentContainerStyle={[styles.container, { paddingHorizontal: 20, gap: isTall ? 16 : 12 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} />}
       >
@@ -114,46 +115,46 @@ export const UserProfileScreen: React.FC = () => {
         <View style={styles.userRow}>
           <AppAvatar avatarId={user.avatar} name={user.displayName} size="lg" />
           <View style={styles.userInfoCol}>
-            <Text numberOfLines={1} style={[styles.displayName, { color: c.text, fontSize: isTall ? 17 : 15.5 }]}>
+            <Text numberOfLines={1} style={[styles.displayName, { color: c.text, fontSize: fs(isTall ? 17 : 15.5), lineHeight: Math.round(fs(17) * 1.3) }]}>
               {user.displayName}
             </Text>
-            <Text style={[styles.metaHandle, { color: c.textSecondary, fontSize: isTall ? 12 : 11 }]}>
-              @{user.username} • {s.points.toLocaleString()} ELO
+            <Text style={[styles.metaHandle, { color: c.textSecondary, fontSize: fs(12) }]}>
+              @{user.username} • {s.points.toLocaleString()} pts
             </Text>
           </View>
         </View>
 
         {/* 3-Column Stats Card */}
-        <View style={[styles.statsCard, { backgroundColor: c.bgCard, borderColor: c.border, paddingVertical: isTall ? 14 : 11 }]}>
+        <View style={[styles.statsCard, { backgroundColor: c.bgCard, borderColor: c.border, paddingVertical: ms(isTall ? 14 : 11) }]}>
           <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: c.text, fontSize: isTall ? 15 : 14 }]}>
+            <Text style={[styles.statVal, { color: c.text, fontSize: fs(isTall ? 15 : 14) }]}>
               {s.totalGames}
             </Text>
-            <Text style={[styles.statLabel, { color: c.textSecondary, fontSize: isTall ? 11 : 10 }]}>Played</Text>
+            <Text style={[styles.statLabel, { color: c.textSecondary, fontSize: fs(11) }]}>Played</Text>
           </View>
 
           <View style={[styles.statCol, styles.statBorder, { borderColor: c.border }]}>
-            <Text style={[styles.statVal, { color: c.accent, fontSize: isTall ? 15 : 14 }]}>
+            <Text style={[styles.statVal, { color: c.accent, fontSize: fs(isTall ? 15 : 14) }]}>
               {winPct}%
             </Text>
-            <Text style={[styles.statLabel, { color: c.textSecondary, fontSize: isTall ? 11 : 10 }]}>Win</Text>
+            <Text style={[styles.statLabel, { color: c.textSecondary, fontSize: fs(11) }]}>Win</Text>
           </View>
 
           <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: c.text, fontSize: isTall ? 15 : 14 }]}>
+            <Text style={[styles.statVal, { color: c.text, fontSize: fs(isTall ? 15 : 14) }]}>
               {s.currentStreak}d
             </Text>
-            <Text style={[styles.statLabel, { color: c.textSecondary, fontSize: isTall ? 11 : 10 }]}>Streak</Text>
+            <Text style={[styles.statLabel, { color: c.textSecondary, fontSize: fs(11) }]}>Streak</Text>
           </View>
         </View>
 
         {/* Guest Banner (if guest) */}
         {guest ? (
           <View testID="guest-banner" style={[styles.alertBanner, { backgroundColor: withAlpha(c.warning, 0.12), borderColor: withAlpha(c.warning, 0.3) }]}>
-            <UserPlus size={16} color={c.warning} />
+            <UserPlus size={ms(20)} color={c.warning} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={[styles.alertTitle, { color: c.text }]}>Guest Account</Text>
-              <Text style={[styles.alertDesc, { color: c.textSecondary }]}>Link an email to save your rank and stats.</Text>
+              <Text style={[styles.alertDesc, { color: c.textSecondary }]}>Add an email to keep your rank and stats.</Text>
             </View>
             <AppButton
               testID="guest-create-account"
@@ -169,12 +170,12 @@ export const UserProfileScreen: React.FC = () => {
         {!guest && user.email ? (
           user.emailVerified ? (
             <View style={[styles.alertBanner, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
-              <CheckCircle2 size={16} color="#15803D" />
+              <CheckCircle2 size={ms(20)} color="#15803D" />
               <Text style={[styles.alertDesc, { color: '#15803D', flex: 1 }]}>Email verified ({user.email})</Text>
             </View>
           ) : (
             <View style={[styles.alertBanner, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
-              <MailWarning size={16} color="#B45309" />
+              <MailWarning size={ms(20)} color="#B45309" />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[styles.alertTitle, { color: '#B45309' }]}>Verify Email</Text>
                 <Text style={[styles.alertDesc, { color: c.textSecondary }]}>Confirm {user.email} to secure account.</Text>
@@ -201,10 +202,10 @@ export const UserProfileScreen: React.FC = () => {
                 <Pressy
                   accessibilityLabel={item.label}
                   onPress={item.onPress}
-                  style={[styles.menuRow, { minHeight: isTall ? 44 : 36 }]}
+                  style={[styles.menuRow, { minHeight: isTall ? ch(44) : 48 }]}
                 >
-                  <Text style={[styles.menuLabel, { color: c.text, fontSize: isTall ? 13 : 12 }]}>{item.label}</Text>
-                  <ChevronRight size={14} color="#8E939E" />
+                  <Text style={[styles.menuLabel, { color: c.text, fontSize: fs(isTall ? 13 : 12) }]}>{item.label}</Text>
+                  <ChevronRight size={ms(18)} color="#8E939E" />
                 </Pressy>
                 {!isLast ? <View style={[styles.divider, { backgroundColor: c.border }]} /> : null}
               </React.Fragment>
@@ -224,11 +225,12 @@ const styles = StyleSheet.create({
   userRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: ms(14),
     paddingVertical: 2,
   },
   userInfoCol: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   displayName: {
@@ -270,14 +272,14 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 12,
     borderWidth: 1,
-    padding: 10,
+    padding: ms(12),
   },
   alertTitle: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   alertDesc: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.regular,
   },
   groupCard: {
@@ -289,7 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 5,
   },
   menuLeft: {

@@ -8,6 +8,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useToastStore } from '../../store/toastStore';
 import { Pressy } from '../common/Pressy';
 
+import { fs, ms } from '../../design-system/responsive';
 /** Presentational toast. Reads the shared toast store; the store owns the auto-dismiss timer. */
 const ToastView: React.FC = () => {
   const c = useTheme();
@@ -77,9 +78,9 @@ export function withOverlayToast<P extends object>(Component: React.ComponentTyp
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100, elevation: 100, alignItems: 'center' },
-  toast: { backgroundColor: '#141518', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 8, maxWidth: '100%', ...lift },
+  toast: { backgroundColor: '#141518', borderRadius: 22, paddingHorizontal: ms(16), paddingVertical: ms(10), maxWidth: '100%', ...lift },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  title: { color: '#FFFFFF', fontSize: 11.5, lineHeight: 16, fontFamily: fonts.body.medium },
-  message: { color: 'rgba(255,255,255,0.72)', fontSize: 10.5, lineHeight: 14, fontFamily: fonts.body.regular },
+  dot: { width: ms(8), height: ms(8), borderRadius: ms(4) },
+  title: { color: '#FFFFFF', fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3), fontFamily: fonts.body.medium },
+  message: { color: 'rgba(255,255,255,0.72)', fontSize: fs(10.5), lineHeight: Math.round(fs(10.5) * 1.3), fontFamily: fonts.body.regular },
 });

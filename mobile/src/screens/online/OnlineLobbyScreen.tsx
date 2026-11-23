@@ -19,7 +19,8 @@ import { toast } from '../../store/toastStore';
 import { joinErrorMessage } from './JoinRoomScreen';
 import { OPEN_ROOMS_KEY, fetchOpenRooms, useSocketStatus, type OpenRoom } from './shared';
 
-const gridName = (n: number) => `${n}×${n} ${n === 3 ? 'Classic' : n === 4 ? 'Extended' : 'Tactical'}`;
+import { ch, fs, ms } from '../../design-system/responsive';
+const gridName = (n: number) => `${n}×${n} ${n === 3 ? 'Classic' : n === 4 ? 'Large' : 'Extra large'}`;
 
 export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () => {
   const c = useTheme();
@@ -57,19 +58,19 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
 
   return (
     <Screen
-      title="Online Arena"
+      title="Play Online"
       onBack={back}
       scroll={false}
       padded={false}
       testID="online-lobby"
       rightAction={
         <View style={[styles.eloBadge, { backgroundColor: c.bgElevated, borderColor: '#BFDBFE' }]}>
-          <Text style={[styles.eloBadgeText, { color: c.accent }]}>{elo.toLocaleString()} ELO</Text>
+          <Text style={[styles.eloBadgeText, { color: c.accent }]} numberOfLines={1}>{elo.toLocaleString()} pts</Text>
         </View>
       }
     >
       {offline ? (
-        <View style={{ padding: 20 }}>
+        <View style={{ padding: ms(20) }}>
           <ErrorState offline message="Online play needs an internet connection. You can still play offline." retryLabel="Play Offline" onRetry={() => goTab('PlayTab')} />
         </View>
       ) : (
@@ -77,7 +78,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
           {unfinished ? (
             <AppCard selected onPress={resume} testID="resume-game" accessibilityLabel="Resume your unfinished game">
               <Text style={[type.subheading, { color: c.text }]}>You have a game in progress</Text>
-              <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>
+              <Text style={[type.small, { color: c.textSecondary, marginTop: ms(2) }]}>
                 {unfinished.boardSize}x{unfinished.boardSize} · {unfinished.status === 'IN_PROGRESS' ? 'Tap to return to your match' : 'Waiting to start'}
               </Text>
             </AppCard>
@@ -87,8 +88,8 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
           <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
             <View style={styles.rankedHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.rankedTitle, { color: c.text }]}>1v1 Ranked Ladder</Text>
-                <Text style={[styles.rankedSub, { color: c.textSecondary }]}>Matched by ELO • 30s turn clock</Text>
+                <Text style={[styles.rankedTitle, { color: c.text }]}>Ranked match</Text>
+                <Text style={[styles.rankedSub, { color: c.textSecondary }]}>Matched by rating • 30s per turn</Text>
               </View>
               <View style={[styles.onlineDot, { backgroundColor: c.success }]} />
             </View>
@@ -127,7 +128,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
                         {r.host.displayName} • {gridName(r.boardSize)}
                       </Text>
                       <Text numberOfLines={1} style={[styles.rowSub, { color: c.textSecondary }]}>
-                        {r.hostPoints.toLocaleString()} ELO • #{r.code}
+                        {r.hostPoints.toLocaleString()} pts • #{r.code}
                       </Text>
                     </View>
                     <Pressy
@@ -151,21 +152,21 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
 };
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 14 },
+  content: { paddingHorizontal: ms(20), paddingTop: ms(8), paddingBottom: ms(24), gap: ms(14) },
   flex: { flex: 1 },
-  eloBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
-  eloBadgeText: { fontSize: 11, fontFamily: fonts.mono.semibold },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  eloBadge: { paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: 999, borderWidth: 1 },
+  eloBadgeText: { fontSize: fs(11), fontFamily: fonts.mono.semibold },
+  card: { borderRadius: ms(14), borderWidth: 1, padding: ms(14), gap: ms(10) },
   rankedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rankedTitle: { fontSize: 13.5, fontFamily: fonts.body.semibold },
-  rankedSub: { fontSize: 11, fontFamily: fonts.body.regular },
-  onlineDot: { width: 8, height: 8, borderRadius: 4 },
-  roomActions: { flexDirection: 'row', gap: 10 },
-  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5 },
-  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  row: { minHeight: 38, paddingVertical: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  rowTitle: { fontSize: 12, fontFamily: fonts.body.semibold },
-  rowSub: { fontSize: 10, fontFamily: fonts.body.regular },
-  joinBtn: { minWidth: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  joinText: { fontSize: 11, fontFamily: fonts.body.semibold },
+  rankedTitle: { fontSize: fs(13.5), fontFamily: fonts.body.semibold },
+  rankedSub: { fontSize: fs(11), fontFamily: fonts.body.regular },
+  onlineDot: { width: ms(9.6), height: ms(9.6), borderRadius: 999 },
+  roomActions: { flexDirection: 'row', gap: ms(10) },
+  sectionLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: ms(5) },
+  group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: ch(38), paddingVertical: ms(8), paddingHorizontal: ms(13), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ms(8) },
+  rowTitle: { fontSize: fs(12), fontFamily: fonts.body.semibold },
+  rowSub: { fontSize: fs(10), fontFamily: fonts.body.regular },
+  joinBtn: { minWidth: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: ms(8) },
+  joinText: { fontSize: fs(11), fontFamily: fonts.body.semibold },
 });

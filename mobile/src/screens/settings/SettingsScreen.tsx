@@ -10,6 +10,7 @@ import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { Group, GroupRow, SectionLabel } from '../../components/profile/ProtoUi';
 import { THEME_LIST } from '../../design-system/themes';
+import { ms } from '../../design-system/responsive';
 import { type } from '../../design-system/typography';
 import { usePreferenceSync } from '../../hooks/usePreferenceSync';
 import { useTheme } from '../../hooks/useTheme';
@@ -42,17 +43,17 @@ export const ToggleSwitch: React.FC<{ checked: boolean; onChange: () => void; la
       accessibilityLabel={label}
       accessibilityState={{ checked }}
       onPress={onChange}
-      hitSlop={10}
+      hitSlop={12}
       scaleTo={1}
-      style={{ width: 36, height: 20, borderRadius: 10, padding: 2, justifyContent: 'center', backgroundColor: checked ? c.accent : '#E4E4DF' }}
+      style={{ width: ms(46), height: ms(26), borderRadius: ms(13), padding: 3, justifyContent: 'center', backgroundColor: checked ? c.accent : '#E4E4DF' }}
     >
       <View
         style={{
-          width: 16,
-          height: 16,
-          borderRadius: 8,
+          width: ms(20),
+          height: ms(20),
+          borderRadius: ms(10),
           backgroundColor: '#fff',
-          transform: [{ translateX: checked ? 16 : 0 }],
+          transform: [{ translateX: checked ? ms(20) : 0 }],
           shadowColor: '#000',
           shadowOpacity: 0.15,
           shadowRadius: 1,
@@ -73,7 +74,7 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; right?: React.ReactN
       {right}
     </>
   );
-  const style = { minHeight: 44, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 };
+  const style = { minHeight: 44, flexDirection: 'row' as const, alignItems: 'center' as const, gap: ms(12) };
   return onPress ? (
     <Pressy testID={testID} accessibilityLabel={label} onPress={onPress} style={style}>{body}</Pressy>
   ) : (
@@ -125,7 +126,7 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         return;
       }
     } catch {
-      toast.error('Notifications unavailable', 'Could not check notification permission.');
+      toast.error('Notifications unavailable', "Couldn't check notification permission.");
       return;
     }
     setPermDenied(false);
@@ -158,7 +159,7 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
           <GroupRow label="Sound Effects" onPress={toggleSound} right={<ToggleSwitch testID="toggle-sound" label="Toggle sound effects" checked={settings.soundEffects} onChange={toggleSound} />} />
           <GroupRow label="Background Music" onPress={toggleMusic} right={<ToggleSwitch testID="toggle-music" label="Toggle background music" checked={settings.music} onChange={toggleMusic} />} />
           <GroupRow label="Haptics" onPress={toggleVibration} right={<ToggleSwitch testID="toggle-vibration" label="Toggle vibration" checked={settings.vibration} onChange={toggleVibration} />} />
-          <GroupRow label="Move Confirm" onPress={toggleMoveConfirm} right={<ToggleSwitch testID="toggle-move-confirm" label="Toggle move confirmation" checked={settings.moveConfirm} onChange={toggleMoveConfirm} />} />
+          <GroupRow label="Confirm Moves" onPress={toggleMoveConfirm} right={<ToggleSwitch testID="toggle-move-confirm" label="Toggle move confirmation" checked={settings.moveConfirm} onChange={toggleMoveConfirm} />} />
         </Group>
       </View>
 
@@ -177,12 +178,12 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
           <GroupRow testID="row-notifications" label="Notification Inbox" chevron onPress={() => nav.navigate('notifications')} />
         </Group>
         {permDenied ? (
-          <View testID="notif-denied" style={{ marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: c.dangerBorder, backgroundColor: c.dangerSoft, padding: 12, gap: 8 }}>
+          <View testID="notif-denied" style={{ marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: c.dangerBorder, backgroundColor: c.dangerSoft, padding: ms(14), gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <BellOff size={16} color={c.dangerText} />
-              <Text style={[type.smallStrong, { color: c.text, flex: 1 }]}>Notification permission denied</Text>
+              <BellOff size={ms(20)} color={c.dangerText} />
+              <Text style={[type.smallStrong, { color: c.text, flex: 1 }]}>Notifications are off</Text>
             </View>
-            <Text style={[type.small, { color: c.textSecondary }]}>Allow notifications in your device settings to get friend requests, invites and reward reminders.</Text>
+            <Text style={[type.small, { color: c.textSecondary }]}>Turn on notifications in your phone settings to get friend requests, invites and reward reminders.</Text>
             <AppButton testID="open-os-settings" title="Open settings" size="md" variant="secondary" onPress={() => void Linking.openSettings()} />
           </View>
         ) : null}
@@ -197,7 +198,7 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
           />
           <GroupRow testID="row-privacy" label="Privacy & Safety" chevron onPress={() => nav.navigate('privacy_settings')} />
           {isGuest ? (
-            <GroupRow testID="row-upgrade" label="Upgrade account" chevron onPress={() => nav.navigate('registration')} />
+            <GroupRow testID="row-upgrade" label="Create account" chevron onPress={() => nav.navigate('registration')} />
           ) : user?.hasPassword === false ? (
             <GroupRow testID="row-set-password" label="Set a password" chevron onPress={() => setDialog('setPassword')} />
           ) : (
@@ -211,18 +212,18 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
 
       <ConfirmDialog
         open={dialog === 'logout'}
-        title="Log Out?"
-        message={isGuest ? 'You are on a guest account. Logging out can lose this guest profile. Upgrade it first to keep your progress.' : 'You can sign back in anytime using your email, Google, or Apple account.'}
-        confirmLabel="Log Out"
+        title="Sign out?"
+        message={isGuest ? "You're a guest. If you sign out, you may lose your progress. Create an account first to keep it." : 'You can sign back in anytime with your email, Google or Apple.'}
+        confirmLabel="Sign Out"
         destructive
         onCancel={() => setDialog(null)}
         onConfirm={() => void run(logout, () => resetTo('welcome'))}
       />
       <ConfirmDialog
         open={dialog === 'logoutAll'}
-        title="Log out everywhere?"
+        title="Sign out everywhere?"
         message="This signs you out of every device, including this one."
-        confirmLabel="Log Out All"
+        confirmLabel="Sign Out All"
         destructive
         onCancel={() => setDialog(null)}
         onConfirm={() => void run(logoutAll, () => resetTo('welcome'))}
@@ -233,7 +234,7 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         onClose={() => setDialog(null)}
         onChanged={async () => {
           setDialog(null);
-          toast.success('Password changed', 'Please sign in again with your new password.');
+          toast.success('Password changed', 'Sign in again with your new password.');
           await logout();
           resetTo('welcome');
         }}
@@ -245,26 +246,26 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         onClose={() => setDialog(null)}
         onDone={() => {
           setDialog(null);
-          toast.success('Password added', 'You can now sign in with Google or with your email and password.');
+          toast.success('Password added', 'You can now sign in with your email and password too.');
         }}
       />
 
       <AppModal open={dialog === 'language'} title="Language" onClose={() => setDialog(null)}>
         <Text style={[type.small, { color: c.textSecondary }]}>
-          Your choice is saved to your account. The app interface is currently available in English only; translations are not bundled yet.
+          Your choice is saved to your account. The app is only in English for now.
         </Text>
         {SUPPORTED_LANGUAGES.map((l) => (
           <Row
             key={l.code}
             testID={`lang-${l.code}`}
-            icon={<View style={{ width: 16 }} />}
+            icon={<View style={{ width: ms(20) }} />}
             label={l.label}
             onPress={() => {
               sync({ language: l.code }, { language: l.code });
               setDialog(null);
               toast.info('Language updated', l.label);
             }}
-            right={settings.language === l.code ? <Check size={16} color={c.accent} /> : undefined}
+            right={settings.language === l.code ? <Check size={ms(20)} color={c.accent} /> : undefined}
           />
         ))}
       </AppModal>
@@ -369,7 +370,7 @@ const SetPasswordModal: React.FC<{ open: boolean; email: string; onClose: () => 
       {step === 'send' ? (
         <>
           <Text style={[type.small, { color: c.textSecondary }]}>
-            You signed in with Google or Apple, so this account has no password yet. We will email a 6-digit code to {email || 'your email'} to confirm it is you. You can still use Google or Apple afterwards.
+            You signed in with Google or Apple, so this account has no password yet. We'll email a 6-digit code to {email || 'your email'} to confirm it's you. You can still sign in with Google or Apple.
           </Text>
           {error ? <Text testID="setpw-error" accessibilityRole="alert" style={[type.small, { color: c.danger }]}>{error}</Text> : null}
           <AppButton testID="setpw-send" title="Send code" fullWidth loading={loading} onPress={() => void sendCode()} />

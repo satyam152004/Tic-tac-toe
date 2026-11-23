@@ -9,6 +9,7 @@ import { AppAvatar } from '../common/AppAvatar';
 import { AppCard } from '../common/AppCard';
 import { Pressy } from '../common/Pressy';
 
+import { fs, ms } from '../../design-system/responsive';
 /* ----------------------------- ScoreCard ----------------------------- */
 export const ScoreCard: React.FC<{
   label: string;
@@ -76,15 +77,15 @@ export const AchievementCard: React.FC<{ achievement: AchievementView }> = ({ ac
     <AppCard selected={a.unlocked} style={{ gap: 10 }} accessibilityLabel={`${a.title}, ${a.unlocked ? 'unlocked' : `${pct} percent`}`}>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={[styles.achIcon, a.unlocked ? { backgroundColor: c.success + '33', borderColor: withAlpha(c.success, 0.4) } : { backgroundColor: c.bgElevated, borderColor: c.border }]}>
-          {a.unlocked ? <Award size={20} color={c.success} /> : <Lock size={20} color={c.textSecondary} />}
+          {a.unlocked ? <Award size={ms(22)} color={c.success} /> : <Lock size={ms(22)} color={c.textSecondary} />}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={1} style={[type.subheading, { color: c.text }]}>{a.title}</Text>
           <Text style={[type.small, { color: c.textSecondary, marginTop: 2 }]}>{a.description}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 4, alignItems: 'flex-start' }}>
-          <Coins size={14} color={c.warning} />
-          <Text style={[type.num, { fontSize: 12, color: c.warning }]}>{a.rewardLabel}</Text>
+          <Coins size={ms(16)} color={c.warning} />
+          <Text style={[type.num, { fontSize: fs(12), color: c.warning }]}>{a.rewardLabel}</Text>
         </View>
       </View>
       <View style={{ gap: 4 }}>
@@ -116,7 +117,7 @@ export const LeaderboardItem: React.FC<{ entry: LeaderboardView; ratingLabel?: s
   const c = useTheme();
   return (
     <AppCard selected={entry.isCurrentUser} padding="sm" onPress={onPress} style={styles.lbRow} accessibilityLabel={`Rank ${entry.rank}, ${entry.username}, ${entry.rating} ${ratingLabel}`}>
-      <Text style={[type.num, { width: 36, color: entry.rank <= 3 ? c.warning : c.textSecondary }]}>#{entry.rank}</Text>
+      <Text style={[type.num, { width: ms(42), color: entry.rank <= 3 ? c.warning : c.textSecondary }]}>#{entry.rank}</Text>
       <AppAvatar avatarId={entry.avatarId} name={entry.username} size="sm" />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{entry.username}{entry.isCurrentUser ? ' (You)' : ''}</Text>
@@ -124,7 +125,7 @@ export const LeaderboardItem: React.FC<{ entry: LeaderboardView; ratingLabel?: s
       </View>
       <View style={{ alignItems: 'flex-end' }}>
         <Text style={[type.num, { color: c.accent }]}>{entry.rating}</Text>
-        <Text style={[type.caption, { color: c.textSecondary, fontSize: 10 }]}>{ratingLabel}</Text>
+        <Text style={[type.caption, { color: c.textSecondary, fontSize: fs(10) }]}>{ratingLabel}</Text>
       </View>
     </AppCard>
   );
@@ -153,10 +154,10 @@ export const RewardCard: React.FC<{ reward: RewardView; onClaim: (day: number) =
     >
       {claimable ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(c.accent, 0.16) }]} /> : null}
       <Text style={[type.caption, { color: c.textSecondary }]}>Day {reward.day}</Text>
-      {claimed ? <CheckCircle2 size={24} color={c.success} /> : <Coins size={24} color={claimable ? c.warning : c.textSecondary} />}
+      {claimed ? <CheckCircle2 size={ms(26)} color={c.success} /> : <Coins size={ms(26)} color={claimable ? c.warning : c.textSecondary} />}
       <View style={{ alignItems: 'center' }}>
-        <Text style={[type.num, { fontSize: 13, color: c.text }]}>+{reward.coins}</Text>
-        {reward.bonusLabel ? <Text style={[type.caption, { fontSize: 10, color: c.o }]}>{reward.bonusLabel}</Text> : null}
+        <Text style={[type.num, { fontSize: fs(13), color: c.text }]}>+{reward.coins}</Text>
+        {reward.bonusLabel ? <Text style={[type.caption, { fontSize: fs(10), color: c.o }]}>{reward.bonusLabel}</Text> : null}
       </View>
     </Pressy>
   );
@@ -170,9 +171,9 @@ export const ThemeCard: React.FC<{ theme: ThemeDefinition; selected: boolean; on
   return (
     <AppCard selected={selected} onPress={onSelect} padding="sm" testID={`theme-${theme.id}`} accessibilityLabel={`${theme.name}${selected ? ', selected' : ''}`} style={{ gap: 10 }}>
       <View style={{ borderRadius: 12, padding: 10, borderWidth: 1, backgroundColor: t.bgPrimary, borderColor: selected ? t.accent : 'rgba(255,255,255,0.08)' }}>
-        <View style={{ width: 84, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        <View style={{ width: ms(28) * 3 + ms(6) * 2 + 2, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: ms(6) }}>
           {marks.map((m, i) => (
-            <View key={i} style={{ width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bgCard }}>
+            <View key={i} style={{ width: ms(28), height: ms(28), borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bgCard }}>
               {m ? <Text style={[type.caption, { color: m === 'X' ? t.x : t.o }]}>{m}</Text> : null}
             </View>
           ))}
@@ -184,8 +185,8 @@ export const ThemeCard: React.FC<{ theme: ThemeDefinition; selected: boolean; on
           <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>{theme.subtitle}</Text>
         </View>
         {selected ? (
-          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: c.accentFill, alignItems: 'center', justifyContent: 'center' }}>
-            <Check size={14} color={c.onAccent} />
+          <View style={{ width: ms(26), height: ms(26), borderRadius: 13, backgroundColor: c.accentFill, alignItems: 'center', justifyContent: 'center' }}>
+            <Check size={ms(16)} color={c.onAccent} />
           </View>
         ) : null}
       </View>
@@ -194,11 +195,11 @@ export const ThemeCard: React.FC<{ theme: ThemeDefinition; selected: boolean; on
 };
 
 const styles = StyleSheet.create({
-  score: { flex: 1, borderRadius: 16, borderWidth: 1, padding: 14, alignItems: 'center' },
-  mode: { borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, overflow: 'hidden' },
-  modeIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  achIcon: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  score: { flex: 1, borderRadius: 16, borderWidth: 1, padding: ms(14), alignItems: 'center' },
+  mode: { borderRadius: 16, borderWidth: 1, padding: ms(16), flexDirection: 'row', alignItems: 'center', gap: ms(14), overflow: 'hidden' },
+  modeIcon: { width: ms(52), height: ms(52), borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  achIcon: { width: ms(48), height: ms(48), borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  track: { height: ms(8), borderRadius: 4, overflow: 'hidden' },
   lbRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  reward: { flex: 1, minHeight: 104, borderRadius: 16, borderWidth: 1, padding: 10, alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' },
+  reward: { flex: 1, minHeight: ms(112), borderRadius: 16, borderWidth: 1, padding: ms(10), alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' },
 });

@@ -19,6 +19,7 @@ import { toast } from '../../store/toastStore';
 import { isOfflineError, timerLabel } from './shared';
 import { joinErrorMessage } from './JoinRoomScreen';
 
+import { fs, ms } from '../../design-system/responsive';
 export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>> = ({ route }) => {
   const c = useTheme();
   const { nav, goHome, back } = useAppNav();
@@ -36,7 +37,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
   if (!gameId && !roomCode) {
     return (
       <Screen title="Match Challenge" onBack={close}>
-        <ErrorState title="Invalid invitation" message="This invitation link is not valid." retryLabel="Back" onRetry={close} />
+        <ErrorState title="Invalid invitation" message="This invitation link does not work." retryLabel="Back" onRetry={close} />
       </Screen>
     );
   }
@@ -118,7 +119,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
       title="Match Challenge"
       onBack={close}
       footer={
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: ms(8) }}>
           <ActionButton
             testID="accept-invite"
             title="Accept Challenge"
@@ -139,15 +140,15 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
         </View>
       }
     >
-      <View style={{ gap: 14 }}>
+      <View style={{ gap: ms(14) }}>
         <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <AppAvatar avatarId={inviter.data?.avatar} name={name} size="xl" />
-          <View style={{ alignItems: 'center', gap: 2 }}>
+          <View style={{ alignItems: 'center', gap: ms(2) }}>
             <Text testID="inviter-name" style={[styles.name, { color: c.text }]}>
               {name}
             </Text>
             <Text style={[styles.sub, { color: c.textSecondary }]}>
-              {elo.toLocaleString()} ELO • Friends
+              {elo.toLocaleString()} pts • Friends
             </Text>
           </View>
 
@@ -174,10 +175,10 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
 };
 
 const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, borderWidth: 1 },
-  name: { fontSize: 16.5, fontFamily: fonts.body.semibold },
-  sub: { fontSize: 11.5, fontFamily: fonts.body.regular },
-  pillRow: { flexDirection: 'row', gap: 8 },
-  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  pillText: { fontSize: 11, fontFamily: fonts.body.semibold },
+  card: { alignItems: 'center', gap: ms(12), padding: ms(16), borderRadius: ms(14), borderWidth: 1 },
+  name: { fontSize: fs(16.5), fontFamily: fonts.body.semibold },
+  sub: { fontSize: fs(11.5), fontFamily: fonts.body.regular },
+  pillRow: { flexDirection: 'row', gap: ms(8) },
+  pill: { paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: ms(8) },
+  pillText: { fontSize: fs(11), fontFamily: fonts.body.semibold },
 });

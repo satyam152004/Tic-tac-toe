@@ -20,7 +20,7 @@ async function view(userId: string) {
     UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).select('wallet').lean(),
     UserEmblemsModel.findOne({ userId }).lean(),
   ]);
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   const owned = new Set(doc?.unlocked ?? []);
   const equipped = doc?.equipped ?? DEFAULT_EQUIPPED;
   return {
@@ -41,7 +41,7 @@ const isUnlocked = async (userId: string, id: string) => {
 /** Buys (spends coins atomically) and equips an emblem. Free emblems are simply equipped. */
 export async function unlockEmblem(userId: string, id: string) {
   const e = find(id);
-  if (!e) throw Errors.notFound('Unknown emblem', 'EMBLEM_NOT_FOUND');
+  if (!e) throw Errors.notFound('We can\'t find that emblem.', 'EMBLEM_NOT_FOUND');
   if (await isUnlocked(userId, id)) throw Errors.conflict('You already own this emblem', 'EMBLEM_ALREADY_OWNED');
 
   // Spend first: the guarded update only matches when the balance covers the price, so it can never go negative.
@@ -65,7 +65,7 @@ export async function unlockEmblem(userId: string, id: string) {
 }
 
 export async function equipEmblem(userId: string, id: string) {
-  if (!find(id)) throw Errors.notFound('Unknown emblem', 'EMBLEM_NOT_FOUND');
+  if (!find(id)) throw Errors.notFound('We can\'t find that emblem.', 'EMBLEM_NOT_FOUND');
   if (!(await isUnlocked(userId, id))) throw Errors.conflict('Unlock this emblem first', 'EMBLEM_LOCKED');
   await UserEmblemsModel.updateOne({ userId }, { $set: { equipped: id } }, { upsert: true });
   return view(userId);

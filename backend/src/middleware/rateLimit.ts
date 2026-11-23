@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
 
 const handler = (_req: unknown, _res: unknown, next: (e?: unknown) => void) =>
-  next(new AppError(429, 'RATE_LIMITED', 'Too many requests, please slow down'));
+  next(new AppError(429, 'RATE_LIMITED', 'Too many tries. Wait a moment and try again.'));
 
 export const globalLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_SEC * 1000,

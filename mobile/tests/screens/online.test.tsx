@@ -91,7 +91,7 @@ describe('OnlineBoardScreen', () => {
 
   it('disables the board when it is not my turn', async () => {
     await open(gameFixture({ currentTurn: 'O' }));
-    await screen.findByText('You (X) • Waiting');
+    await screen.findByText('You (X) • Their turn');
     await fireEvent.press(screen.getByTestId('cell-0'));
     expect(a.submitMove).not.toHaveBeenCalled();
   });
@@ -121,7 +121,7 @@ describe('OnlineBoardScreen', () => {
     await act(async () => useOnlineStore.getState().setOpponentOffline({ userId: OPP_ID, graceSeconds: 30, since: Date.now() }));
     const banner = await screen.findByTestId('opponent-offline-banner');
     expect(banner).toBeTruthy();
-    expect(screen.getByText(/Opponent Pro disconnected\. They forfeit in 00:/)).toBeTruthy();
+    expect(screen.getByText(/Opponent Pro disconnected\. They lose in 00:/)).toBeTruthy();
     await act(async () => useOnlineStore.getState().setReconnecting(true));
     expect(await screen.findByTestId('reconnecting-overlay')).toBeTruthy();
   });
@@ -130,8 +130,8 @@ describe('OnlineBoardScreen', () => {
     await open();
     await fireEvent.press(screen.getByTestId('forfeit'));
     expect(a.forfeitGame).not.toHaveBeenCalled();
-    await screen.findByText('Forfeit Match?');
-    const forfeits = screen.getAllByText('Forfeit');
+    await screen.findByText('Give up this match?');
+    const forfeits = screen.getAllByText('Give up');
     await fireEvent.press(forfeits[forfeits.length - 1]);
     await waitFor(() => expect(a.forfeitGame).toHaveBeenCalledWith('game-1'));
   });
@@ -140,8 +140,8 @@ describe('OnlineBoardScreen', () => {
     await open();
     await fireEvent.press(await screen.findByTestId('offer-draw'));
     expect(gs.offerDraw).not.toHaveBeenCalled();
-    await screen.findByText('Offer Mutual Draw?');
-    await fireEvent.press(screen.getByText('Send Draw Offer'));
+    await screen.findByText('Offer a draw?');
+    await fireEvent.press(screen.getByText('Send offer'));
     await waitFor(() => expect(gs.offerDraw).toHaveBeenCalledWith('game-1'));
     const expiresAt = new Date(Date.now() + 60000).toISOString();
     await act(async () => useOnlineStore.getState().applyGame(gameFixture({ drawOffer: { by: ME_ID, expiresAt } })));
@@ -153,10 +153,10 @@ describe('OnlineBoardScreen', () => {
     await screen.findByTestId('offer-draw');
     const handler = (socketClient.on as jest.Mock).mock.calls.filter((c) => c[0] === 'game:draw-offered').pop()![1];
     await act(async () => handler({ gameId: 'game-1', by: OPP_ID, expiresAt: new Date(Date.now() + 60000).toISOString(), moveCount: 3 }));
-    expect(await screen.findByText('Draw Offered')).toBeTruthy();
+    expect(await screen.findByText('Draw offer')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('draw-accept'));
     await waitFor(() => expect(gs.respondDraw).toHaveBeenCalledWith('game-1', true));
-    await waitFor(() => expect(screen.queryByText('Draw Offered')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Draw offer')).toBeNull());
   });
 
   it('navigates to the result screen when the server finishes the game', async () => {
@@ -189,21 +189,21 @@ describe('OnlineResultScreen', () => {
 
   it('shows the server outcome, reason and points for a win', async () => {
     await open(finished('WIN', 'FORFEIT'));
-    expect(await screen.findByText('Ranked Victory')).toBeTruthy();
-    expect(screen.getByText('+25 ELO (1,030)')).toBeTruthy();
+    expect(await screen.findByText('You won')).toBeTruthy();
+    expect(screen.getByText('+25 points (1,030)')).toBeTruthy();
     expect(screen.getByText('6 Moves')).toBeTruthy();
   });
 
   it('shows a loss from the server outcome (not from the board)', async () => {
     await open(finished('LOSS', 'TIMEOUT'));
-    expect(await screen.findByText('Ranked Defeat')).toBeTruthy();
-    expect(screen.getByText('-10 ELO (1,030)')).toBeTruthy();
+    expect(await screen.findByText('You lost')).toBeTruthy();
+    expect(screen.getByText('-10 points (1,030)')).toBeTruthy();
   });
 
   it('shows a draw', async () => {
     await open(finished('DRAW', 'DRAW'));
-    expect(await screen.findByText('Ranked Draw')).toBeTruthy();
-    expect(screen.getByText('+0 ELO (1,030)')).toBeTruthy();
+    expect(await screen.findByText("It's a draw")).toBeTruthy();
+    expect(screen.getByText('+0 points (1,030)')).toBeTruthy();
   });
 
   it('rematch: sends a request, then shows waiting state', async () => {
@@ -226,7 +226,7 @@ describe('OnlineResultScreen', () => {
     useOnlineStore.getState().reset();
     (a.openGame as jest.Mock).mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<OnlineResultScreen {...props({ gameId: 'game-9' })} />);
-    expect(await screen.findByText('No Internet Connection')).toBeTruthy();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
     expect(a.openGame).toHaveBeenCalledWith('game-9');
   });
 });
@@ -242,7 +242,7 @@ describe('JoinRoomScreen', () => {
     ['ROOM_NOT_FOUND', 'Room code not found. Check the code and try again.'],
     ['ROOM_EXPIRED', 'That room has expired. Ask your friend to create a new one.'],
     ['ROOM_FULL', 'That room is already full.'],
-    ['BLOCKED', 'You cannot join this room.'],
+    ['BLOCKED', "You can't join this room."],
   ])('maps %s to a friendly inline error', async (code, text) => {
     (a.joinRoomByCode as jest.Mock).mockRejectedValueOnce(new ApiError(code, 'raw server text'));
     await submit('abc123');
@@ -276,8 +276,8 @@ describe('JoinRoomScreen', () => {
 describe('MatchmakingScreen', () => {
   it('starts the search once, shows searching state and cancels', async () => {
     await wrap(<MatchmakingScreen {...props({ boardSize: 4 })} />);
-    expect(await screen.findByText('Searching Arena...')).toBeTruthy();
-    expect(screen.getByTestId('search-spec').props.children).toBe('4×4 Ranked • ~1,030 ELO');
+    expect(await screen.findByText('Looking for an opponent...')).toBeTruthy();
+    expect(screen.getByTestId('search-spec').props.children).toBe('4×4 Ranked • Rating 1,030');
     expect(a.startQuickMatch).toHaveBeenCalledTimes(1);
     expect(a.startQuickMatch).toHaveBeenCalledWith(4);
     await fireEvent.press(screen.getByTestId('cancel-search'));
@@ -371,7 +371,7 @@ describe('OnlineLobbyScreen', () => {
   it('shows the offline state', async () => {
     useAuthStore.setState({ offline: true });
     await wrap(<OnlineLobbyScreen {...props()} />);
-    expect(await screen.findByText('No Internet Connection')).toBeTruthy();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
     expect(screen.queryByTestId('quick-match')).toBeNull();
   });
 });

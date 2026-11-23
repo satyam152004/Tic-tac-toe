@@ -15,6 +15,7 @@ import { cancelQuickMatch, startQuickMatch } from '../../services/onlineActions'
 import { useOnlineStore } from '../../store/onlineStore';
 import { isOfflineError } from './shared';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 const FOUND_DELAY_MS = 1600;
 
 export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ route }) => {
@@ -34,7 +35,7 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
   const guard = useBackGuard({
     when: phase === 'searching',
     title: 'Cancel search?',
-    message: 'You will leave the matchmaking queue.',
+    message: 'You will stop looking for an opponent.',
     confirmLabel: 'Cancel search',
     onLeave: () => void cancelQuickMatch(),
   });
@@ -113,7 +114,7 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
   if (begun && phase === 'idle' && cancelReason === 'EXPIRED') {
     return (
       <Screen title="Finding Opponent" onBack={back}>
-        <ErrorState title="No opponent found" message="The search timed out. Try again or pick another board size." retryLabel="Search Again" onRetry={retry} />
+        <ErrorState title="No opponent found" message="No one was found. Try again or pick another board size." retryLabel="Search Again" onRetry={retry} />
       </Screen>
     );
   }
@@ -148,12 +149,12 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
         </View>
 
         <Text style={[styles.title, { color: c.text }]}>
-          {found ? 'Opponent Found!' : 'Searching Arena...'}
+          {found ? 'Opponent Found!' : 'Looking for an opponent...'}
         </Text>
 
         <View style={styles.specPill}>
           <Text testID="search-spec" style={[styles.specText, { color: c.textSecondary }]}>
-            {found ? `vs ${oppName}` : `${boardSize}×${boardSize} Ranked • ~${(me?.stats?.points ?? 0).toLocaleString()} ELO`}
+            {found ? `vs ${oppName}` : `${boardSize}×${boardSize} Ranked • Rating ${(me?.stats?.points ?? 0).toLocaleString()}`}
           </Text>
         </View>
       </View>
@@ -166,13 +167,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 8,
+    paddingVertical: ms(20),
+    gap: ms(8),
   },
   outerRadar: {
-    width: 144,
-    height: 144,
-    borderRadius: 72,
+    width: ms(144),
+    height: ms(144),
+    borderRadius: ms(72),
     backgroundColor: 'rgba(239,244,255,0.55)',
     borderWidth: 1,
     borderColor: '#DBEAFE',
@@ -180,9 +181,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   midRadar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: ms(96),
+    height: ms(96),
+    borderRadius: ms(48),
     backgroundColor: '#EFF4FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
@@ -190,8 +191,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   innerTimerBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(6),
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
@@ -203,57 +204,57 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   timerText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.mono.semibold,
     color: '#1D4ED8',
   },
   title: {
-    fontSize: 17,
+    fontSize: fs(17),
     fontFamily: fonts.body.semibold,
-    marginTop: 12,
+    marginTop: ms(12),
   },
   specPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(4),
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E4E4DF',
   },
   specText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   vsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
-    marginTop: 16,
+    gap: ms(20),
+    marginTop: ms(16),
   },
   avatarCol: {
     alignItems: 'center',
-    gap: 6,
-    width: 80,
+    gap: ms(6),
+    width: ms(80),
   },
   playerName: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.body.semibold,
   },
   vsText: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.mono.semibold,
   },
   unknownBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: ms(44),
+    height: ch(44),
+    borderRadius: ms(22),
     borderWidth: 1,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
   unknownText: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.mono.semibold,
   },
 });

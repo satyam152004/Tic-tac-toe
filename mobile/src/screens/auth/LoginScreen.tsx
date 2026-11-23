@@ -11,6 +11,7 @@ import { useAuthStore } from '../../store/authStore';
 import { emailError } from './authValidation';
 import { ProtoButton, ProtoHeader, ProtoInput, ProtoScreen, SocialButton } from './protoUi';
 
+import { fs } from '../../design-system/responsive';
 export const LoginScreen: React.FC<RootScreenProps<'login'>> = () => {
   const c = useTheme();
   const { nav, resetTo, back } = useAppNav();
@@ -62,7 +63,7 @@ export const LoginScreen: React.FC<RootScreenProps<'login'>> = () => {
       <View style={styles.body}>
         <View>
           <Text style={[styles.title, { color: c.text }]}>Welcome back</Text>
-          <Text style={[styles.sub, { color: c.textSecondary }]}>Sign in to access ranked play &amp; friends.</Text>
+          <Text style={[styles.sub, { color: c.textSecondary }]}>Sign in to play ranked and see your friends.</Text>
         </View>
 
         <View style={styles.fields}>
@@ -140,13 +141,13 @@ export const LoginScreen: React.FC<RootScreenProps<'login'>> = () => {
 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 14 },
-  title: { fontFamily: fonts.body.semibold, fontSize: 19, lineHeight: 24, letterSpacing: -0.38 },
-  sub: { fontFamily: fonts.body.regular, fontSize: 12.5, lineHeight: 18, marginTop: 2 },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(19), lineHeight: Math.round(fs(19) * 1.3), letterSpacing: -0.38 },
+  sub: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 4 },
   fields: { gap: 12 },
-  link: { fontFamily: fonts.body.semibold, fontSize: 11 },
-  error: { fontFamily: fonts.body.regular, fontSize: 11.5, lineHeight: 16 },
+  link: { fontFamily: fonts.body.semibold, fontSize: fs(12) },
+  error: { fontFamily: fonts.body.regular, fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3) },
   socialRow: { flexDirection: 'row', gap: 10 },
   footer: { marginTop: 'auto', paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  footerText: { fontFamily: fonts.body.regular, fontSize: 12 },
-  footerLink: { fontFamily: fonts.body.semibold, fontSize: 12 },
+  footerText: { fontFamily: fonts.body.regular, fontSize: fs(12) },
+  footerLink: { fontFamily: fonts.body.semibold, fontSize: fs(12) },
 });

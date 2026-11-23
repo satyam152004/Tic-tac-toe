@@ -15,6 +15,7 @@ import { gameApi } from '../../services/api/gameApi';
 import type { BoardSize } from '../../services/api/types';
 import { createRoomWithOptions, isOfflineError, type TurnTimer } from './shared';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 const GRID_OPTIONS = ([3, 4, 5] as BoardSize[]).map((n) => ({ value: n, label: `${n}×${n}`, testID: `create-grid-${n}` }));
 const TIMER_OPTIONS: { value: TurnTimer; label: string; testID: string }[] = [
   { value: 15, label: '15s', testID: 'create-timer-15' },
@@ -60,12 +61,12 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
     <Screen
       title="Create Room"
       onBack={back}
-      footer={<ActionButton testID="create-room-submit" title="Generate Room Code" fullWidth loading={busy} onPress={submit} />}
+      footer={<ActionButton testID="create-room-submit" title="Create room code" fullWidth loading={busy} onPress={submit} />}
     >
-      <View style={{ gap: 14 }}>
+      <View style={{ gap: ms(14) }}>
         <View>
-          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>GRID SIZE</Text>
-          <SegmentedControl label="Grid size" options={GRID_OPTIONS} value={size} onChange={setSize} />
+          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>BOARD SIZE</Text>
+          <SegmentedControl label="Board size" options={GRID_OPTIONS} value={size} onChange={setSize} />
         </View>
 
         <View>
@@ -85,7 +86,7 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowTitle, { color: c.text }]}>Private Room</Text>
               <Text style={[styles.rowSub, { color: c.textSecondary }]}>
-                {isPrivate ? 'Invite-only via 6-character code' : 'Listed in public Open Rooms'}
+                {isPrivate ? 'Only people with the code can join' : 'Shows up in Open Rooms'}
               </Text>
             </View>
             <ToggleSwitch value={isPrivate} />
@@ -93,7 +94,7 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
         </View>
 
         {error ? (
-          <View style={{ marginTop: 4 }} testID="create-room-error">
+          <View style={{ marginTop: ms(4) }} testID="create-room-error">
             {code === 'ALREADY_IN_GAME' ? (
               <ErrorState title="You are already in a game" message={friendlyMessage(error)} retryLabel="Return to game" onRetry={returnToGame} />
             ) : code === 'ALREADY_IN_ROOM' ? (
@@ -109,9 +110,9 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
 };
 
 const styles = StyleSheet.create({
-  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5 },
-  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  row: { minHeight: 38, paddingVertical: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  rowTitle: { fontSize: 12.5, fontFamily: fonts.body.semibold },
-  rowSub: { fontSize: 10.5, fontFamily: fonts.body.regular },
+  sectionLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: ms(5) },
+  group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: ch(38), paddingVertical: ms(8), paddingHorizontal: ms(13), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ms(8) },
+  rowTitle: { fontSize: fs(12.5), fontFamily: fonts.body.semibold },
+  rowSub: { fontSize: fs(10.5), fontFamily: fonts.body.regular },
 });

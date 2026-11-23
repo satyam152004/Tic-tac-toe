@@ -8,6 +8,7 @@ import { friendlyMessage } from '../../services/api/errors';
 import { userApi, type ReportReason } from '../../services/api/userApi';
 import { toast } from '../../store/toastStore';
 
+import { fs, ms } from '../../design-system/responsive';
 export interface ReportPlayerModalProps {
   open: boolean;
   /** The reported player (server id). */
@@ -19,10 +20,10 @@ export interface ReportPlayerModalProps {
 }
 
 const REASONS: Array<{ id: ReportReason; label: string }> = [
-  { id: 'CHEATING', label: 'Cheating / Engine Assistance' },
-  { id: 'ABUSE', label: 'Abusive Behaviour' },
-  { id: 'STALLING', label: 'Intentional Timer Stalling' },
-  { id: 'INAPPROPRIATE_NAME', label: 'Inappropriate Username' },
+  { id: 'CHEATING', label: 'Cheating' },
+  { id: 'ABUSE', label: 'Rude or abusive behavior' },
+  { id: 'STALLING', label: 'Stalling on purpose' },
+  { id: 'INAPPROPRIATE_NAME', label: 'Inappropriate username' },
 ];
 
 export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
@@ -45,13 +46,13 @@ export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
     try {
       await userApi.report(userId, selected, undefined, gameId);
       setSubmitted(true);
-      toast.success('Report submitted', 'Thank you for keeping the arena fair');
+      toast.success('Report sent', 'Thanks for helping keep games fair');
       timer.current = setTimeout(() => {
         setSubmitted(false);
         onClose();
       }, 1200);
     } catch (e) {
-      toast.error('Could not send report', friendlyMessage(e));
+      toast.error("Couldn't send the report", friendlyMessage(e));
     } finally {
       setBusy(false);
     }
@@ -64,7 +65,7 @@ export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
           <View style={{ gap: 2 }}>
             <Text style={[styles.title, { color: c.text }]}>Report {playerName}</Text>
             <Text style={[styles.sub, { color: c.textSecondary }]}>
-              Select a reason for our fair-play team.
+              Pick a reason.
             </Text>
           </View>
 
@@ -83,11 +84,11 @@ export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
                     active && { backgroundColor: '#EFF4FF' },
                   ]}
                 >
-                  <Text style={[styles.reasonText, { color: c.text }]}>{r.label}</Text>
+                  <Text style={[styles.reasonText, { flex: 1 }, { color: c.text }]}>{r.label}</Text>
                   <View
                     style={[
                       styles.radio,
-                      active ? { borderColor: c.accent, borderWidth: 4.5, backgroundColor: c.bgCard } : { borderColor: c.border },
+                      active ? { borderColor: c.accent, borderWidth: ms(6), backgroundColor: c.bgCard } : { borderColor: c.border },
                     ]}
                   />
                 </Pressy>
@@ -109,7 +110,7 @@ export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
             <View style={{ flex: 1 }}>
               <AppButton
                 testID="report-submit"
-                title={submitted ? 'Reported ✓' : 'Submit Report'}
+                title={submitted ? 'Reported ✓' : 'Send report'}
                 variant="danger"
                 size="md"
                 onPress={() => void submit()}
@@ -133,11 +134,11 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 288,
+    maxWidth: ms(360),
     borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
-    gap: 12,
+    padding: ms(18),
+    gap: ms(14),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -145,11 +146,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.body.semibold,
   },
   sub: {
-    fontSize: 11,
+    fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.35),
   },
   group: {
     borderRadius: 12,
@@ -162,16 +163,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    minHeight: 33,
+    minHeight: 48,
+    gap: 10,
   },
   reasonText: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.medium,
   },
   radio: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: ms(20),
+    height: ms(20),
+    borderRadius: ms(10),
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -183,6 +185,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
 });

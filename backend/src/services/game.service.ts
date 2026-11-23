@@ -84,9 +84,9 @@ async function loadGame(gameId: string): Promise<G> {
  */
 export async function spectate(viewerId: string, gameId: string) {
   const g = await loadGame(gameId);
-  if (memberOf(g, viewerId)) throw Errors.badRequest('You are playing in this game', 'ALREADY_A_PLAYER');
+  if (memberOf(g, viewerId)) throw Errors.badRequest('You\'re already playing in this match.', 'ALREADY_A_PLAYER');
   if (!ONLINE_TYPES.includes(g.type as (typeof ONLINE_TYPES)[number]) || g.status !== 'IN_PROGRESS') {
-    throw Errors.conflict('This match is not live', 'GAME_NOT_LIVE');
+    throw Errors.conflict('This match isn\'t live.', 'GAME_NOT_LIVE');
   }
   const humans = g.players.filter((p) => p.userId).map((p) => p.userId!);
   const friendships = await FriendshipModel.find({
@@ -94,9 +94,9 @@ export async function spectate(viewerId: string, gameId: string) {
     $or: humans.flatMap((h) => [{ requesterId: viewerId, recipientId: h }, { requesterId: h, recipientId: viewerId }]),
   }).select('requesterId recipientId').lean();
   const friendOf = new Set(friendships.map((f) => (String(f.requesterId) === viewerId ? String(f.recipientId) : String(f.requesterId))));
-  if (friendOf.size === 0) throw Errors.forbidden('You can only watch friends', 'NOT_A_FRIEND');
+  if (friendOf.size === 0) throw Errors.forbidden('You can only watch your friends\' matches.', 'NOT_A_FRIEND');
   const owners = await UserModel.find({ _id: { $in: [...friendOf] } }).select('privacy').lean();
-  if (!owners.some((u) => u.privacy?.allowSpectating !== false)) throw Errors.forbidden('Your friend does not allow spectating', 'SPECTATING_DISABLED');
+  if (!owners.some((u) => u.privacy?.allowSpectating !== false)) throw Errors.forbidden('Your friend doesn\'t allow watching.', 'SPECTATING_DISABLED');
   const blocked = await BlockedUserModel.exists({ $or: humans.flatMap((h) => [{ blockerId: h, blockedId: viewerId }, { blockerId: viewerId, blockedId: h }]) });
   if (blocked) throw Errors.forbidden('You cannot watch this match', 'BLOCKED');
   return { game: presentGame(g), players: await playerCards(g) };
@@ -178,7 +178,7 @@ export async function createGameDoc(input: CreateGameInput): Promise<G> {
 /** An online player may only be in ONE active online game at a time. */
 export async function assertNoActiveOnlineGame(userId: string | Types.ObjectId): Promise<void> {
   const g = await GameModel.findOne({ playerIds: userId, type: { $in: ONLINE_TYPES }, status: { $in: ACTIVE_GAME_STATUSES } }).select('_id').lean();
-  if (g) throw Errors.conflict('You are already in an active game', 'ALREADY_IN_GAME', { gameId: String(g._id) });
+  if (g) throw Errors.conflict('You\'re already in a match.', 'ALREADY_IN_GAME', { gameId: String(g._id) });
 }
 
 export async function areBlocked(a: string | Types.ObjectId, b: string | Types.ObjectId): Promise<boolean> {
@@ -207,7 +207,7 @@ export async function createFriendGame(userId: string, input: { opponentId: stri
   const config = resolveConfig(input.boardSize, input.winLength);
   const friends = await FriendshipModel.exists({ pairKey: makePairKey(userId, input.opponentId), status: 'ACCEPTED' });
   if (!friends) throw Errors.forbidden('You can only invite friends', 'NOT_FRIENDS');
-  if (await areBlocked(userId, input.opponentId)) throw Errors.forbidden('Not allowed', 'BLOCKED');
+  if (await areBlocked(userId, input.opponentId)) throw Errors.forbidden('You can\'t do that.', 'BLOCKED');
   await assertNoActiveOnlineGame(userId);
   const me = await UserModel.findById(userId).select('displayName').lean();
   const game = await createGameDoc({
@@ -220,8 +220,8 @@ export async function createFriendGame(userId: string, input: { opponentId: stri
   realtime.joinUserTo(userId, `game:${game._id}`);
   await notify(input.opponentId, {
     type: 'GAME_INVITE',
-    title: 'Game invitation',
-    body: `${me?.displayName ?? 'A friend'} invited you to play ${config.size}x${config.size}`,
+    title: 'Match invite',
+    body: `${me?.displayName ?? 'A friend'} invited you to a ${config.size}x${config.size} match`,
     data: { gameId: String(game._id), fromUserId: userId },
   });
   return presentGame(game);
@@ -244,7 +244,7 @@ export async function joinGame(userId: string, gameId: string) {
       { new: true },
     ).lean()) as G | null;
     if (updated) {
-      void notify(g.createdBy!, { type: 'OPPONENT_JOINED', title: 'Friend joined', body: 'Your friend accepted the game invitation', data: { gameId } });
+      void notify(g.createdBy!, { type: 'OPPONENT_JOINED', title: 'Friend joined', body: 'Your friend accepted your invite.', data: { gameId } });
     }
     g = await loadGame(gameId);
   }
@@ -290,9 +290,9 @@ async function startIfReady(gameId: string): Promise<void> {
 
 function mapMoveError(e: unknown): never {
   if (e instanceof MoveError) {
-    if (e.code === 'CELL_OCCUPIED') throw Errors.conflict('Cell is already occupied', 'CELL_OCCUPIED');
-    if (e.code === 'CELL_OUT_OF_RANGE') throw Errors.badRequest('Cell is out of range', 'CELL_OUT_OF_RANGE');
-    throw Errors.conflict('Game is not active', 'GAME_NOT_ACTIVE');
+    if (e.code === 'CELL_OCCUPIED') throw Errors.conflict('That square is taken.', 'CELL_OCCUPIED');
+    if (e.code === 'CELL_OUT_OF_RANGE') throw Errors.badRequest('That square isn\'t on the board.', 'CELL_OUT_OF_RANGE');
+    throw Errors.conflict('This match isn\'t active.', 'GAME_NOT_ACTIVE');
   }
   throw e;
 }
@@ -396,11 +396,11 @@ export async function makeMove(userId: string, gameId: string, input: MoveInput)
     const dup = await MoveModel.findOne({ gameId: game._id, playerId: userId, clientMoveId: input.clientMoveId });
     if (dup) return { game: presentGame(game), move: dup.toJSON(), duplicate: true as const };
   }
-  if (game.status !== 'IN_PROGRESS') throw Errors.conflict('Game is not in progress', 'GAME_NOT_ACTIVE');
+  if (game.status !== 'IN_PROGRESS') throw Errors.conflict('This match isn\'t in progress.', 'GAME_NOT_ACTIVE');
   const mark = markOf(game, userId)!;
-  if (game.currentTurn !== mark) throw Errors.conflict('It is not your turn', 'NOT_YOUR_TURN');
+  if (game.currentTurn !== mark) throw Errors.conflict('It\'s not your turn.', 'NOT_YOUR_TURN');
   if (input.expectedMoveNumber !== undefined && input.expectedMoveNumber !== game.moveCount + 1) {
-    throw Errors.conflict('Move number out of sync', 'MOVE_CONFLICT', { moveCount: game.moveCount });
+    throw Errors.conflict('Your board is out of date. Refresh and try again.', 'MOVE_CONFLICT', { moveCount: game.moveCount });
   }
 
   let result;
@@ -414,9 +414,9 @@ export async function makeMove(userId: string, gameId: string, input: MoveInput)
         if (dup) return { game: presentGame(await loadGame(gameId)), move: dup.toJSON(), duplicate: true as const };
       }
       const latest = await loadGame(gameId);
-      if (latest.status !== 'IN_PROGRESS') throw Errors.conflict('Game is not in progress', 'GAME_NOT_ACTIVE');
-      if (latest.currentTurn !== mark) throw Errors.conflict('It is not your turn', 'NOT_YOUR_TURN');
-      throw Errors.conflict('Move conflicts with a concurrent update', 'MOVE_CONFLICT', { moveCount: latest.moveCount });
+      if (latest.status !== 'IN_PROGRESS') throw Errors.conflict('This match isn\'t in progress.', 'GAME_NOT_ACTIVE');
+      if (latest.currentTurn !== mark) throw Errors.conflict('It\'s not your turn.', 'NOT_YOUR_TURN');
+      throw Errors.conflict('Your board is out of date. Refresh and try again.', 'MOVE_CONFLICT', { moveCount: latest.moveCount });
     }
     throw e;
   }
@@ -520,7 +520,7 @@ export async function forfeit(userId: string, gameId: string) {
     const done = await cancelUnstarted(g, 'CANCELLED');
     return presentGame(done ?? (await loadGame(gameId)));
   }
-  throw Errors.conflict('Game is already finished', 'GAME_NOT_ACTIVE');
+  throw Errors.conflict('This match has already ended.', 'GAME_NOT_ACTIVE');
 }
 
 // ------------------------------------------------------------------ mutual draw
@@ -530,8 +530,8 @@ const DRAW_OFFER_TTL_MS = 20_000;
 /** Proposes a mutual draw to the opponent of an online game (valid for 20 s). One open offer per game. */
 export async function offerDraw(userId: string, gameId: string) {
   const g = await loadMemberGame(userId, gameId);
-  if (g.status !== 'IN_PROGRESS') throw Errors.conflict('Game is not in progress', 'GAME_NOT_ACTIVE');
-  if (!ONLINE_TYPES.includes(g.type as (typeof ONLINE_TYPES)[number])) throw Errors.badRequest('Draws can only be offered in online games', 'NOT_SUPPORTED');
+  if (g.status !== 'IN_PROGRESS') throw Errors.conflict('This match isn\'t in progress.', 'GAME_NOT_ACTIVE');
+  if (!ONLINE_TYPES.includes(g.type as (typeof ONLINE_TYPES)[number])) throw Errors.badRequest('You can only offer a draw in online matches.', 'NOT_SUPPORTED');
   const now = new Date();
   const expiresAt = addMs(now, DRAW_OFFER_TTL_MS);
   const updated = (await GameModel.findOneAndUpdate(
@@ -539,7 +539,7 @@ export async function offerDraw(userId: string, gameId: string) {
     { $set: { 'drawOffer.by': new Types.ObjectId(userId), 'drawOffer.expiresAt': expiresAt } },
     { new: true },
   ).lean()) as G | null;
-  if (!updated) throw Errors.conflict('A draw offer is already pending', 'DRAW_OFFER_PENDING');
+  if (!updated) throw Errors.conflict('A draw offer is already open.', 'DRAW_OFFER_PENDING');
   realtime.emitToGame(g._id, 'game:draw-offered', { gameId, by: userId, expiresAt, moveCount: updated.moveCount });
   return presentGame(updated);
 }
@@ -583,8 +583,8 @@ export async function respondDraw(userId: string, gameId: string, accept: boolea
 
 export async function requestRematch(userId: string, gameId: string) {
   const g = await loadMemberGame(userId, gameId);
-  if (g.status !== 'COMPLETED' && g.status !== 'DRAW') throw Errors.conflict('Game is not finished', 'GAME_NOT_FINISHED');
-  if (g.type === 'LOCAL') throw Errors.badRequest('Local games have no rematch', 'NOT_SUPPORTED');
+  if (g.status !== 'COMPLETED' && g.status !== 'DRAW') throw Errors.conflict('This match isn\'t finished yet.', 'GAME_NOT_FINISHED');
+  if (g.type === 'LOCAL') throw Errors.badRequest('Offline matches can\'t have a rematch.', 'NOT_SUPPORTED');
   if (g.rematchGameId) return { status: 'STARTED' as const, game: presentGame(await loadGame(String(g.rematchGameId))) };
 
   const cfg: BoardConfig = { size: g.boardSize as BoardSize, winLength: g.winLength };
@@ -598,7 +598,7 @@ export async function requestRematch(userId: string, gameId: string) {
   }
 
   const opponent = g.players.find((p) => p.userId && String(p.userId) !== userId);
-  if (!opponent?.userId) throw Errors.badRequest('No opponent for rematch', 'NOT_SUPPORTED');
+  if (!opponent?.userId) throw Errors.badRequest('There is no opponent to rematch.', 'NOT_SUPPORTED');
   await GameModel.updateOne({ _id: g._id }, { $addToSet: { rematchRequestedBy: new Types.ObjectId(userId) } });
   const fresh = await loadGame(gameId);
   const both = g.playerIds.every((id) => fresh.rematchRequestedBy.some((r) => String(r) === String(id)));

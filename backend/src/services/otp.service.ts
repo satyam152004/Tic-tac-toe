@@ -43,16 +43,16 @@ interface OtpState {
 export async function issueOtp(userId: string, purpose: OtpPurpose, now = new Date()): Promise<string> {
   const field = FIELD[purpose];
   const user = await UserModel.findById(userId).select(`+${field}`).lean();
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   const st: OtpState = (user as unknown as Record<string, OtpState | undefined>)[field] ?? {};
 
   if (st.sentAt && now.getTime() - st.sentAt.getTime() < OTP.RESEND_COOLDOWN_MS) {
     const wait = Math.ceil((OTP.RESEND_COOLDOWN_MS - (now.getTime() - st.sentAt.getTime())) / 1000);
-    throw Object.assign(Errors.tooMany(`Please wait ${wait}s before requesting another code`, 'OTP_COOLDOWN'), { details: { retryAfterSec: wait } });
+    throw Object.assign(Errors.tooMany(`Wait ${wait}s before asking for another code.`, 'OTP_COOLDOWN'), { details: { retryAfterSec: wait } });
   }
   const windowFresh = st.windowStart && now.getTime() - st.windowStart.getTime() < 3600_000;
   const count = windowFresh ? (st.windowCount ?? 0) : 0;
-  if (count >= OTP.MAX_SENDS_PER_HOUR) throw Errors.tooMany('Too many codes requested, try again later', 'OTP_RATE_LIMITED');
+  if (count >= OTP.MAX_SENDS_PER_HOUR) throw Errors.tooMany('Too many codes asked for. Try again later.', 'OTP_RATE_LIMITED');
 
   const code = generateCode();
   // Optimistic guard on sentAt: two concurrent resends cannot both pass the cooldown.
@@ -72,7 +72,7 @@ export async function issueOtp(userId: string, purpose: OtpPurpose, now = new Da
       },
     },
   );
-  if (res.modifiedCount !== 1) throw Errors.tooMany('A code was just sent, please wait', 'OTP_COOLDOWN');
+  if (res.modifiedCount !== 1) throw Errors.tooMany('A code was just sent. Wait a moment.', 'OTP_COOLDOWN');
   return code;
 }
 
@@ -82,7 +82,7 @@ export async function issueOtp(userId: string, purpose: OtpPurpose, now = new Da
  */
 export async function consumeOtp(userId: string | null, purpose: OtpPurpose, code: string): Promise<void> {
   const field = FIELD[purpose];
-  const invalid = () => Errors.badRequest('The code is invalid or has expired', 'INVALID_OTP');
+  const invalid = () => Errors.badRequest('That code is wrong or has expired.', 'INVALID_OTP');
   if (!userId) {
     digest(purpose, 'none', code); // keep timing similar
     throw invalid();
@@ -92,7 +92,7 @@ export async function consumeOtp(userId: string | null, purpose: OtpPurpose, cod
   if (!st?.hash || !st.expiresAt || st.expiresAt.getTime() < Date.now()) throw invalid();
   if ((st.attempts ?? 0) >= OTP.MAX_ATTEMPTS) {
     await UserModel.updateOne({ _id: userId }, { $unset: { [`${field}.hash`]: 1, [`${field}.expiresAt`]: 1 } });
-    throw Errors.tooMany('Too many wrong attempts. Request a new code.', 'OTP_LOCKED');
+    throw Errors.tooMany('Too many wrong tries. Ask for a new code.', 'OTP_LOCKED');
   }
 
   if (!safeEqualHex(st.hash, digest(purpose, userId, code))) {
@@ -100,7 +100,7 @@ export async function consumeOtp(userId: string | null, purpose: OtpPurpose, cod
     const attempts = ((upd as unknown as Record<string, OtpState | undefined> | null)?.[field]?.attempts) ?? OTP.MAX_ATTEMPTS;
     if (attempts >= OTP.MAX_ATTEMPTS) {
       await UserModel.updateOne({ _id: userId }, { $unset: { [`${field}.hash`]: 1, [`${field}.expiresAt`]: 1 } });
-      throw Errors.tooMany('Too many wrong attempts. Request a new code.', 'OTP_LOCKED');
+      throw Errors.tooMany('Too many wrong tries. Ask for a new code.', 'OTP_LOCKED');
     }
     throw Object.assign(invalid(), { details: { attemptsLeft: OTP.MAX_ATTEMPTS - attempts } });
   }

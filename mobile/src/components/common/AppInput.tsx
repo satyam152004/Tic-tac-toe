@@ -5,6 +5,7 @@ import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 export interface AppInputProps extends TextInputProps {
   label?: string;
   labelRight?: React.ReactNode;
@@ -73,8 +74,8 @@ export const AppInput = forwardRef<ElementRef<typeof TextInput>, AppInputProps>(
 });
 
 const styles = StyleSheet.create({
-  box: { minHeight: 50, borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  input: { flex: 1, fontSize: 15, paddingVertical: 12 },
-  togglePressy: { paddingVertical: 6, paddingHorizontal: 4 },
-  toggleText: { fontFamily: fonts.body.semibold, fontSize: 11.5 },
+  box: { minHeight: Math.max(48, ch(42)), borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: ms(14), flexDirection: 'row', alignItems: 'center', gap: 10 },
+  input: { flex: 1, fontSize: fs(15), paddingVertical: ms(12) },
+  togglePressy: { paddingVertical: 10, paddingHorizontal: 6 },
+  toggleText: { fontFamily: fonts.body.semibold, fontSize: fs(11.5) },
 });

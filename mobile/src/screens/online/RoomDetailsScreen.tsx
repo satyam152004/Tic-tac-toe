@@ -15,6 +15,7 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { isOfflineError, RoomEnded, timerLabel, useRoom } from './shared';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ route }) => {
   const c = useTheme();
   const { roomId } = route.params;
@@ -29,7 +30,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
   const guard = useBackGuard({
     when: live,
     title: isHost ? 'Close this room?' : 'Leave room?',
-    message: isHost ? 'Leaving closes the room and your invitation code stops working.' : 'You will leave this room.',
+    message: isHost ? 'The room will close and the code will stop working.' : 'You will leave this room.',
     confirmLabel: 'Leave room',
     onLeave: () => void leaveRoom(roomId).catch(() => undefined),
   });
@@ -100,7 +101,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
         )
       }
     >
-      <View style={{ gap: 14 }}>
+      <View style={{ gap: ms(14) }}>
         <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <View style={[styles.row, { borderBottomWidth: 1, borderBottomColor: c.border }]}>
             <View style={styles.left}>
@@ -131,7 +132,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
         </View>
 
         <View style={[styles.rules, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <Text style={[styles.rulesTag, { color: '#8E939E' }]}>RULES SUMMARY</Text>
+          <Text style={[styles.rulesTag, { color: '#8E939E' }]}>RULES</Text>
           <Text style={[styles.rulesMain, { color: c.text }]}>
             {room.boardSize}×{room.boardSize} • {timerLabel(ext.turnTimeoutSec ?? 60)}/turn • {ext.isPublic ? 'Public' : 'Private'}
           </Text>
@@ -145,16 +146,16 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
 };
 
 const styles = StyleSheet.create({
-  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  row: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 13, paddingVertical: 8, gap: 8 },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  avatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 10, fontFamily: fonts.body.semibold, color: '#FFFFFF' },
-  playerName: { fontSize: 12.5, fontFamily: fonts.body.semibold, flexShrink: 1 },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
-  badgeText: { fontSize: 10, fontFamily: fonts.body.semibold },
-  rules: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
-  rulesTag: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5 },
-  rulesMain: { fontSize: 13, fontFamily: fonts.body.semibold },
-  rulesSub: { fontSize: 11, fontFamily: fonts.body.regular },
+  group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: ch(38), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: ms(13), paddingVertical: ms(8), gap: ms(8) },
+  left: { flexDirection: 'row', alignItems: 'center', gap: ms(8), flex: 1 },
+  avatar: { width: ms(28.8), height: ms(28.8), borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: fs(10), fontFamily: fonts.body.semibold, color: '#FFFFFF' },
+  playerName: { fontSize: fs(12.5), fontFamily: fonts.body.semibold, flexShrink: 1 },
+  badge: { paddingHorizontal: ms(8), paddingVertical: ms(2), borderRadius: 999 },
+  badgeText: { fontSize: fs(10), fontFamily: fonts.body.semibold },
+  rules: { borderRadius: ms(14), borderWidth: 1, padding: ms(14), gap: ms(8) },
+  rulesTag: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5 },
+  rulesMain: { fontSize: fs(13), fontFamily: fonts.body.semibold },
+  rulesSub: { fontSize: fs(11), fontFamily: fonts.body.regular },
 });

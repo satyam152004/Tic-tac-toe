@@ -27,12 +27,12 @@ export function useDrawOffer(game: Game | null, myId: string | undefined) {
       socketClient.on('game:draw-offered', (p) => {
         if (p.gameId !== gameId) return;
         setOffer({ by: p.by, expiresAt: p.expiresAt, moveCount: p.moveCount });
-        if (p.by !== myId) toast.info('Draw offered', 'Your opponent proposed a draw');
+        if (p.by !== myId) toast.info('Draw offered', 'Your opponent offered a draw');
       }),
       socketClient.on('game:draw-declined', (p) => {
         if (p.gameId !== gameId) return;
         setOffer(null);
-        if (p.by !== myId) toast.info('Draw declined', 'Your opponent wants to play on');
+        if (p.by !== myId) toast.info('Draw declined', 'Your opponent wants to keep playing');
       }),
       socketClient.on('game:finished', (p) => p.game.id === gameId && setOffer(null)),
       socketClient.on('game:draw', (p) => p.game.id === gameId && setOffer(null)),
@@ -45,9 +45,9 @@ export function useDrawOffer(game: Game | null, myId: string | undefined) {
     setBusy(true);
     try {
       await gameSocket.offerDraw(gameId);
-      toast.info('Draw offer sent', 'Waiting for opponent response');
+      toast.info('Draw offer sent', 'Waiting for your opponent');
     } catch (e) {
-      toast.error('Could not offer a draw', friendlyMessage(e));
+      toast.error("Couldn't offer a draw", friendlyMessage(e));
     } finally {
       setBusy(false);
     }
@@ -60,7 +60,7 @@ export function useDrawOffer(game: Game | null, myId: string | undefined) {
       try {
         await gameSocket.respondDraw(gameId, accept);
       } catch (e) {
-        toast.error(accept ? 'Could not accept the draw' : 'Could not decline', friendlyMessage(e));
+        toast.error(accept ? "Couldn't accept the draw" : "Couldn't decline the draw", friendlyMessage(e));
       }
     },
     [gameId],

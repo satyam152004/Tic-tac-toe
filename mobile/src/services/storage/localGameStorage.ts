@@ -89,6 +89,13 @@ export const localGameStorage = {
     return clientMatchId;
   },
 
+  /** The phone's own copy of a match (with its moves), found by the id it was uploaded under. */
+  async findByClientId(clientMatchId: string): Promise<StoredMatch | null> {
+    const d = await db();
+    const row = await d.getFirstAsync<Row>('SELECT * FROM local_matches WHERE client_match_id = ?', clientMatchId);
+    return row ? toStored(row) : null;
+  },
+
   async listMatches(limit = 100): Promise<StoredMatch[]> {
     const d = await db();
     const rows = await d.getAllAsync<Row>('SELECT * FROM local_matches ORDER BY played_at DESC, id DESC LIMIT ?', limit);

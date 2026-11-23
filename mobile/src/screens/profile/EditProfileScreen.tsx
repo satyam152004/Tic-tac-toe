@@ -18,6 +18,7 @@ import type { UpdateMeInput } from '../../services/api/userApi';
 import { toast } from '../../store/toastStore';
 import { usernameError } from '../auth/authValidation';
 
+import { fs, ms } from '../../design-system/responsive';
 const BIO_MAX = 160;
 
 export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () => {
@@ -66,7 +67,7 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
     setServerErr({});
     try {
       await update.mutateAsync(changes);
-      toast.success('Profile Updated', 'Your changes have been saved');
+      toast.success('Profile Updated', 'Your changes are saved');
       guard.allow();
       back();
     } catch (e) {
@@ -168,7 +169,7 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
               setServerErr((e) => ({ ...e, username: undefined }));
             }}
             error={username !== initial.username || serverErr.username ? userErr : null}
-            hint="3-20 characters: letters, numbers, underscore"
+            hint="3-20 letters, numbers or underscores"
             autoCapitalize="none"
             autoCorrect={false}
             placeholder="@username"
@@ -184,8 +185,8 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
               multiline
               numberOfLines={3}
               textAlignVertical="top"
-              placeholder="Tactics, favorite modes, play style..."
-              style={{ minHeight: 70 }}
+              placeholder="Tell people about you"
+              style={{ minHeight: ms(84) }}
             />
             <Text
               testID="bio-counter"
@@ -215,23 +216,23 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   sectionLabel: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
   avatarGrid: {
     flexDirection: 'row',
-    gap: 6,
+    gap: ms(6),
   },
   avatarCell: {
     flex: 1,
-    height: 36,
+    height: ms(44),
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.mono.semibold,
   },
   footer: {

@@ -1,3 +1,4 @@
+import { ch, fs } from '../../design-system/responsive';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { fonts } from '../../design-system/typography';
@@ -46,12 +47,12 @@ export function SegmentedControl<T extends string | number>({
             scaleTo={0.99}
             style={[
               styles.seg,
-              { paddingVertical: sm ? 4 : 6, borderRadius: sm ? 7 : 8, minHeight: sm ? 28 : 32 },
+              { paddingVertical: sm ? 4 : 6, borderRadius: sm ? 7 : 8, minHeight: ch(sm ? 28 : 32) },
               active && [styles.active, { backgroundColor: c.bgCard }],
               disabled && { opacity: 0.5 },
             ]}
           >
-            <Text style={{ fontFamily: fonts.body.semibold, fontSize: sm ? 10.5 : 12, color: active ? c.accent : c.textSecondary }}>{o.label}</Text>
+            <Text style={{ fontFamily: fonts.body.semibold, fontSize: fs(sm ? 11.5 : 12), color: active ? c.accent : c.textSecondary }}>{o.label}</Text>
           </Pressy>
         );
       })}

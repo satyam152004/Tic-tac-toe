@@ -18,18 +18,18 @@ export interface AchievementDef {
 }
 
 export const ACHIEVEMENT_DEFINITIONS: AchievementDef[] = [
-  { key: 'FIRST_VICTORY', name: 'First Victory', description: 'Win your first game', category: 'wins', metric: 'wins', target: 1, reward: { xp: 25, points: 0 }, sortOrder: 1 },
-  { key: 'WINS_10', name: '10 Wins', description: 'Win 10 games', category: 'wins', metric: 'wins', target: 10, reward: { xp: 50, points: 0 }, sortOrder: 2 },
-  { key: 'WINS_50', name: '50 Wins', description: 'Win 50 games', category: 'wins', metric: 'wins', target: 50, reward: { xp: 150, points: 0 }, sortOrder: 3 },
-  { key: 'WINS_100', name: '100 Wins', description: 'Win 100 games', category: 'wins', metric: 'wins', target: 100, reward: { xp: 400, points: 0 }, sortOrder: 4 },
-  { key: 'STREAK_3', name: 'Hat Trick', description: 'Win 3 games in a row', category: 'streak', metric: 'bestStreak', target: 3, reward: { xp: 40, points: 0 }, sortOrder: 5 },
-  { key: 'STREAK_5', name: 'Winning Streak', description: 'Win 5 games in a row', category: 'streak', metric: 'bestStreak', target: 5, reward: { xp: 100, points: 0 }, sortOrder: 6 },
-  { key: 'STREAK_10', name: 'Unstoppable', description: 'Win 10 games in a row', category: 'streak', metric: 'bestStreak', target: 10, reward: { xp: 300, points: 0 }, sortOrder: 7 },
-  { key: 'MULTIPLAYER_CHAMPION', name: 'Multiplayer Champion', description: 'Win 25 online multiplayer games', category: 'online', metric: 'onlineWins', target: 25, reward: { xp: 200, points: 0 }, sortOrder: 8 },
+  { key: 'FIRST_VICTORY', name: 'First Victory', description: 'Win your first match', category: 'wins', metric: 'wins', target: 1, reward: { xp: 25, points: 0 }, sortOrder: 1 },
+  { key: 'WINS_10', name: '10 Wins', description: 'Win 10 matches', category: 'wins', metric: 'wins', target: 10, reward: { xp: 50, points: 0 }, sortOrder: 2 },
+  { key: 'WINS_50', name: '50 Wins', description: 'Win 50 matches', category: 'wins', metric: 'wins', target: 50, reward: { xp: 150, points: 0 }, sortOrder: 3 },
+  { key: 'WINS_100', name: '100 Wins', description: 'Win 100 matches', category: 'wins', metric: 'wins', target: 100, reward: { xp: 400, points: 0 }, sortOrder: 4 },
+  { key: 'STREAK_3', name: 'Hat Trick', description: 'Win 3 matches in a row', category: 'streak', metric: 'bestStreak', target: 3, reward: { xp: 40, points: 0 }, sortOrder: 5 },
+  { key: 'STREAK_5', name: 'Winning Streak', description: 'Win 5 matches in a row', category: 'streak', metric: 'bestStreak', target: 5, reward: { xp: 100, points: 0 }, sortOrder: 6 },
+  { key: 'STREAK_10', name: 'Unstoppable', description: 'Win 10 matches in a row', category: 'streak', metric: 'bestStreak', target: 10, reward: { xp: 300, points: 0 }, sortOrder: 7 },
+  { key: 'MULTIPLAYER_CHAMPION', name: 'Multiplayer Champion', description: 'Win 25 online matches', category: 'online', metric: 'onlineWins', target: 25, reward: { xp: 200, points: 0 }, sortOrder: 8 },
   { key: 'AI_MASTER', name: 'AI Master', description: 'Beat the Expert or Impossible AI 5 times', category: 'ai', metric: 'expertAiWins', target: 5, reward: { xp: 250, points: 0 }, sortOrder: 9 },
-  { key: 'PERFECT_GAME', name: 'Perfect Game', description: 'Win using the minimum possible number of moves', category: 'skill', metric: 'perfectGames', target: 1, reward: { xp: 60, points: 0 }, sortOrder: 10 },
-  { key: 'TOURNAMENT_WINNER', name: 'Tournament Winner', description: 'Win 5 private-room matches (room tournaments)', category: 'social', metric: 'privateRoomWins', target: 5, reward: { xp: 150, points: 0 }, sortOrder: 11 },
-  { key: 'PLAY_100', name: 'Dedicated Player', description: 'Play 100 games', category: 'general', metric: 'totalGames', target: 100, reward: { xp: 120, points: 0 }, sortOrder: 12 },
+  { key: 'PERFECT_GAME', name: 'Perfect Game', description: 'Win in the fewest moves possible', category: 'skill', metric: 'perfectGames', target: 1, reward: { xp: 60, points: 0 }, sortOrder: 10 },
+  { key: 'TOURNAMENT_WINNER', name: 'Tournament Winner', description: 'Win 5 matches in private rooms', category: 'social', metric: 'privateRoomWins', target: 5, reward: { xp: 150, points: 0 }, sortOrder: 11 },
+  { key: 'PLAY_100', name: 'Dedicated Player', description: 'Play 100 matches', category: 'general', metric: 'totalGames', target: 100, reward: { xp: 120, points: 0 }, sortOrder: 12 },
 ];
 
 /** Idempotently writes the catalogue to MongoDB (called on startup). */

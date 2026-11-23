@@ -88,7 +88,7 @@ async function createUserWithUniqueUsername(base: string, fields: Record<string,
       throw err;
     }
   }
-  throw Errors.conflict('Could not allocate a username, try again', 'USERNAME_TAKEN');
+  throw Errors.conflict('Couldn\'t make a username. Try again.', 'USERNAME_TAKEN');
 }
 
 async function sendVerification(user: UserDoc): Promise<void> {
@@ -118,8 +118,8 @@ async function sendMailBestEffort(mail: Parameters<typeof sendMail>[0], purpose:
 /** Re-sends the six-digit verification code (cooldown + hourly cap enforced by issueOtp). */
 export async function resendVerification(userId: string): Promise<{ sent: true; retryAfterSec: number }> {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
-  if (!user?.email) throw Errors.badRequest('This account has no email address', 'NO_EMAIL');
-  if (user.emailVerified) throw Errors.conflict('Email is already verified', 'ALREADY_VERIFIED');
+  if (!user?.email) throw Errors.badRequest('This account has no email.', 'NO_EMAIL');
+  if (user.emailVerified) throw Errors.conflict('Your email is already verified.', 'ALREADY_VERIFIED');
   const code = await issueOtp(String(user._id), 'verify');
   await sendMail(mailTemplates.resendVerifyEmail(user.email, code));
   audit('auth.verification_resent', { userId: user._id });
@@ -131,9 +131,9 @@ export async function resendVerification(userId: string): Promise<{ sent: true; 
 /** Emails a 6-digit code to the account's own address: proof of ownership before a password is added. */
 export async function requestSetPassword(userId: string): Promise<{ sent: true; retryAfterSec: number }> {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   if (user.accountType !== 'REGISTERED') throw Errors.badRequest('Create an account first', 'NOT_REGISTERED');
-  if (!user.email) throw Errors.badRequest('This account has no email address', 'NO_EMAIL');
+  if (!user.email) throw Errors.badRequest('This account has no email.', 'NO_EMAIL');
   if (await hasPassword(user._id)) throw Errors.conflict('This account already has a password', 'PASSWORD_ALREADY_SET');
   const code = await issueOtp(String(user._id), 'reset');
   await sendMail(mailTemplates.setPassword(user.email, code));
@@ -147,7 +147,7 @@ export async function requestSetPassword(userId: string): Promise<{ sent: true; 
  */
 export async function setPassword(userId: string, input: { code: string; newPassword: string }, ctx: SessionContext) {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
-  if (!user) throw Errors.notFound('User not found');
+  if (!user) throw Errors.notFound('Player not found');
   if (user.accountType !== 'REGISTERED' || !user.email) throw Errors.badRequest('Create an account first', 'NOT_REGISTERED');
   if (await hasPassword(user._id)) throw Errors.conflict('This account already has a password', 'PASSWORD_ALREADY_SET');
   await consumeOtp(String(user._id), 'reset', input.code);
@@ -157,7 +157,7 @@ export async function setPassword(userId: string, input: { code: string; newPass
   await revokeAllSessions(user._id);
   audit('auth.password_set', { userId: user._id, ip: ctx.ip });
   await sendMailBestEffort(mailTemplates.passwordChanged(user.email), 'password-set');
-  void notify(user._id, { type: 'ACCOUNT', title: 'Password added', body: 'You can now sign in with your email and password as well.' });
+  void notify(user._id, { type: 'ACCOUNT', title: 'Password added', body: 'You can now sign in with your email and password too.' });
   return authResult(user, ctx);
 }
 
@@ -172,7 +172,7 @@ export interface RegisterInput {
 
 export async function register(input: RegisterInput, ctx: SessionContext) {
   const email = input.email.toLowerCase();
-  if (await UserModel.exists({ email })) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+  if (await UserModel.exists({ email })) throw Errors.conflict('That email is already in use.', 'EMAIL_TAKEN');
   if (await UserModel.exists({ usernameLower: input.username.toLowerCase() })) throw Errors.conflict('Username is already taken', 'USERNAME_TAKEN');
   let user: UserDoc;
   try {
@@ -188,7 +188,7 @@ export async function register(input: RegisterInput, ctx: SessionContext) {
   } catch (err) {
     const e = err as { code?: number; keyPattern?: Record<string, unknown> };
     if (e.code === 11000) {
-      if (e.keyPattern?.email) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+      if (e.keyPattern?.email) throw Errors.conflict('That email is already in use.', 'EMAIL_TAKEN');
       throw Errors.conflict('Username is already taken', 'USERNAME_TAKEN');
     }
     throw err;
@@ -203,7 +203,7 @@ export async function login(input: { email: string; password: string }, ctx: Ses
   const ok = await bcrypt.compare(input.password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !user.passwordHash || !ok) {
     audit('auth.login_failed', { ip: ctx.ip, userId: user?._id });
-    throw Errors.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
+    throw Errors.unauthorized('Wrong email or password.', 'INVALID_CREDENTIALS');
   }
   UserModel.updateOne({ _id: user._id }, { $set: { lastActiveAt: new Date() } }).catch(() => undefined);
   audit('auth.login', { userId: user._id, ip: ctx.ip });
@@ -228,10 +228,10 @@ export async function upgradeGuest(
   ctx: SessionContext,
 ) {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
-  if (!user) throw Errors.notFound('User not found');
-  if (user.accountType !== 'GUEST') throw Errors.conflict('Account is already registered', 'ALREADY_REGISTERED');
+  if (!user) throw Errors.notFound('Player not found');
+  if (user.accountType !== 'GUEST') throw Errors.conflict('You already have an account.', 'ALREADY_REGISTERED');
   const email = input.email.toLowerCase();
-  if (await UserModel.exists({ email })) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+  if (await UserModel.exists({ email })) throw Errors.conflict('That email is already in use.', 'EMAIL_TAKEN');
   if (input.username) {
     const lower = input.username.toLowerCase();
     if (await UserModel.exists({ usernameLower: lower, _id: { $ne: user._id } })) throw Errors.conflict('Username is already taken', 'USERNAME_TAKEN');
@@ -247,7 +247,7 @@ export async function upgradeGuest(
   try {
     await user.save();
   } catch (err) {
-    if ((err as { code?: number }).code === 11000) throw Errors.conflict('Email or username already taken', 'CONFLICT');
+    if ((err as { code?: number }).code === 11000) throw Errors.conflict('That email or username is already in use.', 'CONFLICT');
     throw err;
   }
   // The access token embeds the account type => replace every session with fresh ones.
@@ -264,14 +264,14 @@ export async function upgradeGuest(
 export async function upgradeGuestWithSocial(userId: string, provider: 'google' | 'apple', token: string, ctx: SessionContext, extra: { displayName?: string } = {}) {
   const identity: SocialIdentity = await (provider === 'google' ? socialVerifiers.google(token) : socialVerifiers.apple(token));
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
-  if (!user) throw Errors.notFound('User not found');
-  if (user.accountType !== 'GUEST') throw Errors.conflict('Account is already registered', 'ALREADY_REGISTERED');
-  if (!identity.email || !identity.emailVerified) throw Errors.badRequest('The provider did not share a verified email address', 'SOCIAL_EMAIL_REQUIRED');
+  if (!user) throw Errors.notFound('Player not found');
+  if (user.accountType !== 'GUEST') throw Errors.conflict('You already have an account.', 'ALREADY_REGISTERED');
+  if (!identity.email || !identity.emailVerified) throw Errors.badRequest('Google or Apple did not share a verified email.', 'SOCIAL_EMAIL_REQUIRED');
   const email = identity.email.toLowerCase();
   if (await UserModel.exists({ providers: { $elemMatch: { provider, subject: identity.subject } } })) {
     throw Errors.conflict('That account already has a profile. Sign in with it instead.', 'SOCIAL_ALREADY_LINKED');
   }
-  if (await UserModel.exists({ email, _id: { $ne: user._id } })) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+  if (await UserModel.exists({ email, _id: { $ne: user._id } })) throw Errors.conflict('That email is already in use.', 'EMAIL_TAKEN');
   user.email = email;
   user.emailVerified = true;
   user.accountType = 'REGISTERED';
@@ -280,7 +280,7 @@ export async function upgradeGuestWithSocial(userId: string, provider: 'google' 
   try {
     await user.save();
   } catch (err) {
-    if ((err as { code?: number }).code === 11000) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+    if ((err as { code?: number }).code === 11000) throw Errors.conflict('That email is already in use.', 'EMAIL_TAKEN');
     throw err;
   }
   // The access token embeds the account type => replace every session with fresh ones.
@@ -327,18 +327,18 @@ export async function socialLogin(provider: 'google' | 'apple', token: string, c
 export async function refresh(refreshToken: string, ctx: SessionContext) {
   const hash = sha256(refreshToken);
   const existing = await RefreshTokenModel.findOne({ tokenHash: hash });
-  if (!existing) throw Errors.unauthorized('Invalid refresh token', 'INVALID_REFRESH_TOKEN');
+  if (!existing) throw Errors.unauthorized('Please sign in again.', 'INVALID_REFRESH_TOKEN');
 
   if (existing.revokedAt) {
     // A rotated/revoked token is being replayed: treat as theft and kill the whole session family.
     if (existing.replacedByHash) {
       await revokeFamily(existing.familyId);
       audit('auth.refresh_reuse_detected', { userId: existing.userId, ip: ctx.ip, meta: { familyId: existing.familyId } });
-      throw Errors.unauthorized('Refresh token reuse detected; please log in again', 'REFRESH_TOKEN_REUSED');
+      throw Errors.unauthorized('For your safety, please sign in again.', 'REFRESH_TOKEN_REUSED');
     }
-    throw Errors.unauthorized('Refresh token revoked', 'INVALID_REFRESH_TOKEN');
+    throw Errors.unauthorized('Please sign in again.', 'INVALID_REFRESH_TOKEN');
   }
-  if (existing.expiresAt.getTime() <= Date.now()) throw Errors.unauthorized('Refresh token expired', 'REFRESH_TOKEN_EXPIRED');
+  if (existing.expiresAt.getTime() <= Date.now()) throw Errors.unauthorized('Your sign-in has expired. Please sign in again.', 'REFRESH_TOKEN_EXPIRED');
 
   const user = await UserModel.findOne({ _id: existing.userId, deletedAt: { $exists: false } });
   if (!user) throw Errors.unauthorized('Account no longer exists', 'INVALID_REFRESH_TOKEN');
@@ -353,7 +353,7 @@ export async function refresh(refreshToken: string, ctx: SessionContext) {
   );
   if (!claimed) {
     await revokeFamily(existing.familyId);
-    throw Errors.unauthorized('Refresh token reuse detected; please log in again', 'REFRESH_TOKEN_REUSED');
+    throw Errors.unauthorized('For your safety, please sign in again.', 'REFRESH_TOKEN_REUSED');
   }
   const expiresAt = addMs(new Date(), ttlDays * DAY_MS);
   await RefreshTokenModel.create({
@@ -412,11 +412,11 @@ export async function resetPassword(input: ResetInput): Promise<void> {
       passwordResetExpiresAt: { $gt: new Date() },
       deletedAt: { $exists: false },
     }).select('+passwordResetTokenHash +passwordResetExpiresAt');
-    if (!user) throw Errors.badRequest('Reset token is invalid or expired', 'INVALID_RESET_TOKEN');
+    if (!user) throw Errors.badRequest('This link has expired. Ask for a new one.', 'INVALID_RESET_TOKEN');
   } else {
     const found = await UserModel.findOne({ email: input.email.toLowerCase(), accountType: 'REGISTERED', deletedAt: { $exists: false } });
     await consumeOtp(found ? String(found._id) : null, 'reset', input.code); // same INVALID_OTP for unknown email / wrong code
-    if (!found) throw Errors.badRequest('The code is invalid or has expired', 'INVALID_OTP');
+    if (!found) throw Errors.badRequest('That code is wrong or has expired.', 'INVALID_OTP');
     user = (await UserModel.findById(found._id).select('+passwordResetTokenHash +passwordResetExpiresAt'))!;
   }
   user.passwordHash = await hashPassword(input.newPassword);
@@ -428,7 +428,7 @@ export async function resetPassword(input: ResetInput): Promise<void> {
   audit('auth.password_reset', { userId: user._id });
   // The password is already changed and sessions revoked; a notification mail failing must not report the reset as failed.
   if (user.email) await sendMailBestEffort(mailTemplates.passwordChanged(user.email), 'password-changed');
-  void notify(user._id, { type: 'ACCOUNT', title: 'Password changed', body: 'Your password was changed and all devices were signed out.' });
+  void notify(user._id, { type: 'ACCOUNT', title: 'Password changed', body: 'Your password was changed. You were signed out everywhere.' });
 }
 
 export type VerifyInput = { token: string } | { email: string; code: string };
@@ -439,13 +439,13 @@ export async function verifyEmail(input: VerifyInput): Promise<void> {
       { emailVerifyTokenHash: sha256(input.token), emailVerifyExpiresAt: { $gt: new Date() }, deletedAt: { $exists: false } },
       { $set: { emailVerified: true }, $unset: { emailVerifyTokenHash: 1, emailVerifyExpiresAt: 1 } },
     );
-    if (!user) throw Errors.badRequest('Verification token is invalid or expired', 'INVALID_VERIFY_TOKEN');
+    if (!user) throw Errors.badRequest('This link has expired. Ask for a new one.', 'INVALID_VERIFY_TOKEN');
     audit('auth.email_verified', { userId: user._id });
     return;
   }
   const user = await UserModel.findOne({ email: input.email.toLowerCase(), deletedAt: { $exists: false } });
   await consumeOtp(user ? String(user._id) : null, 'verify', input.code);
-  if (!user) throw Errors.badRequest('The code is invalid or has expired', 'INVALID_OTP');
+  if (!user) throw Errors.badRequest('That code is wrong or has expired.', 'INVALID_OTP');
   await UserModel.updateOne({ _id: user._id }, { $set: { emailVerified: true }, $unset: { emailVerifyTokenHash: 1, emailVerifyExpiresAt: 1 } });
   audit('auth.email_verified', { userId: user._id, meta: { method: 'otp' } });
 }
@@ -453,7 +453,7 @@ export async function verifyEmail(input: VerifyInput): Promise<void> {
 export async function changePassword(userId: string, current: string, next: string): Promise<void> {
   const user = await UserModel.findById(userId).select('+passwordHash');
   if (!user?.passwordHash) throw Errors.badRequest('This account has no password', 'NO_PASSWORD');
-  if (!(await bcrypt.compare(current, user.passwordHash))) throw Errors.unauthorized('Current password is incorrect', 'INVALID_CREDENTIALS');
+  if (!(await bcrypt.compare(current, user.passwordHash))) throw Errors.unauthorized('Your current password is wrong.', 'INVALID_CREDENTIALS');
   user.passwordHash = await hashPassword(next);
   await user.save();
   await revokeAllSessions(user._id);

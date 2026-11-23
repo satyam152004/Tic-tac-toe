@@ -19,23 +19,24 @@ import {
   SUCCESS_SOFT,
 } from '../auth/protoUi';
 
+import { fs, ms, ch } from '../../design-system/responsive';
 type Step = 1 | 2 | 3;
 const STEP_ROUTES = { 1: 'onboarding_1', 2: 'onboarding_2', 3: 'onboarding_3' } as const;
 
 const CONTENT = {
   1: {
-    title: 'Pure Classic Strategy',
-    desc: 'Master classic 3×3 or expand to 4×4 and 5×5 tactical grids.',
+    title: 'Classic Tic-Tac-Toe',
+    desc: 'Play classic 3×3, or try bigger 4×4 and 5×5 boards.',
     cta: 'Next',
   },
   2: {
     title: 'Three Bot Levels',
-    desc: 'Warm up on Casual or test your calculation against our Minimax engine.',
+    desc: 'Warm up with the Easy bot, or try to beat the Unbeatable one.',
     cta: 'Next',
   },
   3: {
-    title: 'Instant 1v1 & Rooms',
-    desc: 'Climb the ranked leaderboard or share a private room code with friends.',
+    title: 'Online Matches & Rooms',
+    desc: 'Climb the leaderboard or share a room code with friends.',
     cta: 'Get Started',
   },
 } as const;
@@ -58,7 +59,7 @@ const BoardIllustration: React.FC = () => {
               win ? { backgroundColor: ACCENT_SOFT, borderWidth: 1, borderColor: '#BFDBFE' } : { backgroundColor: '#F1F1EE' },
             ]}
           >
-            {v === 'X' ? <MarkX size={20} stroke={2.7} /> : v === 'O' ? <MarkO size={20} stroke={2.7} /> : null}
+            {v === 'X' ? <MarkX size={ms(24)} stroke={2.7} /> : v === 'O' ? <MarkO size={ms(24)} stroke={2.7} /> : null}
           </View>
         );
       })}
@@ -70,9 +71,9 @@ const BoardIllustration: React.FC = () => {
 const BotLevels: React.FC = () => {
   const c = useTheme();
   const rows = [
-    { name: 'Casual Bot', level: 'Level 1', active: false },
-    { name: 'Tactical Bot', level: 'Level 2', active: false },
-    { name: 'Unbeatable Minimax', level: null, active: true },
+    { name: 'Easy Bot', level: 'Level 1', active: false },
+    { name: 'Smart Bot', level: 'Level 2', active: false },
+    { name: 'Unbeatable Bot', level: null, active: true },
   ];
   return (
     <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
@@ -81,13 +82,13 @@ const BotLevels: React.FC = () => {
           key={r.name}
           style={[
             styles.groupRow,
-            { minHeight: r.active ? 36 : 34 },
+            { minHeight: ch(r.active ? 40 : 38) },
             i > 0 ? { borderTopWidth: 1, borderTopColor: c.border } : null,
             r.active ? { backgroundColor: 'rgba(239,244,255,0.6)' } : null,
           ]}
         >
           <Text style={[r.active ? styles.botNameActive : styles.botName, { color: r.active ? c.accent : c.textSecondary }]}>{r.name}</Text>
-          {r.level ? <Text style={[styles.botLevel, { color: MUTED }]}>{r.level}</Text> : <CheckIcon size={13} color={c.accent} />}
+          {r.level ? <Text style={[styles.botLevel, { color: MUTED }]}>{r.level}</Text> : <CheckIcon size={ms(16)} color={c.accent} />}
         </View>
       ))}
     </View>
@@ -100,9 +101,9 @@ const ArenaCard: React.FC = () => {
   return (
     <View style={[styles.arena, { backgroundColor: c.bgCard, borderColor: c.border }]}>
       <View style={styles.arenaTop}>
-        <Text style={[styles.arenaLabel, { color: c.accent }]}>1v1 RANKED ARENA</Text>
+        <Text style={[styles.arenaLabel, { color: c.accent }]}>RANKED MATCH</Text>
         <View style={styles.eloPill}>
-          <Text style={styles.eloText}>+18 ELO</Text>
+          <Text style={styles.eloText}>+18 points</Text>
         </View>
       </View>
       <View style={styles.arenaVs}>
@@ -127,11 +128,11 @@ const ArenaCard: React.FC = () => {
 const Dots: React.FC<{ step: Step }> = ({ step }) => {
   const c = useTheme();
   return (
-    <View style={styles.dots} accessibilityLabel={`Onboarding step ${step} of 3`}>
+    <View style={styles.dots} accessibilityLabel={`Step ${step} of 3`}>
       {([1, 2, 3] as const).map((d) => (
         <View
           key={d}
-          style={d === step ? { width: 20, height: 6, borderRadius: 3, backgroundColor: c.accent } : { width: 6, height: 6, borderRadius: 3, backgroundColor: BORDER_STRONG }}
+          style={d === step ? { width: ms(22), height: ms(7), borderRadius: 4, backgroundColor: c.accent } : { width: ms(7), height: ms(7), borderRadius: 4, backgroundColor: BORDER_STRONG }}
         />
       ))}
     </View>
@@ -158,7 +159,7 @@ export const OnboardingPage: React.FC<{ step?: Step }> = ({ step = 1 }) => {
       <View style={styles.screen}>
       <View style={styles.top}>
         {step < 3 ? (
-          <Pressy testID="onboarding-skip" accessibilityLabel="Skip" onPress={finish} hitSlop={12}>
+          <Pressy testID="onboarding-skip" accessibilityLabel="Skip" onPress={finish} hitSlop={16}>
             <Text style={[styles.skip, { color: c.textSecondary }]}>Skip</Text>
           </Pressy>
         ) : (
@@ -188,34 +189,34 @@ export const Onboarding3Screen: React.FC<RootScreenProps<'onboarding_3'>> = () =
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  top: { paddingHorizontal: 20, paddingTop: 8, flexDirection: 'row', justifyContent: 'flex-end' },
-  skip: { fontFamily: fonts.body.semibold, fontSize: 12, lineHeight: 16 },
+  top: { paddingHorizontal: 20, paddingTop: 8, minHeight: 44, alignItems: 'center', flexDirection: 'row', justifyContent: 'flex-end' },
+  skip: { fontFamily: fonts.body.semibold, fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.3) },
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingTop: 8 },
 
-  board: { width: 178, height: 178, borderRadius: 16, borderWidth: 1, padding: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  boardCell: { width: 46, height: 46, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  board: { width: ms(200), height: ms(200), borderRadius: 16, borderWidth: 1, padding: ms(11), flexDirection: 'row', flexWrap: 'wrap', gap: ms(9), marginBottom: 20 },
+  boardCell: { width: ms(52), height: ms(52), borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
-  group: { width: '100%', maxWidth: 232, borderRadius: 14, borderWidth: 1, overflow: 'hidden', marginBottom: 20 },
-  groupRow: { paddingHorizontal: 13, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  botName: { fontFamily: fonts.body.medium, fontSize: 11.5 },
-  botNameActive: { fontFamily: fonts.body.semibold, fontSize: 11.5 },
-  botLevel: { fontFamily: fonts.body.regular, fontSize: 10.5 },
+  group: { width: '100%', maxWidth: ms(280), borderRadius: 14, borderWidth: 1, overflow: 'hidden', marginBottom: 20 },
+  groupRow: { paddingHorizontal: ms(14), paddingVertical: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  botName: { fontFamily: fonts.body.medium, fontSize: fs(11.5) },
+  botNameActive: { fontFamily: fonts.body.semibold, fontSize: fs(11.5) },
+  botLevel: { fontFamily: fonts.body.regular, fontSize: fs(10.5) },
 
-  arena: { width: '100%', maxWidth: 232, borderRadius: 14, borderWidth: 1, padding: 14, gap: 8, marginBottom: 20 },
+  arena: { width: '100%', maxWidth: ms(280), borderRadius: 14, borderWidth: 1, padding: ms(14), gap: 10, marginBottom: 20 },
   arenaTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  arenaLabel: { fontFamily: fonts.body.semibold, fontSize: 10, letterSpacing: 0.5 },
-  eloPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999, backgroundColor: SUCCESS_SOFT },
-  eloText: { fontFamily: fonts.mono.semibold, fontSize: 10, color: SUCCESS },
+  arenaLabel: { fontFamily: fonts.body.semibold, fontSize: fs(10), letterSpacing: 0.5 },
+  eloPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9999, backgroundColor: SUCCESS_SOFT },
+  eloText: { fontFamily: fonts.mono.semibold, fontSize: fs(10), color: SUCCESS },
   arenaVs: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 },
   arenaPlayer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  avatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: fonts.body.semibold, fontSize: 9.5, color: '#FFFFFF' },
-  playerName: { fontFamily: fonts.body.semibold, fontSize: 11.5 },
-  vs: { fontFamily: fonts.body.semibold, fontSize: 11 },
+  avatar: { width: ms(32), height: ms(32), borderRadius: ms(16), alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontFamily: fonts.body.semibold, fontSize: fs(10), color: '#FFFFFF' },
+  playerName: { fontFamily: fonts.body.semibold, fontSize: fs(11.5) },
+  vs: { fontFamily: fonts.body.semibold, fontSize: fs(11) },
 
-  title: { fontFamily: fonts.body.semibold, fontSize: 19, lineHeight: 24, letterSpacing: -0.38, textAlign: 'center' },
-  desc: { fontFamily: fonts.body.regular, fontSize: 12.5, lineHeight: 18, marginTop: 6, maxWidth: 248, textAlign: 'center' },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(19), lineHeight: Math.round(fs(19) * 1.3), letterSpacing: -0.38, textAlign: 'center' },
+  desc: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 8, maxWidth: ms(300), textAlign: 'center' },
   dots: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20 },
 });

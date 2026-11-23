@@ -14,6 +14,7 @@ import { shopApi, type EmblemShop, type EmblemView } from '../../services/api/sh
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
+import { fs, ms } from '../../design-system/responsive';
 export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () => {
   const c = useTheme();
   const { back } = useAppNav();
@@ -39,19 +40,19 @@ export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () 
     try {
       if (item.unlocked) {
         await equip.mutateAsync(item.id);
-        toast.success('Emblem equipped', `${item.name} is now active on your profile`);
+        toast.success('Emblem equipped', `${item.name} is now on your profile`);
       } else {
         if (coins < item.cost) {
-          toast.warning('Not enough coins', `Claim daily rewards to earn ${item.cost - coins} more coins`);
+          toast.warning('Not enough coins', `You need ${item.cost - coins} more coins. Claim daily rewards to earn them.`);
           return;
         }
         await unlock.mutateAsync(item.id);
-        toast.success('Emblem unlocked', `${item.name} equipped!`);
+        toast.success('Emblem unlocked', `${item.name} is equipped`);
       }
     } catch (e) {
       const code = toApiError(e).code;
       if (code === 'INSUFFICIENT_COINS' || code === 'EMBLEM_ALREADY_OWNED') void q.refetch();
-      toast.error('Could not complete purchase', friendlyMessage(e));
+      toast.error("Couldn't buy that", friendlyMessage(e));
     }
   };
 
@@ -62,7 +63,7 @@ export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () 
       testID="coin-shop-screen"
       rightAction={
         <View style={styles.coinPill}>
-          <Text style={styles.coinPillText}>{shop ? coins.toLocaleString() : '-'} Coins</Text>
+          <Text style={styles.coinPillText} numberOfLines={1}>{shop ? coins.toLocaleString() : '-'} Coins</Text>
         </View>
       }
     >
@@ -74,11 +75,11 @@ export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () 
         <View style={{ gap: 12 }}>
           {/* Equipped emblem */}
           <View style={[styles.heroCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
               <View style={[styles.badgeBox, { backgroundColor: activeEmblem.bg }]}>
                 <Text style={[styles.badgeSymbol, { color: activeEmblem.fg }]}>{activeEmblem.badge}</Text>
               </View>
-              <View>
+              <View style={{ flexShrink: 1, minWidth: 0 }}>
                 <Text style={[styles.heroLabel, { color: c.accent }]}>EQUIPPED EMBLEM</Text>
                 <Text style={[styles.heroName, { color: c.text }]}>{activeEmblem.name}</Text>
               </View>
@@ -129,33 +130,35 @@ export const CoinShopEmblemsScreen: React.FC<RootScreenProps<'coin_shop'>> = () 
 
 const styles = StyleSheet.create({
   coinPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(4),
     borderRadius: 999,
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
     borderColor: '#FDE68A',
   },
-  coinPillText: { fontSize: 10.5, fontFamily: fonts.mono.semibold, color: '#B45309' },
+  coinPillText: { fontSize: fs(10.5), fontFamily: fonts.mono.semibold, color: '#B45309' },
   heroCard: {
-    padding: 12,
+    padding: ms(14),
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
-  badgeBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  badgeSymbol: { fontSize: 15, fontFamily: fonts.mono.semibold },
-  heroLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.8 },
-  heroName: { fontSize: 12.5, fontFamily: fonts.body.semibold, marginTop: 1 },
-  activeTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: '#F0FDF4' },
-  activeTagText: { fontSize: 10, fontFamily: fonts.body.semibold, color: '#15803D' },
+  badgeBox: { width: ms(44), height: ms(44), borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badgeSymbol: { fontSize: fs(15), fontFamily: fonts.mono.semibold },
+  heroLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.8 },
+  heroName: { fontSize: fs(12.5), fontFamily: fonts.body.semibold, marginTop: 1 },
+  activeTag: { paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: 8, backgroundColor: '#F0FDF4' },
+  activeTagText: { fontSize: fs(10), fontFamily: fonts.body.semibold, color: '#15803D' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  cell: { width: '48.5%', flexGrow: 1 },
-  cardItem: { alignItems: 'center', gap: 6, padding: 10, borderRadius: 14, borderWidth: 1 },
-  cardTitle: { fontSize: 11.5, fontFamily: fonts.body.semibold },
-  cardSub: { fontSize: 9.5 },
-  actionBtn: { width: '100%', paddingVertical: 4, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  actionBtnText: { fontSize: 10.5, fontFamily: fonts.mono.semibold },
+  // flexBasis (not a % width) so two columns always fit next to the gap, on any phone width
+  cell: { flexBasis: '45%', flexGrow: 1 },
+  cardItem: { alignItems: 'center', gap: ms(8), padding: ms(12), borderRadius: 14, borderWidth: 1 },
+  cardTitle: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
+  cardSub: { fontSize: fs(11) },
+  actionBtn: { width: '100%', paddingVertical: ms(8), borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  actionBtnText: { fontSize: fs(10.5), fontFamily: fonts.mono.semibold },
 });

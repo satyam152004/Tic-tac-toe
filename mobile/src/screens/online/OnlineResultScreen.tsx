@@ -19,6 +19,7 @@ import { useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 import { isOfflineError } from './shared';
 
+import { fs, ms } from '../../design-system/responsive';
 export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({ route }) => {
   const c = useTheme();
   const { gameId } = route.params;
@@ -48,7 +49,7 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
     try {
       await requestRematch(gameId);
     } catch (e) {
-      toast.error('Rematch unavailable', friendlyMessage(e));
+      toast.error("Can't start a rematch", friendlyMessage(e));
     } finally {
       setRematching(false);
     }
@@ -68,7 +69,7 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
   const myPlayer = shown.players.find((p) => p.userId === myId);
   const isWin = myPlayer?.outcome === 'WIN';
   const isLoss = myPlayer?.outcome === 'LOSS';
-  const title = isWin ? 'Ranked Victory' : isLoss ? 'Ranked Defeat' : 'Ranked Draw';
+  const title = isWin ? 'You won' : isLoss ? 'You lost' : "It's a draw";
   const pts = myPlayer?.pointsAwarded ?? 0;
   const eloTotal = authMe?.stats?.points;
   const totalMoves = shown.moveCount ?? shown.board.filter((x) => x !== '').length;
@@ -122,10 +123,10 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
             </Text>
           </View>
 
-          {/* ELO Pill */}
+          {/* Points pill */}
           <View style={styles.eloPill}>
             <Text style={styles.eloPillText}>
-              {pts >= 0 ? '+' : ''}{pts} ELO{eloTotal != null ? ` (${eloTotal.toLocaleString()})` : ''}
+              {pts >= 0 ? '+' : ''}{pts} points{eloTotal != null ? ` (${eloTotal.toLocaleString()})` : ''}
             </Text>
           </View>
         </View>
@@ -146,7 +147,7 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
         <View style={[styles.statsCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <View style={[styles.statCol, { borderRightWidth: 1, borderRightColor: c.border }]}>
             <Text style={[styles.statVal, { color: c.text }]}>{totalMoves} Moves</Text>
-            <Text style={[styles.statLabel, { color: c.textSecondary }]}>Total Turns</Text>
+            <Text style={[styles.statLabel, { color: c.textSecondary }]}>Turns</Text>
           </View>
           <View style={styles.statCol}>
             <Text testID="result-duration" style={[styles.statVal, { color: c.text }]}>{shown.durationMs != null ? formatClock(Math.round(shown.durationMs / 1000)) : '--:--'}</Text>
@@ -161,36 +162,36 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: ms(20),
+    paddingTop: ms(16),
     alignItems: 'center',
-    gap: 14,
+    gap: ms(14),
   },
   badgeWrap: {
     alignItems: 'center',
-    gap: 8,
+    gap: ms(8),
   },
   outcomeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 2,
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(2),
     borderRadius: 999,
     borderWidth: 1,
   },
   outcomeBadgeText: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
   },
   eloPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(6),
     marginTop: 0,
-    borderRadius: 11,
+    borderRadius: ms(11),
     backgroundColor: '#EFF4FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
   eloPillText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.mono.semibold,
     color: '#1D4ED8',
   },
@@ -200,29 +201,29 @@ const styles = StyleSheet.create({
   statsCard: {
     flexDirection: 'row',
     width: '100%',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    paddingVertical: ms(10),
+    paddingHorizontal: ms(12),
+    borderRadius: ms(14),
     borderWidth: 1,
   },
   statCol: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: ms(2),
   },
   statVal: {
-    fontSize: 13.5,
+    fontSize: fs(13.5),
     fontFamily: fonts.mono.semibold,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.body.regular,
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    gap: 8,
+    paddingHorizontal: ms(20),
+    paddingTop: ms(8),
+    paddingBottom: ms(16),
+    gap: ms(8),
   },
 });

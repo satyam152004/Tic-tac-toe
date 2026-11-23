@@ -43,7 +43,7 @@ function getSenderEmail(): string {
 
 /** Thrown when an email could not be handed to the provider (timeout, provider error, not configured). */
 export class MailDeliveryError extends AppError {
-  constructor(message = 'Email could not be sent right now, please try again shortly') {
+  constructor(message = 'We couldn\'t send the email. Try again in a moment.') {
     super(503, 'EMAIL_DELIVERY_FAILED', message);
     this.name = 'MailDeliveryError';
   }
@@ -141,30 +141,50 @@ export const mailTemplates = {
   verifyEmail: (to: string, token: string, code: string): Mail => ({
     to,
     subject: `${code} is your Tic Tac Toe verification code`,
-    text: `Welcome to Tic Tac Toe!\n\nYour verification code: Code: ${code}\nIt expires in 10 minutes.\n\nOr verify with the link: ${env.APP_BASE_URL}/verify-email?token=${token}\n\nToken: ${token}\n\nThe link expires in 24 hours.`,
+    text: `Welcome to Tic Tac Toe!
+
+Your code to verify your email: ${code}
+It works for 10 minutes.
+
+Or open this link: ${env.APP_BASE_URL}/verify-email?token=${token}
+
+Token: ${token}
+
+The link works for 24 hours.`,
   }),
 
   resendVerifyEmail: (to: string, code: string): Mail => ({
     to,
     subject: `${code} is your Tic Tac Toe verification code`,
-    text: `Your verification code: Code: ${code}\nIt expires in 10 minutes. If you did not ask for it, ignore this email.`,
+    text: `Your code to verify your email: ${code}
+It works for 10 minutes. If you didn't ask for it, you can ignore this email.`,
   }),
 
   resetPassword: (to: string, token: string, code: string): Mail => ({
     to,
     subject: `${code} is your Tic Tac Toe password reset code`,
-    text: `Your password reset code: Code: ${code}\nIt expires in 10 minutes.\n\nOr reset with the link: ${env.APP_BASE_URL}/reset-password?token=${token}\n\nToken: ${token}\n\nThe link expires in 1 hour. If you did not request this, ignore this email.`,
+    text: `Your code to reset your password: ${code}
+It works for 10 minutes.
+
+Or open this link: ${env.APP_BASE_URL}/reset-password?token=${token}
+
+Token: ${token}
+
+The link works for 1 hour. If you didn't ask for this, you can ignore this email.`,
   }),
 
   setPassword: (to: string, code: string): Mail => ({
     to,
     subject: `${code} is your Tic Tac Toe code to set a password`,
-    text: `Your code to add a password to your account: ${code}\nIt expires in 10 minutes.\n\nYou will still be able to sign in with Google or Apple. If you did not request this, ignore this email.`,
+    text: `Your code to add a password: ${code}
+It works for 10 minutes.
+
+You can still sign in with Google or Apple. If you didn't ask for this, you can ignore this email.`,
   }),
 
   passwordChanged: (to: string): Mail => ({
     to,
     subject: 'Your password was changed',
-    text: 'Your password was just changed and all devices were signed out. If this was not you, reset your password immediately.',
+    text: 'Your password was just changed, and you were signed out on all devices. If this wasn\'t you, reset your password now.',
   }),
 };

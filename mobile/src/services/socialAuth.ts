@@ -39,7 +39,7 @@ function getGoogleSigninModule() {
   if (!isGoogleSigninSupported()) {
     throw new ApiError(
       'PROVIDER_NOT_AVAILABLE',
-      'Google Sign-In is not supported in Expo Go. Please use a development build (npx expo run:android / ios) or build with EAS.',
+      'Google sign-in does not work in Expo Go. Use a development build instead.',
     );
   }
   // Lazily require the module only when native binary contains RNGoogleSignin
@@ -69,11 +69,11 @@ export async function signInWithGoogle(opts?: SocialOptions): Promise<void> {
   if (!isGoogleSigninSupported()) {
     throw new ApiError(
       'PROVIDER_NOT_AVAILABLE',
-      'Google Sign-In requires custom native code and is not supported in Expo Go. Please create a development build with `npx expo run:android` or EAS Build.',
+      'Google sign-in does not work in Expo Go. Use a development build instead.',
     );
   }
   if (!GOOGLE_WEB.length) {
-    throw new ApiError('PROVIDER_NOT_CONFIGURED', 'Google sign-in is not configured in this build.');
+    throw new ApiError('PROVIDER_NOT_CONFIGURED', "Google sign-in isn't set up in this build.");
   }
 
   const { GoogleSignin, isErrorWithCode, statusCodes } = getGoogleSigninModule();
@@ -87,7 +87,7 @@ export async function signInWithGoogle(opts?: SocialOptions): Promise<void> {
     const res = await GoogleSignin.signIn();
     if (res.type !== 'success') throw cancelled();
     const idToken = res.data.idToken;
-    if (!idToken) throw new ApiError('INVALID_SOCIAL_TOKEN', 'Google did not return an identity token.');
+    if (!idToken) throw new ApiError('INVALID_SOCIAL_TOKEN', "Google sign-in didn't work. Try again.");
     await finish('google', idToken, opts);
   } catch (e) {
     if (e instanceof Error && e.message === 'CANCELLED') throw e;
@@ -99,12 +99,12 @@ export async function signInWithGoogle(opts?: SocialOptions): Promise<void> {
 }
 
 export async function signInWithApple(opts?: SocialOptions): Promise<void> {
-  if (!socialProviders.apple) throw new ApiError('PROVIDER_NOT_CONFIGURED', 'Sign in with Apple is only available on iOS.');
+  if (!socialProviders.apple) throw new ApiError('PROVIDER_NOT_CONFIGURED', 'Sign in with Apple only works on iPhone and iPad.');
   try {
     const cred = await AppleAuthentication.signInAsync({
       requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
     });
-    if (!cred.identityToken) throw new ApiError('INVALID_SOCIAL_TOKEN', 'Apple did not return an identity token.');
+    if (!cred.identityToken) throw new ApiError('INVALID_SOCIAL_TOKEN', "Apple sign-in didn't work. Try again.");
     await finish('apple', cred.identityToken, opts);
   } catch (e) {
     if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') throw cancelled();

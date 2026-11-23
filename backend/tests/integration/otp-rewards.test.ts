@@ -16,7 +16,7 @@ beforeEach(async () => {
 
 const api = () => request(env.app);
 const creds = { email: 'otp@example.com', password: 'Passw0rdOK', username: 'otpuser' };
-const codeFrom = (m: { text: string }) => /Code: (\d{6})/.exec(m.text)![1]!;
+const codeFrom = (m: { text: string }) => /: ([0-9]{6})/.exec(m.text)![1]!;
 const lastCode = () => codeFrom(testOutbox[testOutbox.length - 1]!);
 
 describe('six-digit email OTP (verification)', () => {

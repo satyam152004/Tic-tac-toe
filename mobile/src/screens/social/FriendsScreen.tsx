@@ -12,6 +12,7 @@ import { toast } from '../../store/toastStore';
 import { AddFriendSearchSheet } from './AddFriendSearchSheet';
 import { isOffline, socialError, useChallenge } from './socialShared';
 
+import { fs, ms } from '../../design-system/responsive';
 export const FriendsScreen: React.FC = () => {
   const c = useTheme();
   const { nav } = useAppNav();
@@ -52,14 +53,15 @@ export const FriendsScreen: React.FC = () => {
       rightAction={
         <Pressy
           testID="friends-add-button"
+          hitSlop={4}
           onPress={() => setAddOpen(true)}
           style={styles.addBtn}
         >
-          <Text style={styles.addBtnText}>+ Add</Text>
+          <Text style={styles.addBtnText} numberOfLines={1}>+ Add</Text>
         </Pressy>
       }
     >
-      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10 }}>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, width: '100%', maxWidth: 560, alignSelf: 'center' }}>
         {/* 3-tab Segment: Friends, Requests, Blocked */}
         <View style={[styles.segment, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
           <Pressy
@@ -106,7 +108,7 @@ export const FriendsScreen: React.FC = () => {
             data={friends}
             keyExtractor={(i) => i.friendshipId}
             ListEmptyComponent={
-              <EmptyState title="No friends yet" description="Add friends to challenge them to matches." />
+              <EmptyState title="No friends yet" description="Add friends to play matches together." />
             }
             renderItem={({ item: f }) => {
               const name = f.user.displayName || f.user.username;
@@ -115,8 +117,8 @@ export const FriendsScreen: React.FC = () => {
                   <Pressy
                     onPress={() => nav.navigate('friend_profile', { userId: f.user.id, friendshipId: f.friendshipId })}
                     onLongPress={() => setRemoving({ friendshipId: f.friendshipId, name })}
-                    accessibilityHint="Long press to remove this friend"
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                    accessibilityHint="Press and hold to remove this friend"
+                    style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}
                   >
                     <View style={styles.avatarWrap}>
                       <View style={[styles.avatar, { backgroundColor: '#F1F1EE' }]}>
@@ -124,9 +126,9 @@ export const FriendsScreen: React.FC = () => {
                       </View>
                       <View style={[styles.dot, { backgroundColor: f.activeGameId ? '#B45309' : f.user.online ? '#15803D' : '#CFCFC8' }]} />
                     </View>
-                    <View>
-                      <Text style={[styles.name, { color: c.text }]}>{name}</Text>
-                      <Text style={[styles.sub, { color: c.textSecondary }]}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>{name}</Text>
+                      <Text numberOfLines={2} style={[styles.sub, { color: c.textSecondary }]}>
                         {f.activeGameId ? 'In Match' : f.user.online ? 'Online' : 'Offline'} • Level {f.user.level}
                       </Text>
                     </View>
@@ -162,27 +164,27 @@ export const FriendsScreen: React.FC = () => {
             data={[...inc.map((r) => ({ ...r, dir: 'in' as const })), ...out.map((r) => ({ ...r, dir: 'out' as const }))]}
             keyExtractor={(i) => i.dir + i.friendshipId}
             ListEmptyComponent={
-              <EmptyState title="No requests" description="No pending friend requests." />
+              <EmptyState title="No requests" description="You have no friend requests." />
             }
             renderItem={({ item: r }) => {
               const name = r.user.displayName || r.user.username;
               return (
                 <View style={[styles.row, { borderBottomColor: c.border }]}>
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <View style={styles.avatarWrap}>
                       <View style={[styles.avatar, { backgroundColor: '#EFF4FF' }]}>
                         <Text style={[styles.avatarText, { color: c.accent }]}>{name.slice(0, 2).toUpperCase()}</Text>
                       </View>
                     </View>
-                    <View>
-                      <Text style={[styles.name, { color: c.text }]}>{name}</Text>
-                      <Text style={[styles.sub, { color: c.textSecondary }]}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>{name}</Text>
+                      <Text numberOfLines={2} style={[styles.sub, { color: c.textSecondary }]}>
                         Level {r.user.level} • {r.dir === 'in' ? 'Wants to be friends' : 'Request sent'}
                       </Text>
                     </View>
                   </View>
                   {r.dir === 'in' ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     <Pressy
                       testID={`decline-${r.user.id}`}
                       accessibilityLabel={`Decline ${name}`}
@@ -218,17 +220,17 @@ export const FriendsScreen: React.FC = () => {
             data={blk}
             keyExtractor={(i) => i.id}
             ListEmptyComponent={
-              <EmptyState title="No blocked users" description="You have not blocked any players." />
+              <EmptyState title="No blocked players" description="You haven't blocked anyone." />
             }
             renderItem={({ item: b }) => (
               <View style={[styles.row, { borderBottomColor: c.border }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[styles.avatar, { backgroundColor: '#FEF2F2' }]}>
                     <Text style={[styles.avatarText, { color: '#B91C1C' }]}>{(b.displayName || b.username).slice(0, 2).toUpperCase()}</Text>
                   </View>
-                  <View>
-                    <Text style={[styles.name, { color: c.text }]}>{b.displayName || b.username}</Text>
-                    <Text style={[styles.sub, { color: c.textSecondary }]}>Blocked</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>{b.displayName || b.username}</Text>
+                    <Text numberOfLines={2} style={[styles.sub, { color: c.textSecondary }]}>Blocked</Text>
                   </View>
                 </View>
                 <Pressy
@@ -249,7 +251,7 @@ export const FriendsScreen: React.FC = () => {
       <ConfirmDialog
         open={!!removing}
         title={`Remove ${removing?.name ?? ''}?`}
-        message="They will be removed from your friends roster."
+        message="They'll be removed from your friends list."
         confirmLabel="Remove"
         destructive
         onCancel={() => setRemoving(null)}
@@ -265,13 +267,14 @@ export const FriendsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   addBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: 10,
     backgroundColor: '#EFF4FF',
   },
   addBtnText: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.body.semibold,
     color: '#1D4ED8',
   },
@@ -284,8 +287,8 @@ const styles = StyleSheet.create({
   },
   segmentBtn: {
     flex: 1,
-    paddingVertical: 4,
-    borderRadius: 7,
+    minHeight: 40,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -297,56 +300,59 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   segmentText: {
-    fontSize: 10.5,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: ms(10),
+    minHeight: 64,
+    gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   avatarWrap: {
     position: 'relative',
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 11,
+    fontSize: fs(12),
     fontFamily: fonts.mono.semibold,
   },
   dot: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1,
+    width: ms(11),
+    height: ms(11),
+    borderRadius: ms(5.5),
+    borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
   name: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   sub: {
-    fontSize: 10,
+    fontSize: fs(11),
     fontFamily: fonts.mono.medium,
-    marginTop: 1,
+    marginTop: 2,
   },
   actionPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: ms(12),
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: 10,
   },
   actionPillText: {
-    fontSize: 10.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.body.semibold,
   },
 });

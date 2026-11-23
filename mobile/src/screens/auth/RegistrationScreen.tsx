@@ -12,6 +12,7 @@ import { emailError, passwordValid, usernameError } from './authValidation';
 import { PasswordRules } from './PasswordRules';
 import { MUTED, ProtoButton, ProtoHeader, ProtoInput, ProtoScreen, SocialButton } from './protoUi';
 
+import { fs } from '../../design-system/responsive';
 type Field = 'username' | 'email' | 'password';
 
 export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () => {
@@ -37,7 +38,7 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
     if (u) next.username = u;
     const em = emailError(email);
     if (em) next.email = em;
-    if (!passwordValid(password)) next.password = 'Password does not meet the requirements below';
+    if (!passwordValid(password)) next.password = "Password doesn't meet the rules below";
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -52,7 +53,7 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
       const err = toApiError(e);
       if (err.code === 'EMAIL_TAKEN') setErrors({ email: 'That email is already registered. Try signing in instead.' });
       else if (err.code === 'USERNAME_TAKEN') setErrors({ username: 'That username is taken. Pick another one.' });
-      else if (err.code === 'ALREADY_REGISTERED') setErrors({ form: 'This account is already registered. Please sign in.' });
+      else if (err.code === 'ALREADY_REGISTERED') setErrors({ form: 'You already have an account. Sign in instead.' });
       else setErrors({ form: friendlyMessage(err) });
       setBusy(false);
     }
@@ -147,7 +148,7 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
             </View>
           ) : null}
           <View style={styles.footerRow}>
-            <Text style={[styles.footerText, { color: MUTED }]}>Already registered? </Text>
+            <Text style={[styles.footerText, { color: MUTED }]}>Already have an account? </Text>
             <Pressy accessibilityLabel="Sign in" onPress={() => nav.replace('login')} hitSlop={10}>
               <Text style={[styles.footerLink, { color: c.accent }]}>Sign In</Text>
             </Pressy>
@@ -161,10 +162,10 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 14 },
   fields: { gap: 10 },
-  error: { fontFamily: fonts.body.regular, fontSize: 11.5, lineHeight: 16 },
+  error: { fontFamily: fonts.body.regular, fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3) },
   footer: { marginTop: 'auto', paddingTop: 8, gap: 8 },
   socialRow: { flexDirection: 'row', gap: 10 },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  footerText: { fontFamily: fonts.body.regular, fontSize: 11 },
-  footerLink: { fontFamily: fonts.body.semibold, fontSize: 11 },
+  footerText: { fontFamily: fonts.body.regular, fontSize: fs(12.5) },
+  footerLink: { fontFamily: fonts.body.semibold, fontSize: fs(12.5) },
 });

@@ -10,6 +10,7 @@ import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { seatsOf, useLocalGameStore } from '../../store/localGameStore';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 const AI_LABEL = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard', EXPERT: 'Expert', IMPOSSIBLE: 'Unbeatable' } as const;
 
 export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
@@ -61,7 +62,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
       onBack={back}
       testID="rematch"
       footer={
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: ms(8) }}>
           <ActionButton
             testID="rematch-again"
             fullWidth
@@ -73,7 +74,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
             fullWidth
             variant="secondary"
             compact
-            title="Exit to Home"
+            title="Go home"
             onPress={() => {
               useLocalGameStore.getState().quit();
               goHome();
@@ -85,7 +86,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
       <View style={styles.container}>
         {/* Series Score Card */}
         <View style={[styles.seriesCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <Text style={[styles.seriesOverline, { color: c.textSecondary }]}>CURRENT SERIES</Text>
+          <Text style={[styles.seriesOverline, { color: c.textSecondary }]}>SCORE SO FAR</Text>
           <View style={styles.scoresRow}>
             <View style={styles.scoreCol}>
               <Text style={[styles.playerName, { color: c.textSecondary }]}>
@@ -120,7 +121,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
             onPress={() => setSwapSymbols((v) => !v)}
             style={styles.groupRow}
           >
-            <View style={{ flex: 1, gap: 2 }}>
+            <View style={{ flex: 1, gap: ms(2) }}>
               <Text style={[styles.rowTitle, { color: c.text }]}>
                 Swap Symbols (X ↔ O)
               </Text>
@@ -142,7 +143,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
                 style={[
                   styles.switchThumb,
                   {
-                    transform: [{ translateX: swapSymbols ? 16 : 0 }],
+                    transform: [{ translateX: swapSymbols ? ms(18) : 0 }],
                   },
                 ]}
               />
@@ -168,14 +169,14 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 14,
+    gap: ms(14),
   },
   seriesCard: {
-    borderRadius: 14,
+    borderRadius: ms(14),
     borderWidth: 1,
-    padding: 16,
+    padding: ms(16),
     alignItems: 'center',
-    gap: 8,
+    gap: ms(8),
     shadowColor: '#000000',
     shadowOpacity: 0.02,
     shadowRadius: 3,
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   seriesOverline: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
@@ -191,27 +192,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
+    gap: ms(20),
   },
   scoreCol: {
     alignItems: 'center',
-    gap: 2,
+    gap: ms(2),
   },
   playerName: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.body.semibold,
   },
   scoreNumber: {
-    fontSize: 28,
+    fontSize: fs(28),
     fontFamily: fonts.mono.semibold,
-    lineHeight: 34,
+    lineHeight: Math.round(fs(28) * 1.25),
   },
   scoreDivider: {
-    fontSize: 20,
+    fontSize: fs(20),
     fontFamily: fonts.mono.semibold,
   },
   groupCard: {
-    borderRadius: 14,
+    borderRadius: ms(14),
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -219,37 +220,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    minHeight: 38,
+    paddingHorizontal: ms(13),
+    paddingVertical: ms(8),
+    minHeight: ch(38),
   },
   rowTitle: {
     fontFamily: fonts.body.semibold,
-    fontSize: 12.5,
+    fontSize: fs(12.5),
   },
   rowSub: {
     fontFamily: fonts.body.regular,
-    fontSize: 10.5,
+    fontSize: fs(10.5),
   },
   settingsVal: {
     fontFamily: fonts.body.semibold,
-    fontSize: 12,
+    fontSize: fs(12),
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 0,
   },
   switchTrack: {
-    width: 36,
-    height: 20,
-    borderRadius: 10,
-    padding: 2,
+    width: ms(44),
+    height: ms(26),
+    borderRadius: 999,
+    padding: ms(3),
     justifyContent: 'center',
   },
   switchThumb: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: ms(20),
+    height: ms(20),
+    borderRadius: 999,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000000',
     shadowOpacity: 0.15,

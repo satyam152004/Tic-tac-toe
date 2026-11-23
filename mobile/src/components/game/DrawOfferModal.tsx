@@ -5,6 +5,7 @@ import { fonts } from '../../design-system/typography';
 import { formatClock, useCountdown } from '../../hooks/useOnlineGame';
 import { useTheme } from '../../hooks/useTheme';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 export interface DrawOfferModalProps {
   open: boolean;
   proposerName?: string;
@@ -44,10 +45,10 @@ export const DrawOfferModal: React.FC<DrawOfferModalProps> = ({
           ) : null}
 
           <View style={{ alignItems: 'center', gap: 4 }}>
-            <Text style={[styles.title, { color: c.text }]}>Draw Offered</Text>
+            <Text style={[styles.title, { color: c.text }]}>Draw offer</Text>
             <Text style={[styles.desc, { color: c.textSecondary }]}>
               <Text style={{ fontFamily: fonts.body.semibold, color: c.text }}>{proposerName}</Text>{' '}
-              proposed a mutual draw{moveCount ? ` on Move ${moveCount}` : ''} (0 ELO change).
+              offered a draw{moveCount ? ` on move ${moveCount}` : ''}. Your rating will not change.
             </Text>
           </View>
 
@@ -59,7 +60,7 @@ export const DrawOfferModal: React.FC<DrawOfferModalProps> = ({
                 variant="secondary"
                 size="md"
                 onPress={onDecline}
-                style={{ minHeight: 40 }}
+                style={{ minHeight: ch(40) }}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -69,7 +70,7 @@ export const DrawOfferModal: React.FC<DrawOfferModalProps> = ({
                 variant="primary"
                 size="md"
                 onPress={onAccept}
-                style={{ minHeight: 40 }}
+                style={{ minHeight: ch(40) }}
               />
             </View>
           </View>
@@ -85,16 +86,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20, 21, 24, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: ms(20),
   },
   card: {
     width: '100%',
-    maxWidth: 290,
+    maxWidth: ms(320),
     borderRadius: 20,
     borderWidth: 1,
-    padding: 20,
+    padding: ms(20),
     alignItems: 'center',
-    gap: 14,
+    gap: ms(14),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -102,30 +103,30 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   timerBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(4),
     borderRadius: 999,
     backgroundColor: '#EFF4FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
   timerBadgeText: {
-    fontSize: 10.5,
+    fontSize: fs(12),
     fontFamily: fonts.mono.semibold,
     color: '#1D4ED8',
   },
   title: {
-    fontSize: 17,
+    fontSize: fs(17),
     fontFamily: fonts.body.semibold,
   },
   desc: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: fs(12),
+    lineHeight: Math.round(fs(12) * 1.35),
     textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: ms(10),
     width: '100%',
     paddingTop: 4,
   },

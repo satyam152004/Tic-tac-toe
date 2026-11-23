@@ -90,7 +90,7 @@ export async function create(userId: string, input: { boardSize: number; winLeng
       throw err;
     }
   }
-  throw Errors.internal('Could not allocate a room code');
+  throw Errors.internal('Couldn\'t make a room code. Try again.');
 }
 
 /**
@@ -139,7 +139,7 @@ export async function join(userId: string, code: string) {
     realtime.joinUserTo(userId, `room:${probe._id}`);
     return presentRoom(probe); // re-joining your own room is idempotent
   }
-  if (probe.status === 'EXPIRED' || probe.expiresAt <= now) throw new (await import('../utils/errors.js')).AppError(410, 'ROOM_EXPIRED', 'Room has expired');
+  if (probe.status === 'EXPIRED' || probe.expiresAt <= now) throw new (await import('../utils/errors.js')).AppError(410, 'ROOM_EXPIRED', 'This room has expired.');
   if (await areBlocked(userId, probe.hostId)) throw Errors.forbidden('You cannot join this room', 'BLOCKED');
   await assertNotInLiveRoom(userId);
   await assertNoActiveOnlineGame(userId);
@@ -150,7 +150,7 @@ export async function join(userId: string, code: string) {
     { $set: { guestId: userId, status: 'FULL', guestReady: false } },
     { new: true },
   );
-  if (!room) throw Errors.conflict('Room is full or not accepting players', 'ROOM_FULL');
+  if (!room) throw Errors.conflict('This room is full.', 'ROOM_FULL');
   realtime.joinUserTo(userId, `room:${room._id}`);
   await broadcast(room);
   const joiner = await UserModel.findById(userId).select('displayName').lean();
@@ -174,7 +174,7 @@ export async function setReady(userId: string, id: string, ready: boolean) {
     { $set: { guestReady: ready, status: ready ? 'READY' : 'FULL' } },
     { new: true },
   );
-  if (!room) throw Errors.conflict('Room is not in a state where readiness can change', 'ROOM_STATE');
+  if (!room) throw Errors.conflict('You can\'t change ready status right now.', 'ROOM_STATE');
   await broadcast(room);
   return presentRoom(room);
 }
@@ -182,10 +182,10 @@ export async function setReady(userId: string, id: string, ready: boolean) {
 export async function start(userId: string, id: string) {
   const r = await loadMemberRoom(userId, id);
   if (String(r.hostId) !== userId) throw Errors.forbidden('Only the host can start the game', 'NOT_HOST');
-  if (r.status === 'PLAYING') throw Errors.conflict('Game already started', 'ROOM_STATE');
+  if (r.status === 'PLAYING') throw Errors.conflict('The match already started.', 'ROOM_STATE');
   // Atomic claim READY -> PLAYING so a double tap cannot create two games.
   const claimed = await RoomModel.findOneAndUpdate({ _id: r._id, hostId: userId, status: { $in: ['READY', 'COMPLETED'] }, guestId: { $ne: null }, expiresAt: { $gt: new Date() } }, { $set: { status: 'PLAYING' } }, { new: true });
-  if (!claimed) throw Errors.conflict('Both players must be present and ready', 'ROOM_NOT_READY');
+  if (!claimed) throw Errors.conflict('Both players must be in the room and ready.', 'ROOM_NOT_READY');
   try {
     const mark = randomMark();
     const game = await createGameDoc({
@@ -244,17 +244,17 @@ export async function leave(userId: string, id: string) {
 
 export async function invite(userId: string, id: string, friendId: string) {
   const room = await loadMemberRoom(userId, id);
-  if (room.status !== 'WAITING') throw Errors.conflict('Room is not accepting players', 'ROOM_FULL');
+  if (room.status !== 'WAITING') throw Errors.conflict('This room is not open to new players.', 'ROOM_FULL');
   if (friendId === userId) throw Errors.badRequest('You cannot invite yourself', 'SELF_INVITE');
   const friends = await FriendshipModel.exists({ pairKey: makePairKey(userId, friendId), status: 'ACCEPTED' });
   if (!friends) throw Errors.forbidden('You can only invite friends', 'NOT_FRIENDS');
-  if (await areBlocked(userId, friendId)) throw Errors.forbidden('Not allowed', 'BLOCKED');
+  if (await areBlocked(userId, friendId)) throw Errors.forbidden('You can\'t do that.', 'BLOCKED');
   await RoomModel.updateOne({ _id: room._id }, { $addToSet: { invitedUserIds: new Types.ObjectId(friendId) } });
   const me = await UserModel.findById(userId).select('displayName').lean();
   await notify(friendId, {
     type: 'GAME_INVITE',
-    title: 'Game invitation',
-    body: `${me?.displayName ?? 'A friend'} invited you to a private room`,
+    title: 'Match invite',
+    body: `${me?.displayName ?? 'A friend'} invited you to their room`,
     data: { roomId: String(room._id), roomCode: room.code, fromUserId: userId },
   });
   return { invited: true, roomCode: room.code };

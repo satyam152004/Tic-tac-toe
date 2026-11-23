@@ -9,12 +9,14 @@ const mockNav = { nav: { navigate: jest.fn() }, goTab: jest.fn(), goHome: jest.f
 jest.mock('../../src/navigation/useAppNav', () => ({ useAppNav: () => mockNav }));
 jest.mock('../../src/services/api/statisticsApi', () => ({ statisticsApi: { me: jest.fn(), streaks: jest.fn(), history: jest.fn() } }));
 jest.mock('../../src/services/api/gameApi', () => ({ gameApi: { replay: jest.fn() } }));
+jest.mock('../../src/services/storage/localGameStorage', () => ({ localGameStorage: { findByClientId: jest.fn() } }));
 jest.mock('../../src/services/api/achievementApi', () => ({ achievementApi: { mine: jest.fn() } }));
 jest.mock('../../src/services/api/rewardApi', () => ({ rewardApi: { status: jest.fn(), claim: jest.fn() } }));
 jest.mock('../../src/services/api/userApi', () => ({ userApi: { me: jest.fn(), update: jest.fn() } }));
 
 import { statisticsApi } from '../../src/services/api/statisticsApi';
 import { gameApi } from '../../src/services/api/gameApi';
+import { localGameStorage } from '../../src/services/storage/localGameStorage';
 import { achievementApi } from '../../src/services/api/achievementApi';
 import { rewardApi } from '../../src/services/api/rewardApi';
 import { useAuthStore } from '../../src/store/authStore';
@@ -105,6 +107,39 @@ describe('GameStatisticsScreen', () => {
     expect(screen.getByText('1/2')).toBeTruthy();
   });
 
+  describe('offline matches in the history list', () => {
+    const LOCAL_ITEM = {
+      id: 'loc1', type: 'LOCAL', boardSize: 3, winLength: 3, difficulty: 'EASY', result: 'WIN', myMark: 'X', pointsAwarded: 0,
+      endReason: 'LINE', moveCount: 5, durationMs: 12000, clientMatchId: 'client-1', opponent: { isAI: true, difficulty: 'EASY' }, playedAt: '2026-03-01T10:00:00Z',
+    };
+    const STORED = {
+      id: 1, clientMatchId: 'client-1', playedAt: '2026-03-01T10:00:00Z', synced: true, p1Name: 'Me', p2Name: 'Bot',
+      record: { mode: 'VS_AI', humanMark: 'X', difficulty: 'EASY', config: { size: 3, winLength: 3 }, moves: [0, 3, 1, 4, 2], durationMs: 12000, playedAt: '2026-03-01T10:00:00Z', result: 'X' },
+    };
+
+    it('opens the replay from the copy on the phone (it has the moves), without asking the server', async () => {
+      m(statisticsApi.history).mockResolvedValue(page([LOCAL_ITEM]));
+      m(localGameStorage.findByClientId).mockResolvedValue(STORED);
+      await wrap(<GameStatisticsScreen {...props} />);
+      await fireEvent.press(await screen.findByTestId('history-loc1'));
+      expect(localGameStorage.findByClientId).toHaveBeenCalledWith('client-1');
+      expect(await screen.findByText('Move 5 of 5')).toBeTruthy();
+      expect(gameApi.replay).not.toHaveBeenCalled();
+      await fireEvent.press(screen.getByLabelText('Prev'));
+      expect(screen.getByText('Move 4 of 5')).toBeTruthy();
+    });
+
+    it('falls back to the server replay when the phone no longer has that match', async () => {
+      m(statisticsApi.history).mockResolvedValue(page([LOCAL_ITEM]));
+      m(localGameStorage.findByClientId).mockResolvedValue(null);
+      m(gameApi.replay).mockResolvedValue({ game: { boardSize: 3, result: { line: [] }, type: 'LOCAL' }, totalMoves: 0, frames: [] });
+      await wrap(<GameStatisticsScreen {...props} />);
+      await fireEvent.press(await screen.findByTestId('history-loc1'));
+      await waitFor(() => expect(gameApi.replay).toHaveBeenCalledWith('loc1'));
+      expect(await screen.findByText("This match was saved without its moves, so it can't be replayed.")).toBeTruthy();
+    });
+  });
+
   it('shows the empty state and links to local history', async () => {
     m(statisticsApi.history).mockResolvedValue(page([]));
     await wrap(<GameStatisticsScreen {...props} />);
@@ -116,7 +151,7 @@ describe('GameStatisticsScreen', () => {
   it('shows the offline state when stats fail with NETWORK_ERROR', async () => {
     m(statisticsApi.me).mockRejectedValue(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<GameStatisticsScreen {...props} />);
-    expect((await screen.findAllByText('No Internet Connection')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("You're offline")).length).toBeGreaterThan(0);
   });
 });
 
@@ -133,7 +168,7 @@ describe('AchievementsScreen', () => {
     expect(screen.getByTestId('ach-filter-STREAKS')).toBeTruthy();
     expect(screen.queryByText('Strategy')).toBeNull();
     expect(screen.getByLabelText('Name a, unlocked')).toBeTruthy();
-    expect(screen.getByLabelText('Name b, 30% completed')).toBeTruthy();
+    expect(screen.getByLabelText('Name b, 30% done')).toBeTruthy();
     expect(screen.getByText('33%')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('ach-filter-STREAKS'));
     expect(screen.getByText('Name b')).toBeTruthy();
@@ -161,7 +196,7 @@ describe('DailyRewardsScreen', () => {
     const after = { ...claimable, canClaim: false, claimedToday: true, coins: 150, streak: 3, nextClaimAt: nextAt(), cycle: cycle(4) };
     m(rewardApi.claim).mockResolvedValue({ claimed: { day: 3, coins: 30 }, wallet: { coins: 150 }, status: after });
     await wrap(<DailyRewardsScreen {...props} />);
-    expect(await screen.findByText('Claim Day 3 Reward')).toBeTruthy();
+    expect(await screen.findByText('Claim Day 3 reward')).toBeTruthy();
     expect(screen.getByLabelText('120 coins')).toBeTruthy();
     expect(screen.getByText('120 Coins')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('claim-reward'));
@@ -193,13 +228,13 @@ describe('DailyRewardsScreen', () => {
     m(rewardApi.claim).mockRejectedValue(new ApiError('INTERNAL', 'Server exploded', 500));
     await wrap(<DailyRewardsScreen {...props} />);
     await fireEvent.press(await screen.findByTestId('claim-reward'));
-    await waitFor(() => expect(JSON.stringify(useToastStore.getState())).toContain('Could not claim reward'));
+    await waitFor(() => expect(JSON.stringify(useToastStore.getState())).toContain("Couldn't claim your reward"));
     expect(rewardApi.status).toHaveBeenCalledTimes(1);
   });
 
   it('shows offline state', async () => {
     m(rewardApi.status).mockRejectedValue(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<DailyRewardsScreen {...props} />);
-    expect(await screen.findByText('No Internet Connection')).toBeTruthy();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
   });
 });

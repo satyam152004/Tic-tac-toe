@@ -10,6 +10,7 @@ import { useReplay } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import { toApiError, friendlyMessage } from '../../services/api/errors';
 
+import { fs, ms } from '../../design-system/responsive';
 /** Server-recorded replay of a finished game, stepped move by move. */
 export const ReplaySheet: React.FC<{ gameId: string | null; onClose: () => void }> = ({ gameId, onClose }) => {
   const c = useTheme();
@@ -46,19 +47,19 @@ export const ReplaySheet: React.FC<{ gameId: string | null; onClose: () => void 
       ) : err ? (
         <ErrorState offline={err.code === 'NETWORK_ERROR'} message={friendlyMessage(err)} onRetry={() => void q.refetch()} />
       ) : replay && total === 0 ? (
-        <EmptyState title="No moves recorded" description="This game has no recorded moves." />
+        <EmptyState title="No moves saved" description="This match was saved without its moves, so it can't be replayed." />
       ) : replay ? (
         <View style={{ gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, fontFamily: fonts.body.regular, color: c.textSecondary }}>{subtitle}</Text>
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: fs(11), marginRight: 8, fontFamily: fonts.body.regular, color: c.textSecondary }}>{subtitle}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               {[3, 4, 5].filter((n) => n === size).map((n) => (
-                <View key={n} style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: c.accentFill }}>
-                  <Text style={{ fontSize: 10.5, fontFamily: fonts.body.semibold, color: c.onAccent }}>{n}×{n}</Text>
+                <View key={n} style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: c.accentFill }}>
+                  <Text style={{ fontSize: fs(10.5), fontFamily: fonts.body.semibold, color: c.onAccent }}>{n}×{n}</Text>
                 </View>
               ))}
-              <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: c.bgElevated }}>
-                <Text testID="replay-step" style={{ fontSize: 10.5, fontFamily: fonts.mono.semibold, color: c.accent }}>{step}/{total}</Text>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: c.bgElevated }}>
+                <Text testID="replay-step" style={{ fontSize: fs(10.5), fontFamily: fonts.mono.semibold, color: c.accent }}>{step}/{total}</Text>
               </View>
             </View>
           </View>
@@ -70,12 +71,12 @@ export const ReplaySheet: React.FC<{ gameId: string | null; onClose: () => void 
               size={replay.game.boardSize}
               winningLine={step === total ? replay.game.result?.line ?? null : null}
               lastMoveIndex={frame?.position ?? null}
-              maxSize={160}
+              maxSize={ms(180)}
             />
           </View>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <AppButton testID="replay-prev" title="← Prev" variant="secondary" size="md" disabled={step === 0} onPress={() => setStep((n) => Math.max(0, n - 1))} style={{ flex: 1, minHeight: 36 }} />
-            <AppButton testID="replay-next" title="Next →" size="md" disabled={step === total} onPress={() => setStep((n) => Math.min(total, n + 1))} style={{ flex: 1, minHeight: 36 }} />
+            <AppButton testID="replay-prev" title="← Prev" variant="secondary" size="md" disabled={step === 0} onPress={() => setStep((n) => Math.max(0, n - 1))} style={{ flex: 1 }} />
+            <AppButton testID="replay-next" title="Next →" size="md" disabled={step === total} onPress={() => setStep((n) => Math.min(total, n + 1))} style={{ flex: 1 }} />
           </View>
         </View>
       ) : null}

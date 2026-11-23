@@ -43,7 +43,7 @@ export function createSocketServer(httpServer: HttpServer, redis?: { pub: Redis;
   io.use(async (socket, next) => {
     try {
       const raw = (socket.handshake.auth as { token?: string } | undefined)?.token ?? socket.handshake.headers.authorization?.replace(/^Bearer\s+/i, '');
-      if (!raw || typeof raw !== 'string') throw Errors.unauthorized('Missing token');
+      if (!raw || typeof raw !== 'string') throw Errors.unauthorized('Sign in first.');
       const claims = verifyAccessToken(raw);
       const user = await UserModel.findOne({ _id: claims.sub, deletedAt: { $exists: false } }).select('_id').lean();
       if (!user) throw Errors.unauthorized('Account not found', 'INVALID_TOKEN');
@@ -101,7 +101,7 @@ async function onConnection(io: Server, socket: Socket): Promise<void> {
     return { left: true };
   });
   reg('game:cheer', cheerEvent, async (uid, p, s) => {
-    if (!s.rooms.has(`spectate:${p.gameId}`)) throw Errors.forbidden('Join the match as a spectator first', 'NOT_SPECTATING');
+    if (!s.rooms.has(`spectate:${p.gameId}`)) throw Errors.forbidden('Start watching the match first.', 'NOT_SPECTATING');
     realtime.emitToGame(p.gameId, 'game:cheer', { gameId: p.gameId, kind: p.kind, userId: uid });
     return { sent: true };
   });

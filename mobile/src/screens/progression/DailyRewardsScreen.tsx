@@ -18,6 +18,7 @@ import { feedback } from '../../services/feedback';
 import { toast } from '../../store/toastStore';
 import { formatCountdown } from '../../utils/format';
 
+import { fs, ms } from '../../design-system/responsive';
 /** Ticks once a second until `targetIso`; calls `onZero` once when reached. */
 export function useCountdown(targetIso: string | null | undefined, onZero: () => void): number | null {
   const [now, setNow] = useState(() => Date.now());
@@ -64,7 +65,7 @@ const Celebration: React.FC<{ coins: number; day: number; onDone: () => void }> 
           borderWidth: 1,
           borderColor: '#86EFAC',
           backgroundColor: '#F0FDF4',
-          padding: 12,
+          padding: ms(14),
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
@@ -72,10 +73,10 @@ const Celebration: React.FC<{ coins: number; day: number; onDone: () => void }> 
         anim,
       ]}
     >
-      <PartyPopper size={24} color="#15803D" />
+      <PartyPopper size={ms(28)} color="#15803D" />
       <View style={{ flex: 1 }}>
         <Text style={[type.subheading, { color: c.text }]}>Day {day} claimed!</Text>
-        <Text style={[type.num, { color: '#B45309', fontSize: 13 }]}>+{coins} coins</Text>
+        <Text style={[type.num, { color: '#B45309', fontSize: fs(13) }]}>+{coins} coins</Text>
       </View>
     </Animated.View>
   );
@@ -105,7 +106,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
         void q.refetch();
       } else {
         feedback.error();
-        toast.error('Could not claim reward', friendlyMessage(err));
+        toast.error("Couldn't claim your reward", friendlyMessage(err));
       }
     }
   }, [claim, status?.canClaim, q]);
@@ -123,10 +124,10 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
   const label = !status
     ? 'Claim'
     : status.canClaim && claimable
-      ? `Claim Day ${claimable.day} Reward`
+      ? `Claim Day ${claimable.day} reward`
       : remaining != null
         ? `Next reward in ${formatCountdown(remaining)}`
-        : 'Today Reward Claimed';
+        : "Today's reward claimed";
 
   const days1to6 = status?.cycle.slice(0, 6) ?? [];
 
@@ -145,7 +146,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
             accessibilityLabel={`${status.coins} coins`}
             style={styles.coinPill}
           >
-            <Text style={styles.coinPillText}>{status.coins.toLocaleString()} Coins</Text>
+            <Text style={styles.coinPillText} numberOfLines={1}>{status.coins.toLocaleString()} Coins</Text>
           </View>
         ) : undefined
       }
@@ -174,7 +175,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { gap: isTall ? 14 : 10, paddingBottom: 24 },
+            { gap: isTall ? 14 : 12, paddingBottom: 24, width: '100%', maxWidth: 560, alignSelf: 'center' },
           ]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={c.accent} />}
           showsVerticalScrollIndicator={false}
@@ -234,8 +235,8 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
               },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1, minWidth: 0 }}>
+              <View style={{ flexShrink: 1 }}>
                 <Text style={[styles.chestTitle, { color: c.text }]}>Day 7 • Grand Chest</Text>
                 <Text style={[styles.chestSub, { color: c.textSecondary }]}>+{day7.coins} Coins & Cobalt Emblem</Text>
               </View>
@@ -272,7 +273,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
             style={[styles.miniInfo, { backgroundColor: c.bgCard, borderColor: c.border, justifyContent: 'space-between' }]}
           >
             <Text style={[styles.chestTitle, { color: c.text }]}>Emblems & Shop</Text>
-            <ChevronRight size={14} color="#8E939E" />
+            <ChevronRight size={ms(18)} color="#8E939E" />
           </Pressy>
         </ScrollView>
       )}
@@ -290,43 +291,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   coinPillText: {
-    fontSize: 11,
+    fontSize: fs(12),
     fontFamily: fonts.mono.semibold,
     color: '#B45309',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: ms(8),
   },
   dayCard: {
-    width: '31.5%',
+    flexBasis: '28%',
     flexGrow: 1,
-    paddingVertical: 10,
+    paddingVertical: ms(14),
     paddingHorizontal: 6,
-    borderRadius: 11,
+    minHeight: ms(84),
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayLabel: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.body.semibold,
   },
   dayValue: {
-    fontSize: 11.5,
+    fontSize: fs(12.5),
     fontFamily: fonts.mono.semibold,
-    marginTop: 2,
+    marginTop: 4,
   },
   dayStatus: {
-    fontSize: 9.5,
+    fontSize: fs(9.5),
     fontFamily: fonts.body.semibold,
-    marginTop: 2,
+    marginTop: 4,
   },
   grandChestCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    padding: ms(14),
+    gap: 8,
     borderRadius: 12,
   },
   chestIcon: {
@@ -338,28 +341,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chestTitle: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   chestSub: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     marginTop: 1,
   },
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(4),
+    borderRadius: 6,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.body.semibold,
   },
   miniInfo: {
-    flex: 1,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 10,
+    padding: ms(12),
     borderRadius: 12,
     borderWidth: 1,
   },

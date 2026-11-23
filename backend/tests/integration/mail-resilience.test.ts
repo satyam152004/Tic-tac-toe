@@ -80,7 +80,7 @@ describe('email provider outage', () => {
   it('a password reset completes even if the "password changed" notice cannot be sent', async () => {
     await api().post('/api/v1/auth/register').send(creds);
     await api().post('/api/v1/auth/forgot-password').send({ email: creds.email });
-    const code = /Code: (\d{6})/.exec(testOutbox.at(-1)!.text)![1]!;
+    const code = /: ([0-9]{6})/.exec(testOutbox.at(-1)!.text)![1]!;
     mode.fail = true; // only the follow-up notice fails
     const res = await api().post('/api/v1/auth/reset-password').send({ email: creds.email, code, newPassword: 'NewPassw0rd1' });
     expect(res.status).toBe(200);

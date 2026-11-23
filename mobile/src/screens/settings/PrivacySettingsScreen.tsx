@@ -31,7 +31,7 @@ const DeleteAccountModal: React.FC<{ open: boolean; busy: boolean; onClose: () =
   }, [open]);
   return (
     <AppModal open={open} title="Delete account?" onClose={onClose}>
-      <Text style={[type.body, { color: c.textSecondary }]}>This permanently deletes your account, stats and friends. Enter your password to confirm.</Text>
+      <Text style={[type.body, { color: c.textSecondary }]}>This deletes your account, stats and friends for good. Enter your password to confirm.</Text>
       <AppInput testID="delete-password" label="Password" value={pw} onChangeText={setPw} secureToggle autoCapitalize="none" autoCorrect={false} />
       <AppButton testID="delete-confirm" title="Delete forever" variant="danger" fullWidth loading={busy} disabled={pw.length === 0} onPress={() => onDelete(pw)} />
     </AppModal>
@@ -77,7 +77,7 @@ export const PrivacySettingsScreen: React.FC<RootScreenProps<'privacy_settings'>
       setDeleting(false);
       resetTo('welcome');
     } catch (e) {
-      toast.error('Could not delete account', friendlyMessage(e));
+      toast.error("Couldn't delete account", friendlyMessage(e));
     } finally {
       setBusy(false);
     }
@@ -90,9 +90,9 @@ export const PrivacySettingsScreen: React.FC<RootScreenProps<'privacy_settings'>
       <View>
         <SectionLabel>Visibility</SectionLabel>
         <Group>
-          <GroupRow label="Online Presence" onPress={toggleOnline} right={<ToggleSwitch testID="privacy-online" label="Toggle online presence" checked={settings.privacyOnline} onChange={toggleOnline} />} />
-          <GroupRow label="Allow Friend Spectating" onPress={toggleSpectate} right={<ToggleSwitch testID="privacy-spectate" label="Toggle friend spectating" checked={settings.privacySpectate} onChange={toggleSpectate} />} />
-          <GroupRow label="Show ELO on Profile" onPress={toggleElo} right={<ToggleSwitch testID="privacy-elo" label="Toggle public ELO" checked={settings.privacyPublicElo} onChange={toggleElo} />} />
+          <GroupRow label="Online Status" onPress={toggleOnline} right={<ToggleSwitch testID="privacy-online" label="Toggle online presence" checked={settings.privacyOnline} onChange={toggleOnline} />} />
+          <GroupRow label="Friends Can Watch" onPress={toggleSpectate} right={<ToggleSwitch testID="privacy-spectate" label="Toggle friend spectating" checked={settings.privacySpectate} onChange={toggleSpectate} />} />
+          <GroupRow label="Show Rating on Profile" onPress={toggleElo} right={<ToggleSwitch testID="privacy-elo" label="Toggle show rating" checked={settings.privacyPublicElo} onChange={toggleElo} />} />
         </Group>
       </View>
 
@@ -119,7 +119,7 @@ export const PrivacySettingsScreen: React.FC<RootScreenProps<'privacy_settings'>
         <ConfirmDialog
           open={deleting}
           title="Delete account?"
-          message="This permanently deletes your guest profile and all of its progress. This cannot be undone."
+          message="This deletes your guest profile and all your progress for good. You can't undo this."
           confirmLabel="Delete"
           destructive
           onCancel={() => setDeleting(false)}

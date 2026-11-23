@@ -118,7 +118,7 @@ describe('LeaderboardScreen', () => {
   it('shows the offline state', async () => {
     lb.get.mockRejectedValue(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<LeaderboardScreen />);
-    await screen.findByText('No Internet Connection');
+    await screen.findByText("You're offline");
   });
 });
 
@@ -142,15 +142,15 @@ describe('FriendsScreen', () => {
     await wrap(<FriendsScreen />);
     await screen.findByText('No friends yet');
     await fireEvent.press(screen.getByTestId('friends-segment-requests'));
-    expect(screen.getByText('No pending friend requests.')).toBeTruthy();
+    expect(screen.getByText('You have no friend requests.')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('friends-segment-blocked'));
-    expect(screen.getByText('No blocked users')).toBeTruthy();
+    expect(screen.getByText('No blocked players')).toBeTruthy();
   });
 
   it('shows the offline state', async () => {
     fr.list.mockRejectedValue(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<FriendsScreen />);
-    await screen.findByText('No Internet Connection');
+    await screen.findByText("You're offline");
   });
 
   it('accepts an incoming request with the friendshipId', async () => {
@@ -198,10 +198,10 @@ describe('FriendsScreen', () => {
   });
 
   it.each([
-    ['USER_NOT_FOUND', 'No player found with that username.'],
-    ['ALREADY_FRIENDS', 'You are already friends with this player.'],
-    ['REQUEST_ALREADY_SENT', 'A friend request is already pending.'],
-    ['BLOCKED', "You can't interact with this player."],
+    ['USER_NOT_FOUND', "We can't find a player with that username."],
+    ['ALREADY_FRIENDS', "You're already friends."],
+    ['REQUEST_ALREADY_SENT', 'You already sent a friend request.'],
+    ['BLOCKED', "You can't do that with this player."],
     ['SELF_REQUEST', "You can't add yourself."],
   ])('maps add-friend error %s', async (code, msg) => {
     setLists([]);
@@ -297,7 +297,7 @@ describe('FriendProfileScreen', () => {
     const g = (id: string, result: string) => ({ id, type: 'ONLINE_RANDOM', boardSize: 3, result, playedAt: '2026-01-01T00:00:00Z', opponent: { id: 'u1' } });
     stats.history.mockResolvedValue(page([g('a', 'WIN'), g('b', 'WIN'), g('c', 'LOSS')]) as never);
     await open();
-    await screen.findByText('1,200 ELO');
+    await screen.findByText('1,200 pts');
     await screen.findByText('You 2');
     expect(screen.getByText('1 Ann')).toBeTruthy();
     expect(screen.getAllByText('You Won').length).toBe(2);

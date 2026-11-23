@@ -14,6 +14,7 @@ import { emptyDigits, OtpInput } from './OtpInput';
 import { ProtoButton, ProtoHeader, ProtoScreen } from './protoUi';
 import { useCountdown } from './useCountdown';
 
+import { fs } from '../../design-system/responsive';
 /** sa****@example.com: keeps the first two characters of the address. */
 export const maskEmail = (e: string) => {
   const [local, domain] = e.split('@');
@@ -54,13 +55,13 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
       try {
         await authApi.verifyEmail(email, value);
         await refreshUser();
-        toast.success('Email verified', 'Welcome to the Arena');
+        toast.success('Email verified', 'Welcome!');
         resetTo('Main');
       } catch (e) {
         const info = otpErrorInfo(e);
         if (info.code === 'OTP_LOCKED') {
           setLocked(true);
-          setError('Too many wrong attempts. Request a new code to continue.');
+          setError('Too many wrong tries. Get a new code.');
         } else if (info.code === 'INVALID_OTP') {
           setError(
             info.attemptsLeft !== undefined
@@ -86,7 +87,7 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
   const resend = async () => {
     if (left > 0 || resending) return;
     if (!signedIn) {
-      setError('Please sign in first, then request a new code from your profile.');
+      setError('Sign in first, then ask for a new code from your profile.');
       return;
     }
     setResending(true);
@@ -97,13 +98,13 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
       setLocked(false);
       lastTried.current = '';
       setDigits(emptyDigits());
-      toast.success('Code sent', 'A fresh 6-digit code is on its way');
+      toast.success('Code sent', 'We sent a new 6-digit code.');
     } catch (e) {
       const info = otpErrorInfo(e);
       if (info.code === 'OTP_COOLDOWN') start(info.retryAfterSec ?? OTP_COOLDOWN_SEC);
       else if (info.code === 'ALREADY_VERIFIED') {
         await refreshUser();
-        toast.info('Already verified', 'Your email is already confirmed');
+        toast.info('Already verified', 'Your email is already verified.');
         resetTo('Main');
         return;
       }
@@ -120,7 +121,7 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
       <ProtoHeader title="Verify Email" onBack={back} />
       <View style={styles.body}>
         <View>
-          <Text style={[styles.title, { color: c.text }]}>Enter verification code</Text>
+          <Text style={[styles.title, { color: c.text }]}>Enter your code</Text>
           <Text style={[styles.sub, { color: c.textSecondary }]}>
             We sent a 6-digit code to <Text style={{ color: c.text, fontFamily: fonts.body.semibold }}>{maskEmail(email)}</Text>
           </Text>
@@ -142,9 +143,9 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
               {mmss(left)}
             </Text>
           ) : (
-            <Pressy testID="otp-resend" accessibilityLabel="Resend OTP code" disabled={resending} onPress={() => void resend()} hitSlop={10}>
+            <Pressy testID="otp-resend" accessibilityLabel="Resend code" disabled={resending} onPress={() => void resend()} hitSlop={14}>
               <Text style={[styles.resendValue, { color: c.accent }]}>
-                {resending ? 'Sending...' : locked ? 'Request a new code' : 'Resend Code'}
+                {resending ? 'Sending...' : locked ? 'Get a new code' : 'Resend Code'}
               </Text>
             </Pressy>
           )}
@@ -153,7 +154,7 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
         <View style={styles.footer}>
           <ProtoButton
             testID="otp-submit"
-            title="Verify & Continue"
+            title="Verify"
             loading={busy}
             disabled={code.length < OTP_LENGTH || locked}
             onPress={() => void verify(code)}
@@ -166,11 +167,11 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, gap: 16 },
-  title: { fontFamily: fonts.body.semibold, fontSize: 19, lineHeight: 24, letterSpacing: -0.38 },
-  sub: { fontFamily: fonts.body.regular, fontSize: 12.5, lineHeight: 18, marginTop: 4 },
-  error: { fontFamily: fonts.body.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center' },
-  resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, minHeight: 20 },
-  resendLabel: { fontFamily: fonts.body.regular, fontSize: 12 },
-  resendValue: { fontFamily: fonts.body.semibold, fontSize: 12 },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(19), lineHeight: Math.round(fs(19) * 1.3), letterSpacing: -0.38 },
+  sub: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 6 },
+  error: { fontFamily: fonts.body.regular, fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.3), textAlign: 'center' },
+  resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, minHeight: 28 },
+  resendLabel: { fontFamily: fonts.body.regular, fontSize: fs(13) },
+  resendValue: { fontFamily: fonts.body.semibold, fontSize: fs(13) },
   footer: { marginTop: 'auto', paddingTop: 8 },
 });

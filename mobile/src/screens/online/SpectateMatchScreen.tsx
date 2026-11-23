@@ -18,6 +18,7 @@ import { gameSocket } from '../../services/socket/gameSocket';
 import { socketClient } from '../../services/socket/socketClient';
 import { toast } from '../../store/toastStore';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 type Cards = SpectateSnapshot['players'];
 
 const CHEERS: Array<{ kind: CheerKind; emoji: string; label: string }> = [
@@ -106,7 +107,7 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
 
   if (error || !game) {
     return (
-      <Screen title="Live Spectate" onBack={back} testID="spectate-match-screen">
+      <Screen title="Watching Live" onBack={back} testID="spectate-match-screen">
         {error ? <ErrorState message={friendlyMessage(error)} onRetry={() => void load()} /> : <AppLoader label={`Joining ${friendName ?? 'match'}...`} />}
       </Screen>
     );
@@ -115,19 +116,19 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
   const ended = !live;
   return (
     <Screen
-      title="Live Spectate"
+      title="Watching Live"
       onBack={back}
       testID="spectate-match-screen"
       scroll={false}
       padded={false}
       rightAction={
         <View style={[styles.liveBadge, ended && { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
-          <Text style={[styles.liveBadgeText, ended && { color: c.textSecondary }]}>{ended ? 'ENDED' : `LIVE • ${viewers}`}</Text>
+          <Text style={[styles.liveBadgeText, ended && { color: c.textSecondary }]} numberOfLines={1}>{ended ? 'ENDED' : `LIVE • ${viewers}`}</Text>
         </View>
       }
       footer={
         <View style={styles.footer}>
-          <AppButton testID="spectate-leave" title="Leave Spectate" variant="secondary" fullWidth onPress={back} />
+          <AppButton testID="spectate-leave" title="Stop watching" variant="secondary" fullWidth onPress={back} />
         </View>
       }
     >
@@ -137,14 +138,14 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
         </View>
 
         <View style={[styles.playerCard, { backgroundColor: c.bgCard, borderColor: c.accent }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(10) }}>
             {chip(mover?.user, c.accent)}
             <View>
               <Text style={[styles.name, { color: c.text }]}>
                 {nameOf(mover, friendName ?? 'Player')} ({turnMark}){ended ? '' : ' • Thinking'}
               </Text>
               <Text style={[styles.sub, { color: c.textSecondary }]}>
-                {moverProfile.data ? `${moverProfile.data.stats.points.toLocaleString()} ELO • ` : ''}Move {Math.min(game.moveCount + (ended ? 0 : 1), total)} of {total}
+                {moverProfile.data ? `${moverProfile.data.stats.points.toLocaleString()} points • ` : ''}Move {Math.min(game.moveCount + (ended ? 0 : 1), total)} of {total}
               </Text>
             </View>
           </View>
@@ -156,13 +157,13 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
         </View>
 
         <View style={[styles.playerCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(10) }}>
             {chip(waiter?.user, '#141518')}
             <Text style={[styles.name, { color: c.text }]}>
               {nameOf(waiter, 'Opponent')} ({idleMark})
             </Text>
           </View>
-          {waiterProfile.data ? <Text style={[styles.sub, { color: c.textSecondary }]}>{waiterProfile.data.stats.points.toLocaleString()} ELO</Text> : null}
+          {waiterProfile.data ? <Text style={[styles.sub, { color: c.textSecondary }]}>{waiterProfile.data.stats.points.toLocaleString()} pts</Text> : null}
         </View>
 
         <View style={styles.cheersRow}>
@@ -188,26 +189,26 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: ms(20),
+    paddingTop: ms(8),
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingBottom: ms(12),
   },
   liveBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: ms(8),
+    paddingVertical: ms(3),
     borderRadius: 999,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
   },
   liveBadgeText: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.mono.semibold,
     color: '#B91C1C',
   },
   track: {
-    height: 4,
+    height: ms(4.8),
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -219,34 +220,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(10),
+    borderRadius: ms(12),
     borderWidth: 1.5,
   },
   avatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: ms(31.2),
+    height: ms(31.2),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.mono.semibold,
     color: '#FFFFFF',
   },
   name: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.body.semibold,
   },
   sub: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.mono.medium,
     marginTop: 1,
   },
   timer: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.mono.semibold,
     color: '#1D4ED8',
   },
@@ -256,23 +257,23 @@ const styles = StyleSheet.create({
   },
   cheersRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: ms(10),
   },
   cheerBtn: {
     flex: 1,
-    height: 38,
-    borderRadius: 10,
+    height: ch(38),
+    borderRadius: ms(10),
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cheerText: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.mono.semibold,
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 16,
+    paddingHorizontal: ms(20),
+    paddingTop: ms(6),
+    paddingBottom: ms(16),
   },
 });

@@ -9,6 +9,7 @@ import { OverlayToast } from '../feedback/AppToast';
 import { AppButton } from './AppButton';
 import { Pressy } from './Pressy';
 
+import { fs, ms } from '../../design-system/responsive';
 /** Bottom-sheet style modal (prototype CustomModal). Android hardware back closes it. */
 export const AppModal: React.FC<{
   open: boolean;
@@ -24,14 +25,14 @@ export const AppModal: React.FC<{
         <Pressable style={[styles.backdrop, { backgroundColor: c.scrim }]} onPress={onClose} accessibilityLabel="Close dialog">
           <Pressable
             onPress={() => undefined}
-            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom }]}
+            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: ms(20) + insets.bottom }]}
           >
             <View style={[styles.handle, { backgroundColor: c.border }]} />
             <View style={styles.titleRow}>
               <Text accessibilityRole="header" style={[styles.sheetTitle, { color: c.text }]}>{title}</Text>
               {onClose ? (
                 <Pressy accessibilityLabel="Close" onPress={onClose} style={styles.close}>
-                  <X size={18} color={c.textSecondary} />
+                  <X size={ms(20)} color={c.textSecondary} />
                 </Pressy>
               ) : null}
             </View>
@@ -60,7 +61,7 @@ export const ConfirmDialog: React.FC<{
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.fill}>
-        <View style={[styles.backdrop, { backgroundColor: c.scrim, justifyContent: 'center', padding: 20 }]}>
+        <View style={[styles.backdrop, { backgroundColor: c.scrim, justifyContent: 'center', padding: ms(20) }]}>
           <View style={[styles.dialog, { backgroundColor: c.bgCard, borderColor: c.border }]}>
             <Text style={[styles.dialogTitle, { color: c.text }]}>{title}</Text>
             <Text style={[styles.dialogMessage, { color: c.textSecondary }]}>{message}</Text>
@@ -79,14 +80,14 @@ export const ConfirmDialog: React.FC<{
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 12 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: ms(20), paddingTop: 10, gap: ms(12), maxHeight: '92%' },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center' },
-  sheetTitle: { flex: 1, fontSize: 15, lineHeight: 20, fontFamily: fonts.body.semibold },
+  sheetTitle: { flex: 1, fontSize: fs(15), lineHeight: Math.round(fs(15) * 1.3), fontFamily: fonts.body.semibold },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
-  close: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  dialog: { width: '100%', maxWidth: 288, alignSelf: 'center', borderRadius: 20, borderWidth: 1, padding: 20 },
-  dialogTitle: { fontSize: 17, lineHeight: 22, fontFamily: fonts.body.semibold, letterSpacing: -0.2 },
-  dialogMessage: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.body.regular, marginTop: 6 },
-  dialogBtn: { flex: 1, minHeight: 40, borderRadius: 12 },
+  close: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  dialog: { width: '100%', maxWidth: ms(340), alignSelf: 'center', borderRadius: 20, borderWidth: 1, padding: ms(20) },
+  dialogTitle: { fontSize: fs(17), lineHeight: Math.round(fs(17) * 1.3), fontFamily: fonts.body.semibold, letterSpacing: -0.2 },
+  dialogMessage: { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4), fontFamily: fonts.body.regular, marginTop: 6 },
+  dialogBtn: { flex: 1, minHeight: 44, borderRadius: 12 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
 });

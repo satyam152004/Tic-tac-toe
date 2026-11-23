@@ -42,8 +42,8 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
   const guard = useBackGuard({
     when: !!game && inProgress,
     title: 'Leave Match?',
-    message: 'Your current round progress will be discarded.',
-    confirmLabel: 'Exit',
+    message: 'You will lose this round.',
+    confirmLabel: 'Leave',
     onLeave: () => useLocalGameStore.getState().quit(),
   });
 
@@ -76,7 +76,7 @@ export const OfflineBoardScreen: React.FC<RootScreenProps<'offline_board'>> = ()
           : isVsAi
             ? game.current === game.humanMark
               ? `Your turn (${game.current})`
-              : 'AI thinking...'
+              : 'AI is thinking...'
             : `${nameOf(game.current)} (${game.current})`;
   const nameForChip = (mark: 'X' | 'O') => (isVsAi && !seats[mark].isP1 ? `AI ${AI_LABEL[game.difficulty ?? 'MEDIUM']}` : nameOf(mark));
   const boardLocked = !inProgress || paused || aiThinking;

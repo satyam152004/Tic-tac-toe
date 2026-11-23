@@ -15,6 +15,7 @@ import type { LeaderboardRow } from '../../services/api/types';
 import { useAuthStore } from '../../store/authStore';
 import { isOffline } from './socialShared';
 
+import { fs, ms } from '../../design-system/responsive';
 const SCOPES: Array<{ id: LeaderboardScope; label: string }> = [
   { id: 'global', label: 'Global' },
   { id: 'friends', label: 'Friends' },
@@ -69,7 +70,7 @@ export const LeaderboardScreen: React.FC = () => {
 
   const first = top3[0];
   const header = (
-    <View style={{ gap: 10, marginBottom: 10 }}>
+    <View style={{ gap: ms(12), marginBottom: 10 }}>
       {/* Scope Segment Tabs */}
       <View style={[styles.segment, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
         {SCOPES.map((s) => {
@@ -98,7 +99,7 @@ export const LeaderboardScreen: React.FC = () => {
             accessibilityLabel={first ? `Rank 1, ${nameOf(first)}` : 'Rank 1, empty'}
             style={[styles.podiumCard, { backgroundColor: '#EFF4FF', borderColor: c.accent, borderRadius: 13 }]}
           >
-            <Crown size={14} color="#B45309" />
+            <Crown size={ms(18)} color="#B45309" />
             <View style={[styles.podiumAvatar, styles.podiumAvatarLg, { backgroundColor: c.accent }]}>
               <Text style={[styles.podiumAvatarText, { color: '#FFFFFF' }]}>{initials(first)}</Text>
             </View>
@@ -124,7 +125,7 @@ export const LeaderboardScreen: React.FC = () => {
           <Text style={styles.footerText}>
             {scopeRankLabel} {myRank != null ? `#${myRank}` : '–'}
           </Text>
-          <Text style={styles.footerText}>{fmtPts(myPoints)} ELO</Text>
+          <Text style={styles.footerText}>{fmtPts(myPoints)} pts</Text>
         </View>
       }
     >
@@ -134,7 +135,7 @@ export const LeaderboardScreen: React.FC = () => {
         <View style={{ padding: 20 }}>
           <ErrorState
             offline={isOffline(q.error)}
-            message={isOffline(q.error) ? 'Connect to the internet to see rankings.' : toApiError(q.error).message}
+            message={isOffline(q.error) ? 'Connect to the internet to see the rankings.' : toApiError(q.error).message}
             onRetry={() => void q.refetch()}
           />
         </View>
@@ -146,7 +147,7 @@ export const LeaderboardScreen: React.FC = () => {
             rows.length === 0 ? (
               <EmptyState
                 title={scope === 'friends' ? 'No friends ranked yet' : 'No players yet'}
-                description={scope === 'friends' ? 'Add friends and play to see how you compare.' : 'Climb the ranks by playing online matches.'}
+                description={scope === 'friends' ? 'Add friends and play to see how you stack up.' : 'Play online matches to get on the board.'}
               />
             ) : undefined
           }
@@ -165,9 +166,9 @@ export const LeaderboardScreen: React.FC = () => {
                   index > 0 && { borderTopWidth: 0 },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                   <Text style={[styles.rowRank, { color: '#8E939E' }]}>#{r.rank}</Text>
-                  <Text style={[styles.rowName, { color: c.text }]}>{nameOf(r)}</Text>
+                  <Text numberOfLines={1} style={[styles.rowName, { flexShrink: 1 }, { color: c.text }]}>{nameOf(r)}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Text style={[styles.rowWr, { color: '#8E939E' }]}>{wr}%</Text>
@@ -177,7 +178,7 @@ export const LeaderboardScreen: React.FC = () => {
             );
           }}
           ListHeaderComponent={header}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, width: '100%', maxWidth: 560, alignSelf: 'center' }}
           refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} tintColor={c.accent} />}
         />
       )}
@@ -186,28 +187,29 @@ export const LeaderboardScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  segment: { flexDirection: 'row', padding: 2, borderRadius: 9, borderWidth: 1 },
-  segmentBtn: { flex: 1, paddingVertical: 4, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  segment: { flexDirection: 'row', padding: 3, borderRadius: 10, borderWidth: 1 },
+  segmentBtn: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   segmentBtnActive: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
-  segmentText: { fontSize: 11, fontFamily: fonts.body.semibold },
-  podiumContainer: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  segmentText: { fontSize: fs(12), fontFamily: fonts.body.semibold },
+  podiumContainer: { flexDirection: 'row', alignItems: 'flex-end', gap: ms(8) },
   podiumCol: { flex: 1 },
-  podiumCard: { borderRadius: 14, borderWidth: 1, padding: 8, alignItems: 'center', gap: 2 },
-  podiumAvatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  podiumAvatarLg: { width: 28, height: 28, borderRadius: 14 },
-  podiumAvatarText: { fontSize: 10, fontFamily: fonts.body.semibold },
-  podiumName: { fontSize: 11, fontFamily: fonts.body.semibold, marginTop: 2, maxWidth: '100%' },
-  podiumElo: { fontSize: 10, fontFamily: fonts.mono.medium },
-  rowItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 29, paddingVertical: 4.5, paddingHorizontal: 12, borderWidth: 1 },
+  podiumCard: { borderRadius: 14, borderWidth: 1, padding: ms(10), alignItems: 'center', gap: ms(3) },
+  podiumAvatar: { width: ms(34), height: ms(34), borderRadius: ms(17), alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  podiumAvatarLg: { width: ms(42), height: ms(42), borderRadius: ms(21) },
+  podiumAvatarText: { fontSize: fs(10), fontFamily: fonts.body.semibold },
+  podiumName: { fontSize: fs(11), fontFamily: fonts.body.semibold, marginTop: 2, maxWidth: '100%' },
+  podiumElo: { fontSize: fs(11), fontFamily: fonts.mono.medium },
+  rowItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48, paddingVertical: 8, paddingHorizontal: 14, gap: 8, borderWidth: 1 },
   rowFirst: { borderTopLeftRadius: 14, borderTopRightRadius: 14 },
   rowLast: { borderBottomLeftRadius: 14, borderBottomRightRadius: 14 },
-  rowRank: { fontSize: 10.5, fontFamily: fonts.mono.semibold, width: 24 },
-  rowName: { fontSize: 11.5, fontFamily: fonts.body.medium },
-  rowWr: { fontSize: 10, fontFamily: fonts.mono.medium },
-  rowElo: { fontSize: 11, fontFamily: fonts.mono.semibold },
+  rowRank: { fontSize: fs(10.5), fontFamily: fonts.mono.semibold, width: ms(38) },
+  rowName: { fontSize: fs(11.5), fontFamily: fonts.body.medium },
+  rowWr: { fontSize: fs(10), fontFamily: fonts.mono.medium },
+  rowElo: { fontSize: fs(11), fontFamily: fonts.mono.semibold },
   footerBar: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: ms(10),
+    gap: 8,
     borderRadius: 10,
     backgroundColor: '#EFF4FF',
     borderWidth: 1,
@@ -216,5 +218,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  footerText: { fontSize: 11, fontFamily: fonts.mono.semibold, color: '#1D4ED8' },
+  footerText: { fontSize: fs(12), flexShrink: 1, fontFamily: fonts.mono.semibold, color: '#1D4ED8' },
 });

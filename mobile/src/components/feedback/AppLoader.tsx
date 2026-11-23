@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { type } from '../../design-system/typography';
+import { ms } from '../../design-system/responsive';
 import { useTheme } from '../../hooks/useTheme';
 
 export const AppLoader: React.FC<{ label?: string; sublabel?: string }> = ({ label = 'Loading...', sublabel }) => {
@@ -26,6 +27,6 @@ export const AppLoader: React.FC<{ label?: string; sublabel?: string }> = ({ lab
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 32, paddingHorizontal: 16 },
-  badge: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: ms(56), height: ms(56), alignItems: 'center', justifyContent: 'center' },
   ring: { borderRadius: 16, borderWidth: 2 },
 });

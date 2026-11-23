@@ -51,7 +51,7 @@ function latestCode(email: string): string {
   const dir = join(BACKEND, '.dev-mail');
   const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.includes(email.replace(/[^a-z0-9@.]/gi, '_'))).sort() : [];
   const text = readFileSync(join(dir, files[files.length - 1]!), 'utf8');
-  return /Code: (\d{6})/.exec(text)![1]!;
+  return /: (\d{6})/.exec(text)![1]!;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

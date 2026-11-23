@@ -12,6 +12,7 @@ import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { useLocalGameStore } from '../../store/localGameStore';
 
+import { ch, fs, ms } from '../../design-system/responsive';
 interface BoardOption {
   size: BoardSize;
   title: string;
@@ -19,9 +20,9 @@ interface BoardOption {
 }
 
 const BOARDS: BoardOption[] = [
-  { size: 3, title: '3×3 Classic', desc: '3-in-a-row • Quick 1 min rounds' },
-  { size: 4, title: '4×4 Extended', desc: '4-in-a-row • Deeper positioning' },
-  { size: 5, title: '5×5 Tactical', desc: '4-in-a-row • Long strategic duels' },
+  { size: 3, title: '3×3 Classic', desc: 'Get 3 in a row • Quick rounds' },
+  { size: 4, title: '4×4 Bigger', desc: 'Get 4 in a row • More room to plan' },
+  { size: 5, title: '5×5 Biggest', desc: 'Get 4 in a row • Longer games' },
 ];
 
 export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> = ({ route }) => {
@@ -69,8 +70,8 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
               style={[
                 styles.boardCard,
                 {
-                  padding: 12,
-                  borderRadius: 14,
+                  padding: ms(12),
+                  borderRadius: ms(14),
                   backgroundColor: selected ? withAlpha(c.bgElevated, 0.55) : c.bgCard,
                   borderColor: selected ? c.accent : c.border,
                   borderWidth: selected ? 1.5 : 1,
@@ -114,7 +115,7 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
                     : { borderColor: '#CFCFC8', borderWidth: 1 },
                 ]}
               >
-                {selected ? <Check size={12} color="#FFFFFF" strokeWidth={2.6} /> : null}
+                {selected ? <Check size={ms(15)} color="#FFFFFF" strokeWidth={2.6} /> : null}
               </View>
             </Pressy>
           );
@@ -127,7 +128,7 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
 const styles = StyleSheet.create({
   container: {
     paddingTop: 0,
-    gap: 12,
+    gap: ms(12),
   },
   boardCard: {
     flexDirection: 'row',
@@ -137,37 +138,37 @@ const styles = StyleSheet.create({
   cardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: ms(12),
     flex: 1,
   },
   gridPreviewBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: ms(44),
+    height: ch(44),
+    borderRadius: ms(10),
     borderWidth: 1,
-    padding: 6,
-    gap: 2,
+    padding: ms(6),
+    gap: ms(2),
   },
-  previewRow: { flex: 1, flexDirection: 'row', gap: 2 },
-  previewCell: { flex: 1, borderRadius: 2 },
+  previewRow: { flex: 1, flexDirection: 'row', gap: ms(2) },
+  previewCell: { flex: 1, borderRadius: ms(2) },
   textCol: {
     flex: 1,
-    gap: 2,
+    gap: ms(2),
   },
   boardTitle: {
     fontFamily: fonts.body.semibold,
-    fontSize: 13,
+    fontSize: fs(13),
   },
   boardDesc: {
     fontFamily: fonts.body.regular,
-    fontSize: 11,
+    fontSize: fs(11),
   },
   checkCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: ms(24),
+    height: ms(24),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: ms(8),
   },
 });

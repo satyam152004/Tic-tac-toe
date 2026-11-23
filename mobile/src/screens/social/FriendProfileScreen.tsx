@@ -18,6 +18,7 @@ import { toast } from '../../store/toastStore';
 import { formatShortDate } from '../../utils/format';
 import { isOffline, socialError, useChallenge } from './socialShared';
 
+import { fs, ms } from '../../design-system/responsive';
 export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = ({ route }) => {
   const { userId } = route.params;
   const c = useTheme();
@@ -41,7 +42,7 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
     const offline = isOffline(profile.error);
     return (
       <Screen title="Player Profile" onBack={back}>
-        <ErrorState offline={offline} message={offline ? 'Connect to the internet to view this profile.' : toApiError(profile.error).message} onRetry={() => void profile.refetch()} />
+        <ErrorState offline={offline} message={offline ? 'Connect to the internet to see this profile.' : toApiError(profile.error).message} onRetry={() => void profile.refetch()} />
       </Screen>
     );
   }
@@ -73,9 +74,9 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
   const addFriend = async () => {
     try {
       await actions.request.mutateAsync({ userId });
-      toast.success('Friend request sent', `Invited ${name}`);
+      toast.success('Friend request sent', `We sent a request to ${name}`);
     } catch (e) {
-      toast.error('Could not send request', socialError(e));
+      toast.error("Couldn't send the request", socialError(e));
     }
   };
 
@@ -87,7 +88,7 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
         <View style={styles.footer}>
           {friend ? (
             <>
-              <AppButton testID="profile-challenge" title="Challenge to Match" fullWidth onPress={() => challenge(userId, name)} />
+              <AppButton testID="profile-challenge" title="Challenge" fullWidth onPress={() => challenge(userId, name)} />
               <AppButton testID="profile-remove" title="Remove Friend" variant="secondary" fullWidth onPress={() => setConfirmRemove(true)} />
             </>
           ) : (
@@ -108,10 +109,10 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
           <View style={[styles.avatar, { backgroundColor: '#141518' }]}>
             <Text style={styles.avatarText}>{name.slice(0, 2).toUpperCase()}</Text>
           </View>
-          <Text style={[styles.name, { color: c.text }]}>
+          <Text style={[styles.name, { color: c.text, textAlign: 'center' }]}>
             {name} • <Text style={{ color: friend?.activeGameId ? '#B45309' : p?.online ? '#15803D' : c.textSecondary }}>{friend?.activeGameId ? 'In Match' : p?.online ? 'Online' : 'Offline'}</Text>
           </Text>
-          <Text style={[styles.elo, { color: c.textSecondary }]}>{elo.toLocaleString()} ELO</Text>
+          <Text style={[styles.elo, { color: c.textSecondary }]}>{elo.toLocaleString()} pts</Text>
         </View>
 
         {/* Head-to-Head Card */}
@@ -132,7 +133,7 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
                 key={g.id}
                 style={[styles.duelRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.border }]}
               >
-                <Text style={[styles.duelTitle, { color: c.text }]}>
+                <Text numberOfLines={1} style={[styles.duelTitle, { color: c.text, flex: 1 }]}>
                   {g.boardSize}×{g.boardSize} {typeLabel(g.type)} • {formatShortDate(g.playedAt)}
                 </Text>
                 <Text style={[styles.duelElo, { color: g.result === 'WIN' ? '#15803D' : c.textSecondary }]}>
@@ -147,8 +148,8 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
           </Text>
         )}
 
-        <Pressy testID="profile-report" accessibilityRole="button" accessibilityLabel={`Report ${name}`} onPress={() => setReporting(true)} style={{ alignSelf: 'center', paddingVertical: 6 }}>
-          <Text style={{ fontSize: 11.5, color: c.textSecondary }}>Report player</Text>
+        <Pressy testID="profile-report" accessibilityRole="button" accessibilityLabel={`Report ${name}`} onPress={() => setReporting(true)} style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 12 }}>
+          <Text style={{ fontSize: fs(12.5), color: c.textSecondary }}>Report player</Text>
         </Pressy>
       </View>
 
@@ -158,7 +159,7 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
       <ConfirmDialog
         open={confirmRemove}
         title={`Remove ${name}?`}
-        message="They will be removed from your friends roster."
+        message="They'll be removed from your friends list."
         confirmLabel="Remove"
         cancelLabel="Cancel"
         destructive
@@ -176,55 +177,55 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(32),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   avatarText: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.mono.semibold,
     color: '#FFFFFF',
   },
   name: {
-    fontSize: 15.5,
+    fontSize: fs(15.5),
     fontFamily: fonts.body.semibold,
   },
   elo: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.mono.medium,
   },
   h2hCard: {
     alignItems: 'center',
     gap: 4,
-    paddingVertical: 12,
+    paddingVertical: ms(14),
   },
   h2hTag: {
-    fontSize: 9.5,
+    fontSize: fs(11),
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
   h2hRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: ms(16),
   },
   scoreYou: {
-    fontSize: 19,
+    fontSize: fs(19),
     fontFamily: fonts.mono.semibold,
   },
   scoreDash: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.body.medium,
   },
   scoreOpp: {
-    fontSize: 19,
+    fontSize: fs(19),
     fontFamily: fonts.mono.semibold,
   },
   sectionLabel: {
-    fontSize: 10.5,
+    fontSize: fs(10.5),
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
@@ -237,20 +238,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    minHeight: 34,
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(10),
+    minHeight: 48,
+    gap: 8,
   },
   duelTitle: {
-    fontSize: 11.5,
+    fontSize: fs(11.5),
     fontFamily: fonts.body.medium,
   },
   duelSub: {
-    fontSize: 10.5,
+    fontSize: fs(12),
     marginTop: 1,
   },
   duelElo: {
-    fontSize: 11,
+    fontSize: fs(12),
     fontFamily: fonts.mono.semibold,
   },
   footer: {
