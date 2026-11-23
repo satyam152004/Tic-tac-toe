@@ -186,6 +186,20 @@ describe('RegistrationScreen', () => {
     expect(mockNav.replace).not.toHaveBeenCalled();
   });
 
+  it('a guest tapping Google upgrades the guest account instead of switching accounts', async () => {
+    useAuthStore.setState({ status: 'signedIn', user: makeMe({ accountType: 'GUEST', email: null }) });
+    await render(<RegistrationScreen {...(props() as any)} />);
+    await press('register-google');
+    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith({ upgradeGuest: true }));
+  });
+
+  it('a signed-out user tapping Google signs in normally', async () => {
+    useAuthStore.setState({ status: 'signedOut', user: null });
+    await render(<RegistrationScreen {...(props() as any)} />);
+    await press('register-google');
+    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith({ upgradeGuest: false }));
+  });
+
   it('upgrades a guest instead of registering (keeps progress)', async () => {
     useAuthStore.setState({ status: 'signedIn', user: makeMe({ accountType: 'GUEST', email: null }) });
     upgradeGuest.mockResolvedValue(makeMe());

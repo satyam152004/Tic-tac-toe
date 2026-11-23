@@ -29,6 +29,10 @@ interface AuthState {
   continueAsGuest: () => Promise<Me>;
   upgradeGuest: (input: { email: string; password: string; username?: string }) => Promise<Me>;
   social: (provider: 'google' | 'apple', token: string) => Promise<Me>;
+  /** Signed-in guest -> registered via Google/Apple, keeping all progress. */
+  upgradeGuestSocial: (provider: 'google' | 'apple', token: string) => Promise<Me>;
+  /** Google/Apple account adds a password (emailed code). Sessions are replaced by the fresh ones the server returns. */
+  setPassword: (code: string, newPassword: string) => Promise<Me>;
   refreshUser: () => Promise<Me | null>;
   setUser: (me: Me) => void;
   logout: () => Promise<void>;
@@ -131,6 +135,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
     register: async (input) => enter((await authApi.register(input)).user, true),
     continueAsGuest: async () => enter((await authApi.guest()).user, true),
     upgradeGuest: async (input) => enter((await authApi.upgradeGuest(input)).user, false),
+    upgradeGuestSocial: async (provider, token) =>
+      enter((await (provider === 'google' ? authApi.upgradeGoogle(token) : authApi.upgradeApple(token))).user, false),
+    setPassword: async (code, newPassword) => enter((await authApi.setPassword(code, newPassword)).user, false),
     social: async (provider, token) => enter((await (provider === 'google' ? authApi.google(token) : authApi.apple(token))).user, true),
 
     refreshUser: async () => {

@@ -63,9 +63,14 @@ export async function revokeAllSessions(userId: unknown): Promise<void> {
   await RefreshTokenModel.updateMany({ userId, revokedAt: null }, { $set: { revokedAt: new Date() } });
 }
 
+/** True when the account can log in with email + password (the hash is never selected by default). */
+export async function hasPassword(userId: unknown): Promise<boolean> {
+  return !!(await UserModel.exists({ _id: userId, passwordHash: { $exists: true, $nin: [null, ''] } }));
+}
+
 async function authResult(user: UserDoc, ctx: SessionContext) {
   const tokens = await issueSession(user, ctx);
-  return { user: toSelf(user.toObject()), tokens };
+  return { user: toSelf(user.toObject(), await hasPassword(user._id)), tokens };
 }
 
 // ---------------------------------------------------------------- creation helpers
@@ -119,6 +124,41 @@ export async function resendVerification(userId: string): Promise<{ sent: true; 
   await sendMail(mailTemplates.resendVerifyEmail(user.email, code));
   audit('auth.verification_resent', { userId: user._id });
   return { sent: true, retryAfterSec: OTP.RESEND_COOLDOWN_MS / 1000 };
+}
+
+// ---------------------------------------------------------------- set a password (Google/Apple accounts)
+
+/** Emails a 6-digit code to the account's own address: proof of ownership before a password is added. */
+export async function requestSetPassword(userId: string): Promise<{ sent: true; retryAfterSec: number }> {
+  const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
+  if (!user) throw Errors.notFound('User not found');
+  if (user.accountType !== 'REGISTERED') throw Errors.badRequest('Create an account first', 'NOT_REGISTERED');
+  if (!user.email) throw Errors.badRequest('This account has no email address', 'NO_EMAIL');
+  if (await hasPassword(user._id)) throw Errors.conflict('This account already has a password', 'PASSWORD_ALREADY_SET');
+  const code = await issueOtp(String(user._id), 'reset');
+  await sendMail(mailTemplates.setPassword(user.email, code));
+  audit('auth.set_password_requested', { userId: user._id });
+  return { sent: true, retryAfterSec: OTP.RESEND_COOLDOWN_MS / 1000 };
+}
+
+/**
+ * Adds a password to an account that has none (the Google/Apple link is kept, so both methods work afterwards).
+ * Every session is revoked and a fresh one is returned for the calling device.
+ */
+export async function setPassword(userId: string, input: { code: string; newPassword: string }, ctx: SessionContext) {
+  const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
+  if (!user) throw Errors.notFound('User not found');
+  if (user.accountType !== 'REGISTERED' || !user.email) throw Errors.badRequest('Create an account first', 'NOT_REGISTERED');
+  if (await hasPassword(user._id)) throw Errors.conflict('This account already has a password', 'PASSWORD_ALREADY_SET');
+  await consumeOtp(String(user._id), 'reset', input.code);
+  user.passwordHash = await hashPassword(input.newPassword);
+  if (!user.providers.some((p) => p.provider === 'password')) user.providers.push({ provider: 'password', subject: user.email });
+  await user.save();
+  await revokeAllSessions(user._id);
+  audit('auth.password_set', { userId: user._id, ip: ctx.ip });
+  await sendMailBestEffort(mailTemplates.passwordChanged(user.email), 'password-set');
+  void notify(user._id, { type: 'ACCOUNT', title: 'Password added', body: 'You can now sign in with your email and password as well.' });
+  return authResult(user, ctx);
 }
 
 // ---------------------------------------------------------------- public API
@@ -214,6 +254,38 @@ export async function upgradeGuest(
   await revokeAllSessions(user._id);
   await sendVerification(user);
   audit('auth.guest_upgraded', { userId: user._id, ip: ctx.ip });
+  return authResult(user, ctx);
+}
+
+/**
+ * Turns the signed-in GUEST into a registered account through Google/Apple, keeping coins, stats and history.
+ * Never merges two existing accounts: an identity or email that already belongs to someone else is refused.
+ */
+export async function upgradeGuestWithSocial(userId: string, provider: 'google' | 'apple', token: string, ctx: SessionContext, extra: { displayName?: string } = {}) {
+  const identity: SocialIdentity = await (provider === 'google' ? socialVerifiers.google(token) : socialVerifiers.apple(token));
+  const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } });
+  if (!user) throw Errors.notFound('User not found');
+  if (user.accountType !== 'GUEST') throw Errors.conflict('Account is already registered', 'ALREADY_REGISTERED');
+  if (!identity.email || !identity.emailVerified) throw Errors.badRequest('The provider did not share a verified email address', 'SOCIAL_EMAIL_REQUIRED');
+  const email = identity.email.toLowerCase();
+  if (await UserModel.exists({ providers: { $elemMatch: { provider, subject: identity.subject } } })) {
+    throw Errors.conflict('That account already has a profile. Sign in with it instead.', 'SOCIAL_ALREADY_LINKED');
+  }
+  if (await UserModel.exists({ email, _id: { $ne: user._id } })) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+  user.email = email;
+  user.emailVerified = true;
+  user.accountType = 'REGISTERED';
+  user.providers.push({ provider, subject: identity.subject });
+  if (extra.displayName) user.displayName = extra.displayName;
+  try {
+    await user.save();
+  } catch (err) {
+    if ((err as { code?: number }).code === 11000) throw Errors.conflict('Email is already registered', 'EMAIL_TAKEN');
+    throw err;
+  }
+  // The access token embeds the account type => replace every session with fresh ones.
+  await revokeAllSessions(user._id);
+  audit('auth.guest_upgraded_social', { userId: user._id, ip: ctx.ip, meta: { provider } });
   return authResult(user, ctx);
 }
 

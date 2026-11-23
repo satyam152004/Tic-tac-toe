@@ -16,6 +16,13 @@ export const authApi = {
   apple: (identityToken: string, displayName?: string) => unwrap<AuthResult>(bare.post('/auth/apple', { identityToken, displayName })).then(persist),
   /** Guest -> registered; keeps all progress. The server revokes old sessions and returns fresh tokens. */
   upgradeGuest: (input: { email: string; password: string; username?: string }) => unwrap<AuthResult>(api.post('/auth/upgrade', input)).then(persist),
+  /** Guest -> registered through Google/Apple; keeps all progress (never merges two existing accounts). */
+  upgradeGoogle: (idToken: string) => unwrap<AuthResult>(api.post('/auth/upgrade/google', { idToken })).then(persist),
+  upgradeApple: (identityToken: string) => unwrap<AuthResult>(api.post('/auth/upgrade/apple', { identityToken })).then(persist),
+  /** Google/Apple account without a password: emails a 6-digit code to the account's address. */
+  requestSetPassword: () => unwrap<{ sent: true; retryAfterSec: number }>(api.post('/auth/set-password/request')),
+  /** Adds the password; the server revokes every session and returns a fresh one for this device. */
+  setPassword: (code: string, newPassword: string) => unwrap<AuthResult>(api.post('/auth/set-password', { code, newPassword })).then(persist),
   async logout(): Promise<void> {
     const t = tokenStorage.current();
     if (t?.refreshToken) await bare.post('/auth/logout', { refreshToken: t.refreshToken }).catch(() => undefined); // best effort

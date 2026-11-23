@@ -120,9 +120,11 @@ export const LoginScreen: React.FC<RootScreenProps<'login'>> = () => {
           {socialProviders.google ? (
             <SocialButton testID="login-google" provider="google" busy={busyAction === 'google'} disabled={busy} onPress={() => void social('google', signInWithGoogle)} />
           ) : null}
+          {/* Apple sign-in temporarily disabled:
           {socialProviders.apple ? (
             <SocialButton testID="login-apple" provider="apple" busy={busyAction === 'apple'} disabled={busy} onPress={() => void social('apple', signInWithApple)} />
           ) : null}
+          */}
         </View>
 
         <View style={styles.footer}>

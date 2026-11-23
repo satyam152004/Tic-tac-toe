@@ -156,6 +156,12 @@ export const mailTemplates = {
     text: `Your password reset code: Code: ${code}\nIt expires in 10 minutes.\n\nOr reset with the link: ${env.APP_BASE_URL}/reset-password?token=${token}\n\nToken: ${token}\n\nThe link expires in 1 hour. If you did not request this, ignore this email.`,
   }),
 
+  setPassword: (to: string, code: string): Mail => ({
+    to,
+    subject: `${code} is your Tic Tac Toe code to set a password`,
+    text: `Your code to add a password to your account: ${code}\nIt expires in 10 minutes.\n\nYou will still be able to sign in with Google or Apple. If you did not request this, ignore this email.`,
+  }),
+
   passwordChanged: (to: string): Mail => ({
     to,
     subject: 'Your password was changed',

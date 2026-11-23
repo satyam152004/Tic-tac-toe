@@ -41,7 +41,7 @@ export function computeStats(s: UserLike['stats']) {
 }
 
 /** Full profile for the owner (never includes password hash / tokens). */
-export function toSelf(u: UserLike) {
+export function toSelf(u: UserLike, hasPassword = false) {
   return {
     id: String(u._id),
     username: u.username,
@@ -57,6 +57,8 @@ export function toSelf(u: UserLike) {
     sound: u.sound,
     language: u.language,
     notificationPrefs: u.notificationPrefs,
+    // False for accounts created through Google/Apple until the user sets a password (Settings > Set a password).
+    hasPassword,
     privacy: { allowSpectating: u.privacy?.allowSpectating ?? true },
     online: u.online ?? false,
     lastActiveAt: u.lastActiveAt,

@@ -18,6 +18,7 @@ import { useAppNav } from '../../navigation/useAppNav';
 import { authApi } from '../../services/api/authApi';
 import { friendlyMessage } from '../../services/api/errors';
 import { useAuthStore } from '../../store/authStore';
+import { passwordValid } from '../auth/authValidation';
 import { useSettingsStore } from '../../store/settingsStore';
 import { toast } from '../../store/toastStore';
 
@@ -80,7 +81,7 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; right?: React.ReactN
   );
 };
 
-type Dialog = null | 'logout' | 'logoutAll' | 'password' | 'language';
+type Dialog = null | 'logout' | 'logoutAll' | 'password' | 'setPassword' | 'language';
 
 export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
   const c = useTheme();
@@ -197,6 +198,8 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
           <GroupRow testID="row-privacy" label="Privacy & Safety" chevron onPress={() => nav.navigate('privacy_settings')} />
           {isGuest ? (
             <GroupRow testID="row-upgrade" label="Upgrade account" chevron onPress={() => nav.navigate('registration')} />
+          ) : user?.hasPassword === false ? (
+            <GroupRow testID="row-set-password" label="Set a password" chevron onPress={() => setDialog('setPassword')} />
           ) : (
             <GroupRow testID="row-change-password" label="Change password" chevron onPress={() => setDialog('password')} />
           )}
@@ -233,6 +236,16 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
           toast.success('Password changed', 'Please sign in again with your new password.');
           await logout();
           resetTo('welcome');
+        }}
+      />
+
+      <SetPasswordModal
+        open={dialog === 'setPassword'}
+        email={user?.email ?? ''}
+        onClose={() => setDialog(null)}
+        onDone={() => {
+          setDialog(null);
+          toast.success('Password added', 'You can now sign in with Google or with your email and password.');
         }}
       />
 
@@ -297,6 +310,81 @@ const ChangePasswordModal: React.FC<{ open: boolean; onClose: () => void; onChan
       <AppInput testID="pw-new" label="New password" value={next} onChangeText={setNext} secureToggle autoCapitalize="none" hint="At least 8 characters" />
       <AppInput testID="pw-confirm" label="Confirm new password" value={confirm} onChangeText={setConfirm} secureToggle autoCapitalize="none" error={error} />
       <AppButton testID="pw-submit" title="Update password" fullWidth loading={loading} onPress={() => void submit()} />
+    </AppModal>
+  );
+};
+
+/** Google/Apple accounts have no password. Adding one is confirmed with a code emailed to the account's address. */
+const SetPasswordModal: React.FC<{ open: boolean; email: string; onClose: () => void; onDone: () => void }> = ({ open, email, onClose, onDone }) => {
+  const c = useTheme();
+  const setPassword = useAuthStore((st) => st.setPassword);
+  const [step, setStep] = useState<'send' | 'enter'>('send');
+  const [code, setCode] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setStep('send');
+      setCode('');
+      setNext('');
+      setConfirm('');
+      setError(null);
+      setLoading(false);
+    }
+  }, [open]);
+
+  const sendCode = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await authApi.requestSetPassword();
+      setStep('enter');
+    } catch (e) {
+      setError(friendlyMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = async () => {
+    if (!/^\d{6}$/.test(code)) return setError('Enter the 6-digit code from the email.');
+    if (!passwordValid(next)) return setError('Use at least 8 characters with a letter and a number.');
+    if (next !== confirm) return setError('Passwords do not match.');
+    setError(null);
+    setLoading(true);
+    try {
+      await setPassword(code, next);
+      onDone();
+    } catch (e) {
+      setError(friendlyMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AppModal open={open} title="Set a password" onClose={onClose}>
+      {step === 'send' ? (
+        <>
+          <Text style={[type.small, { color: c.textSecondary }]}>
+            You signed in with Google or Apple, so this account has no password yet. We will email a 6-digit code to {email || 'your email'} to confirm it is you. You can still use Google or Apple afterwards.
+          </Text>
+          {error ? <Text testID="setpw-error" accessibilityRole="alert" style={[type.small, { color: c.danger }]}>{error}</Text> : null}
+          <AppButton testID="setpw-send" title="Send code" fullWidth loading={loading} onPress={() => void sendCode()} />
+        </>
+      ) : (
+        <>
+          <AppInput testID="setpw-code" label="6-digit code" value={code} onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" autoCapitalize="none" maxLength={6} hint={`Sent to ${email || 'your email'}`} />
+          <AppInput testID="setpw-new" label="New password" value={next} onChangeText={setNext} secureToggle autoCapitalize="none" hint="At least 8 characters, with a letter and a number" />
+          <AppInput testID="setpw-confirm" label="Confirm password" value={confirm} onChangeText={setConfirm} secureToggle autoCapitalize="none" error={error} />
+          <AppButton testID="setpw-submit" title="Set password" fullWidth loading={loading} onPress={() => void submit()} />
+          <Pressy testID="setpw-resend" accessibilityRole="button" accessibilityLabel="Send a new code" onPress={() => void sendCode()} style={{ alignSelf: 'center', paddingVertical: 6 }}>
+            <Text style={[type.small, { color: c.accent }]}>Send a new code</Text>
+          </Pressy>
+        </>
+      )}
     </AppModal>
   );
 };

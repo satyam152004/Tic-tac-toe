@@ -9,7 +9,7 @@ jest.mock('lucide-react-native', () => new Proxy({}, { get: (_t, k) => (k === '_
 const mockNav = { nav: { navigate: jest.fn() }, goTab: jest.fn(), goHome: jest.fn(), resetTo: jest.fn(), back: jest.fn() };
 jest.mock('../../src/navigation/useAppNav', () => ({ useAppNav: () => mockNav }));
 jest.mock('../../src/services/api/userApi', () => ({ userApi: { me: jest.fn(), update: jest.fn() } }));
-jest.mock('../../src/services/api/authApi', () => ({ authApi: { changePassword: jest.fn(), logout: jest.fn(), logoutAll: jest.fn() } }));
+jest.mock('../../src/services/api/authApi', () => ({ authApi: { changePassword: jest.fn(), requestSetPassword: jest.fn(), logout: jest.fn(), logoutAll: jest.fn() } }));
 jest.mock('../../src/services/api/notificationApi', () => ({ notificationApi: { list: jest.fn(), read: jest.fn(), readAll: jest.fn(), remove: jest.fn() } }));
 jest.mock('expo-notifications', () => ({ getPermissionsAsync: jest.fn(), requestPermissionsAsync: jest.fn() }));
 
@@ -168,6 +168,62 @@ describe('SettingsScreen', () => {
     await waitFor(() => expect(authApi.changePassword).toHaveBeenCalledWith('OldPass123', 'BrandNew123'));
     await waitFor(() => expect(logout).toHaveBeenCalled());
     expect(mockNav.resetTo).toHaveBeenCalledWith('welcome');
+  });
+
+  it('Google accounts without a password see "Set a password", not "Change password"', async () => {
+    useAuthStore.setState({ user: { ...ME, hasPassword: false } as never });
+    await wrap(<SettingsScreen {...props} />);
+    expect(screen.queryByTestId('row-change-password')).toBeNull();
+    expect(screen.getByTestId('row-set-password')).toBeTruthy();
+  });
+
+  it('accounts with a password keep "Change password"', async () => {
+    useAuthStore.setState({ user: { ...ME, hasPassword: true } as never });
+    await wrap(<SettingsScreen {...props} />);
+    expect(screen.queryByTestId('row-set-password')).toBeNull();
+    expect(screen.getByTestId('row-change-password')).toBeTruthy();
+  });
+
+  it('set a password: emails a code, validates, then stores the password without signing out', async () => {
+    const setPassword = jest.fn(async (_c: string, _p: string) => ME as never);
+    useAuthStore.setState({ user: { ...ME, hasPassword: false } as never, setPassword } as never);
+    m(authApi.requestSetPassword).mockResolvedValue({ sent: true, retryAfterSec: 60 });
+    await wrap(<SettingsScreen {...props} />);
+    await fireEvent.press(screen.getByTestId('row-set-password'));
+    await fireEvent.press(await screen.findByTestId('setpw-send'));
+    await waitFor(() => expect(authApi.requestSetPassword).toHaveBeenCalledTimes(1));
+
+    await fireEvent.changeText(await screen.findByTestId('setpw-code'), '12');
+    await fireEvent.press(screen.getByTestId('setpw-submit'));
+    expect(await screen.findByText('Enter the 6-digit code from the email.')).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByTestId('setpw-code'), '123456');
+    await fireEvent.changeText(screen.getByTestId('setpw-new'), 'short');
+    await fireEvent.press(screen.getByTestId('setpw-submit'));
+    expect(await screen.findByText('Use at least 8 characters with a letter and a number.')).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByTestId('setpw-new'), 'BrandNew123');
+    await fireEvent.changeText(screen.getByTestId('setpw-confirm'), 'Different123');
+    await fireEvent.press(screen.getByTestId('setpw-submit'));
+    expect(await screen.findByText('Passwords do not match.')).toBeTruthy();
+    expect(setPassword).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(screen.getByTestId('setpw-confirm'), 'BrandNew123');
+    await fireEvent.press(screen.getByTestId('setpw-submit'));
+    await waitFor(() => expect(setPassword).toHaveBeenCalledWith('123456', 'BrandNew123'));
+    // the server returns a fresh session: nothing to sign out of
+    expect(logout).not.toHaveBeenCalled();
+    expect(mockNav.resetTo).not.toHaveBeenCalled();
+  });
+
+  it('shows the server error when the code request fails (e.g. cooldown)', async () => {
+    useAuthStore.setState({ user: { ...ME, hasPassword: false } as never });
+    m(authApi.requestSetPassword).mockRejectedValue(new ApiError('OTP_COOLDOWN', 'Please wait before requesting another code'));
+    await wrap(<SettingsScreen {...props} />);
+    await fireEvent.press(screen.getByTestId('row-set-password'));
+    await fireEvent.press(await screen.findByTestId('setpw-send'));
+    expect(await screen.findByTestId('setpw-error')).toBeTruthy();
+    expect(screen.queryByTestId('setpw-code')).toBeNull();
   });
 
   it('guests see an upgrade prompt instead of change password', async () => {

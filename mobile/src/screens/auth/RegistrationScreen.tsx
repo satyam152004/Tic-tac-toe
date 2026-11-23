@@ -6,16 +6,17 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage, toApiError } from '../../services/api/errors';
+import { signInWithApple, signInWithGoogle, socialProviders } from '../../services/socialAuth';
 import { useAuthStore, useIsGuest } from '../../store/authStore';
 import { emailError, passwordValid, usernameError } from './authValidation';
 import { PasswordRules } from './PasswordRules';
-import { MUTED, ProtoButton, ProtoHeader, ProtoInput, ProtoScreen } from './protoUi';
+import { MUTED, ProtoButton, ProtoHeader, ProtoInput, ProtoScreen, SocialButton } from './protoUi';
 
 type Field = 'username' | 'email' | 'password';
 
 export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () => {
   const c = useTheme();
-  const { nav, back } = useAppNav();
+  const { nav, resetTo, back } = useAppNav();
   const isGuest = useIsGuest();
   const register = useAuthStore((s) => s.register);
   const upgradeGuest = useAuthStore((s) => s.upgradeGuest);
@@ -25,6 +26,7 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Partial<Record<Field | 'form', string>>>({});
   const [busy, setBusy] = useState(false);
+  const [socialBusy, setSocialBusy] = useState<'google' | 'apple' | null>(null);
 
   const clear = (f: Field) => setErrors((e) => ({ ...e, [f]: undefined, form: undefined }));
 
@@ -53,6 +55,19 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
       else if (err.code === 'ALREADY_REGISTERED') setErrors({ form: 'This account is already registered. Please sign in.' });
       else setErrors({ form: friendlyMessage(err) });
       setBusy(false);
+    }
+  };
+
+  const social = async (provider: 'google' | 'apple', fn: () => Promise<void>) => {
+    if (busy || socialBusy) return;
+    setSocialBusy(provider);
+    setErrors({});
+    try {
+      await fn();
+      resetTo('Main');
+    } catch (e) {
+      if (!(e instanceof Error && e.message === 'CANCELLED')) setErrors({ form: friendlyMessage(e) });
+      setSocialBusy(null);
     }
   };
 
@@ -119,6 +134,18 @@ export const RegistrationScreen: React.FC<RootScreenProps<'registration'>> = () 
 
         <View style={styles.footer}>
           <ProtoButton testID="register-submit" title="Create Account" loading={busy} onPress={submit} />
+          {socialProviders.google || socialProviders.apple ? (
+            <View style={styles.socialRow}>
+              {socialProviders.google ? (
+                <SocialButton testID="register-google" provider="google" busy={socialBusy === 'google'} disabled={busy || !!socialBusy} onPress={() => void social('google', () => signInWithGoogle({ upgradeGuest: isGuest }))} />
+              ) : null}
+              {/* Apple sign-in temporarily disabled:
+              {socialProviders.apple ? (
+                <SocialButton testID="register-apple" provider="apple" busy={socialBusy === 'apple'} disabled={busy || !!socialBusy} onPress={() => void social('apple', () => signInWithApple({ upgradeGuest: isGuest }))} />
+              ) : null}
+              */}
+            </View>
+          ) : null}
           <View style={styles.footerRow}>
             <Text style={[styles.footerText, { color: MUTED }]}>Already registered? </Text>
             <Pressy accessibilityLabel="Sign in" onPress={() => nav.replace('login')} hitSlop={10}>
@@ -136,6 +163,7 @@ const styles = StyleSheet.create({
   fields: { gap: 10 },
   error: { fontFamily: fonts.body.regular, fontSize: 11.5, lineHeight: 16 },
   footer: { marginTop: 'auto', paddingTop: 8, gap: 8 },
+  socialRow: { flexDirection: 'row', gap: 10 },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   footerText: { fontFamily: fonts.body.regular, fontSize: 11 },
   footerLink: { fontFamily: fonts.body.semibold, fontSize: 11 },

@@ -23,6 +23,7 @@ export const verifyEmailBody = z.union([z.object({ token: z.string().min(20).max
 export const upgradeBody = z.object({ email, password, username: username.optional(), displayName: displayName.optional(), deviceName });
 export const googleBody = z.object({ idToken: z.string().min(20).max(4096), displayName: displayName.optional(), deviceName });
 export const appleBody = z.object({ identityToken: z.string().min(20).max(4096), displayName: displayName.optional(), deviceName });
+export const setPasswordBody = z.object({ code: otpCode, newPassword: password, deviceName });
 export const changePasswordBody = z.object({ currentPassword: z.string().min(1).max(128), newPassword: password });
 
 export type RegisterBody = z.infer<typeof registerBody>;

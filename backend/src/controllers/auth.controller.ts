@@ -13,6 +13,11 @@ export const upgrade = (c: B<typeof v.upgradeBody>) => auth.upgradeGuest(c.userI
 export const google = (c: B<typeof v.googleBody>) => auth.socialLogin('google', c.body.idToken, c.session, c.body);
 export const apple = (c: B<typeof v.appleBody>) => auth.socialLogin('apple', c.body.identityToken, c.session, c.body);
 
+export const upgradeGoogle = (c: B<typeof v.googleBody>) => auth.upgradeGuestWithSocial(c.userId, 'google', c.body.idToken, c.session, c.body);
+export const upgradeApple = (c: B<typeof v.appleBody>) => auth.upgradeGuestWithSocial(c.userId, 'apple', c.body.identityToken, c.session, c.body);
+export const requestSetPassword = (c: Ctx) => auth.requestSetPassword(c.userId);
+export const setPassword = (c: B<typeof v.setPasswordBody>) => auth.setPassword(c.userId, c.body, c.session);
+
 export async function logout(c: B<typeof v.logoutBody>) {
   await auth.logout(c.body.refreshToken);
   return { loggedOut: true };

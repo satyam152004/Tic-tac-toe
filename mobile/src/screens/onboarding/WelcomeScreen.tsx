@@ -60,9 +60,11 @@ export const WelcomeScreen: React.FC<RootScreenProps<'welcome'>> = () => {
           {socialProviders.google ? (
             <SocialButton testID="welcome-google" provider="google" busy={busy === 'google'} disabled={!!busy} onPress={() => void run('google', signInWithGoogle)} />
           ) : null}
+          {/* Apple sign-in temporarily disabled:
           {socialProviders.apple ? (
             <SocialButton testID="welcome-apple" provider="apple" busy={busy === 'apple'} disabled={!!busy} onPress={() => void run('apple', signInWithApple)} />
           ) : null}
+          */}
         </View>
 
         <ProtoButton

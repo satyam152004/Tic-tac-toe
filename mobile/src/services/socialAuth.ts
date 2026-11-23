@@ -57,7 +57,15 @@ export const socialProviders = {
 let googleConfigured = false;
 const cancelled = () => new Error('CANCELLED');
 
-export async function signInWithGoogle(): Promise<void> {
+/** `upgradeGuest`: the signed-in guest becomes this Google/Apple account (keeps progress) instead of switching accounts. */
+export interface SocialOptions {
+  upgradeGuest?: boolean;
+}
+
+const finish = (provider: 'google' | 'apple', token: string, opts?: SocialOptions) =>
+  opts?.upgradeGuest ? useAuthStore.getState().upgradeGuestSocial(provider, token) : useAuthStore.getState().social(provider, token);
+
+export async function signInWithGoogle(opts?: SocialOptions): Promise<void> {
   if (!isGoogleSigninSupported()) {
     throw new ApiError(
       'PROVIDER_NOT_AVAILABLE',
@@ -80,7 +88,7 @@ export async function signInWithGoogle(): Promise<void> {
     if (res.type !== 'success') throw cancelled();
     const idToken = res.data.idToken;
     if (!idToken) throw new ApiError('INVALID_SOCIAL_TOKEN', 'Google did not return an identity token.');
-    await useAuthStore.getState().social('google', idToken);
+    await finish('google', idToken, opts);
   } catch (e) {
     if (e instanceof Error && e.message === 'CANCELLED') throw e;
     const isObj = typeof e === 'object' && e !== null;
@@ -90,14 +98,14 @@ export async function signInWithGoogle(): Promise<void> {
   }
 }
 
-export async function signInWithApple(): Promise<void> {
+export async function signInWithApple(opts?: SocialOptions): Promise<void> {
   if (!socialProviders.apple) throw new ApiError('PROVIDER_NOT_CONFIGURED', 'Sign in with Apple is only available on iOS.');
   try {
     const cred = await AppleAuthentication.signInAsync({
       requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
     });
     if (!cred.identityToken) throw new ApiError('INVALID_SOCIAL_TOKEN', 'Apple did not return an identity token.');
-    await useAuthStore.getState().social('apple', cred.identityToken);
+    await finish('apple', cred.identityToken, opts);
   } catch (e) {
     if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') throw cancelled();
     throw e;

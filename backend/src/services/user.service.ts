@@ -11,7 +11,7 @@ import {
 import { Errors } from '../utils/errors.js';
 import { paged, skipOf } from '../utils/pagination.js';
 import { audit } from './audit.service.js';
-import { verifyPassword } from './auth.service.js';
+import { hasPassword, verifyPassword } from './auth.service.js';
 import { toPublic, toSelf } from './presenter.js';
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -19,7 +19,7 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export async function getMe(userId: string) {
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).lean();
   if (!user) throw Errors.notFound('User not found');
-  return toSelf(user);
+  return toSelf(user, await hasPassword(user._id));
 }
 
 export interface UpdateMeInput {
@@ -65,7 +65,7 @@ export async function updateMe(userId: string, input: UpdateMeInput) {
   try {
     const user = await UserModel.findOneAndUpdate({ _id: userId, deletedAt: { $exists: false } }, { $set: set }, { new: true, runValidators: true }).lean();
     if (!user) throw Errors.notFound('User not found');
-    return toSelf(user);
+    return toSelf(user, await hasPassword(user._id));
   } catch (err) {
     if ((err as { code?: number }).code === 11000) throw Errors.conflict('Username is already taken', 'USERNAME_TAKEN');
     throw err;

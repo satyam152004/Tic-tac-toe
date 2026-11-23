@@ -32,6 +32,8 @@ export interface Me {
   accountType: 'GUEST' | 'REGISTERED'; theme: ThemeId; language: string;
   sound: { effects: boolean; music: boolean; volume: number };
   notificationPrefs: { social: boolean; game: boolean; achievements: boolean; account: boolean };
+  /** False for Google/Apple accounts until a password is added (Settings > Set a password). */
+  hasPassword?: boolean;
   privacy?: { allowSpectating: boolean };
   online: boolean; lastActiveAt: string; createdAt: string; stats: Stats;
 }

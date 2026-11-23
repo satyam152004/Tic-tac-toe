@@ -38,6 +38,10 @@ Auth levels: **public** (no token), **user** (any valid access token, guests inc
 | POST | `/api/v1/auth/google` | public | Login/registration with a Google ID token |
 | POST | `/api/v1/auth/apple` | public | Login/registration with an Apple identity token |
 | POST | `/api/v1/auth/upgrade` | user | Upgrade the current guest account to a registered account (keeps all progress) |
+| POST | `/api/v1/auth/upgrade/google` | user | Upgrade the current guest with a Google ID token (keeps all progress; never merges two accounts) |
+| POST | `/api/v1/auth/upgrade/apple` | user | Upgrade the current guest with an Apple identity token (keeps all progress; never merges two accounts) |
+| POST | `/api/v1/auth/set-password/request` | user | Email a 6-digit code to add a password to a Google/Apple account (60 s cooldown) |
+| POST | `/api/v1/auth/set-password` | user | Add a password to an account that has none, using the emailed code. Google/Apple login keeps working; all sessions are revoked and a fresh one is returned |
 | POST | `/api/v1/auth/refresh` | public | Rotate the refresh token and get a new access token |
 | POST | `/api/v1/auth/logout` | public | Log out this device (revokes the session of the supplied refresh token) |
 | POST | `/api/v1/auth/logout-all` | user | Log out from all devices |
@@ -586,6 +590,154 @@ curl -X POST "$API_URL/api/v1/auth/upgrade" \
 {
   "success": true,
   "data": "<{ user, tokens } - all previous sessions are revoked>"
+}
+```
+
+### POST `/api/v1/auth/upgrade/google`
+
+Upgrade the current guest with a Google ID token (keeps all progress; never merges two accounts)
+
+- **HTTP method:** POST
+- **Authentication:** Bearer access token
+- **Success status:** 200
+- **Rate limit:** strict (credential endpoint limiter)
+
+**Request body**
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `idToken` | string | yes | min length 20; max length 4096 |
+| `displayName` | string | no | min length 1; max length 40 |
+| `deviceName` | string | no | max length 100 |
+
+**Response** `200`: { user, tokens } - all previous sessions are revoked
+
+**Errors:** 400 VALIDATION_ERROR, 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, domain `ALREADY_REGISTERED`, domain `SOCIAL_ALREADY_LINKED`, domain `EMAIL_TAKEN`, domain `SOCIAL_EMAIL_REQUIRED`, domain `INVALID_SOCIAL_TOKEN`, domain `PROVIDER_NOT_CONFIGURED`, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X POST "$API_URL/api/v1/auth/upgrade/google" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"idToken":"<google-id-token>"}'
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<{ user, tokens } - all previous sessions are revoked>"
+}
+```
+
+### POST `/api/v1/auth/upgrade/apple`
+
+Upgrade the current guest with an Apple identity token (keeps all progress; never merges two accounts)
+
+- **HTTP method:** POST
+- **Authentication:** Bearer access token
+- **Success status:** 200
+- **Rate limit:** strict (credential endpoint limiter)
+
+**Request body**
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `identityToken` | string | yes | min length 20; max length 4096 |
+| `displayName` | string | no | min length 1; max length 40 |
+| `deviceName` | string | no | max length 100 |
+
+**Response** `200`: { user, tokens } - all previous sessions are revoked
+
+**Errors:** 400 VALIDATION_ERROR, 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, domain `ALREADY_REGISTERED`, domain `SOCIAL_ALREADY_LINKED`, domain `EMAIL_TAKEN`, domain `SOCIAL_EMAIL_REQUIRED`, domain `INVALID_SOCIAL_TOKEN`, domain `PROVIDER_NOT_CONFIGURED`, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X POST "$API_URL/api/v1/auth/upgrade/apple" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"identityToken":"<apple-identity-token>"}'
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<{ user, tokens } - all previous sessions are revoked>"
+}
+```
+
+### POST `/api/v1/auth/set-password/request`
+
+Email a 6-digit code to add a password to a Google/Apple account (60 s cooldown)
+
+- **HTTP method:** POST
+- **Authentication:** Bearer access token
+- **Success status:** 200
+- **Rate limit:** strict (credential endpoint limiter)
+
+_No parameters or body._
+
+**Response** `200`: { sent: true, retryAfterSec }
+
+**Errors:** 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, domain `NOT_REGISTERED`, domain `NO_EMAIL`, domain `PASSWORD_ALREADY_SET`, domain `OTP_COOLDOWN`, domain `OTP_RATE_LIMITED`, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X POST "$API_URL/api/v1/auth/set-password/request" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<{ sent: true, retryAfterSec }>"
+}
+```
+
+### POST `/api/v1/auth/set-password`
+
+Add a password to an account that has none, using the emailed code. Google/Apple login keeps working; all sessions are revoked and a fresh one is returned
+
+- **HTTP method:** POST
+- **Authentication:** Bearer access token
+- **Success status:** 200
+- **Rate limit:** strict (credential endpoint limiter)
+
+**Request body**
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `code` | string | yes | pattern `^\d{6}$` |
+| `newPassword` | string | yes | min length 8; max length 128 |
+| `deviceName` | string | no | max length 100 |
+
+**Response** `200`: { user, tokens }
+
+**Errors:** 400 VALIDATION_ERROR, 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, domain `NOT_REGISTERED`, domain `PASSWORD_ALREADY_SET`, domain `INVALID_OTP`, domain `OTP_LOCKED`, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X POST "$API_URL/api/v1/auth/set-password" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"K7M3QX","newPassword":"N3wPassw0rd"}'
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<{ user, tokens }>"
 }
 ```
 
