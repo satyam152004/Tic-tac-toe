@@ -2,15 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
-import { Bell, BellOff, Check, CheckCircle2, ChevronRight, Globe, Info, KeyRound, LogOut, Mail, Music, Palette, Shield, Smartphone, Trash2, UserPlus, Volume2 } from 'lucide-react-native';
+import { BellOff, Check } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { AppInput } from '../../components/common/AppInput';
 import { AppModal, ConfirmDialog } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
+import { Group, GroupRow, SectionLabel } from '../../components/profile/ProtoUi';
 import { THEME_LIST } from '../../design-system/themes';
-import { fonts, type } from '../../design-system/typography';
+import { type } from '../../design-system/typography';
 import { usePreferenceSync } from '../../hooks/usePreferenceSync';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
@@ -41,10 +41,24 @@ export const ToggleSwitch: React.FC<{ checked: boolean; onChange: () => void; la
       accessibilityLabel={label}
       accessibilityState={{ checked }}
       onPress={onChange}
-      hitSlop={8}
-      style={{ width: 48, height: 28, borderRadius: 14, padding: 4, justifyContent: 'center', backgroundColor: checked ? c.accent : c.bgSecondary, borderWidth: checked ? 0 : 1, borderColor: c.border }}
+      hitSlop={10}
+      scaleTo={1}
+      style={{ width: 36, height: 20, borderRadius: 10, padding: 2, justifyContent: 'center', backgroundColor: checked ? c.accent : '#E4E4DF' }}
     >
-      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', transform: [{ translateX: checked ? 20 : 0 }] }} />
+      <View
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: '#fff',
+          transform: [{ translateX: checked ? 16 : 0 }],
+          shadowColor: '#000',
+          shadowOpacity: 0.15,
+          shadowRadius: 1,
+          shadowOffset: { width: 0, height: 1 },
+          elevation: 1,
+        }}
+      />
     </Pressy>
   );
 };
@@ -66,12 +80,7 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; right?: React.ReactN
   );
 };
 
-const SectionTitle: React.FC<{ children: string }> = ({ children }) => {
-  const c = useTheme();
-  return <Text style={[type.smallStrong, { color: c.textSecondary }]}>{children}</Text>;
-};
-
-type Dialog = null | 'logout' | 'logoutAll' | 'delete' | 'password' | 'language';
+type Dialog = null | 'logout' | 'logoutAll' | 'password' | 'language';
 
 export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
   const c = useTheme();
@@ -81,7 +90,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const logoutAll = useAuthStore((s) => s.logoutAll);
-  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const isGuest = user?.accountType === 'GUEST';
 
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -136,33 +144,39 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
     }
   };
 
-  return (
-    <Screen title="Settings" onBack={back}>
-      <AppCard style={{ gap: 14 }}>
-        <SectionTitle>Audio &amp; Gameplay</SectionTitle>
-        <Row icon={<Volume2 size={16} color={c.accent} />} label="Sound Effects" right={<ToggleSwitch testID="toggle-sound" label="Toggle sound effects" checked={settings.soundEffects} onChange={() => sync({ soundEffects: !settings.soundEffects }, { sound: { effects: !settings.soundEffects } })} />} />
-        <Row icon={<Music size={16} color={c.accentSecondary} />} label="Background Music" right={<ToggleSwitch testID="toggle-music" label="Toggle background music" checked={settings.music} onChange={() => sync({ music: !settings.music }, { sound: { music: !settings.music } })} />} />
-        <Row icon={<Smartphone size={16} color={c.o} />} label="Vibration" right={<ToggleSwitch testID="toggle-vibration" label="Toggle vibration" checked={settings.vibration} onChange={() => sync({ vibration: !settings.vibration })} />} />
-        <Row icon={<CheckCircle2 size={16} color={c.success} />} label="Move Confirm" right={<ToggleSwitch testID="toggle-move-confirm" label="Toggle move confirmation" checked={settings.moveConfirm} onChange={() => settings.set({ moveConfirm: !settings.moveConfirm })} />} />
-      </AppCard>
+  const toggleSound = () => sync({ soundEffects: !settings.soundEffects }, { sound: { effects: !settings.soundEffects } });
+  const toggleMusic = () => sync({ music: !settings.music }, { sound: { music: !settings.music } });
+  const toggleVibration = () => sync({ vibration: !settings.vibration });
+  const toggleMoveConfirm = () => settings.set({ moveConfirm: !settings.moveConfirm });
 
-      <AppCard style={{ gap: 14 }}>
-        <SectionTitle>Preferences</SectionTitle>
-        <Row
-          testID="row-theme"
-          icon={<Palette size={16} color={c.accent} />}
-          label="Board Theme"
-          onPress={() => nav.navigate('theme_selection')}
-          right={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={[type.small, { color: c.textSecondary }]}>{themeName}</Text>
-              <ChevronRight size={16} color={c.textSecondary} />
-            </View>
-          }
-        />
-        <Row icon={<Bell size={16} color={c.warning} />} label="Notifications" right={<ToggleSwitch testID="toggle-notifications" label="Toggle notifications" checked={settings.notifications} onChange={() => void toggleNotifications()} />} />
+  return (
+    <Screen title="Settings" onBack={back} gutter={20} gap={12}>
+      <View>
+        <SectionLabel>Gameplay</SectionLabel>
+        <Group>
+          <GroupRow label="Sound Effects" onPress={toggleSound} right={<ToggleSwitch testID="toggle-sound" label="Toggle sound effects" checked={settings.soundEffects} onChange={toggleSound} />} />
+          <GroupRow label="Background Music" onPress={toggleMusic} right={<ToggleSwitch testID="toggle-music" label="Toggle background music" checked={settings.music} onChange={toggleMusic} />} />
+          <GroupRow label="Haptics" onPress={toggleVibration} right={<ToggleSwitch testID="toggle-vibration" label="Toggle vibration" checked={settings.vibration} onChange={toggleVibration} />} />
+          <GroupRow label="Move Confirm" onPress={toggleMoveConfirm} right={<ToggleSwitch testID="toggle-move-confirm" label="Toggle move confirmation" checked={settings.moveConfirm} onChange={toggleMoveConfirm} />} />
+        </Group>
+      </View>
+
+      <View>
+        <SectionLabel>Appearance</SectionLabel>
+        <Group>
+          <GroupRow testID="row-theme" label="Theme" value={themeName} valueColor={c.accent} chevron onPress={() => nav.navigate('theme_selection')} />
+          <GroupRow testID="row-language" label="Language" value={langLabel} chevron onPress={() => setDialog('language')} />
+        </Group>
+      </View>
+
+      <View>
+        <SectionLabel>Notifications</SectionLabel>
+        <Group>
+          <GroupRow label="Push Notifications" onPress={() => void toggleNotifications()} right={<ToggleSwitch testID="toggle-notifications" label="Toggle notifications" checked={settings.notifications} onChange={() => void toggleNotifications()} />} />
+          <GroupRow testID="row-notifications" label="Notification Inbox" chevron onPress={() => nav.navigate('notifications')} />
+        </Group>
         {permDenied ? (
-          <View testID="notif-denied" style={{ borderRadius: 12, borderWidth: 1, borderColor: c.dangerBorder, backgroundColor: c.dangerSoft, padding: 12, gap: 8 }}>
+          <View testID="notif-denied" style={{ marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: c.dangerBorder, backgroundColor: c.dangerSoft, padding: 12, gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <BellOff size={16} color={c.dangerText} />
               <Text style={[type.smallStrong, { color: c.text, flex: 1 }]}>Notification permission denied</Text>
@@ -171,45 +185,26 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
             <AppButton testID="open-os-settings" title="Open settings" size="md" variant="secondary" onPress={() => void Linking.openSettings()} />
           </View>
         ) : null}
-        <Row
-          testID="row-language"
-          icon={<Globe size={16} color={c.success} />}
-          label="Language"
-          onPress={() => setDialog('language')}
-          right={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={[type.small, { color: c.textSecondary }]}>{langLabel}</Text>
-              <ChevronRight size={16} color={c.textSecondary} />
-            </View>
-          }
-        />
-      </AppCard>
+      </View>
 
-      <AppCard style={{ gap: 14 }}>
-        <SectionTitle>Account &amp; Privacy</SectionTitle>
-        <Row
-          icon={<Mail size={16} color={c.textSecondary} />}
-          label={isGuest ? 'Guest account' : user?.email ?? 'Not signed in'}
-          right={!isGuest && user?.email ? <Text testID="verified-status" style={[type.smallStrong, { color: user.emailVerified ? c.success : c.warning }]}>{user.emailVerified ? 'Verified' : 'Not verified'}</Text> : undefined}
-        />
-        <Row
-          testID="row-privacy"
-          icon={<Shield size={16} color={c.accent} />}
-          label="Privacy & Safety"
-          onPress={() => nav.navigate('privacy_settings')}
-          right={<ChevronRight size={16} color={c.textSecondary} />}
-        />
-        {isGuest ? (
-          <Row testID="row-upgrade" icon={<UserPlus size={16} color={c.accent} />} label="Upgrade account" onPress={() => nav.navigate('registration')} right={<ChevronRight size={16} color={c.textSecondary} />} />
-        ) : (
-          <Row testID="row-change-password" icon={<KeyRound size={16} color={c.textSecondary} />} label="Change password" onPress={() => setDialog('password')} right={<ChevronRight size={16} color={c.textSecondary} />} />
-        )}
-        <Row testID="row-about" icon={<Info size={16} color={c.textSecondary} />} label="App version" right={<Text style={[type.small, { color: c.textSecondary, fontFamily: fonts.mono.medium }]}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
-      </AppCard>
-
-      <AppButton testID="logout" fullWidth variant="danger" title="Log Out" icon={<LogOut size={16} color={c.dangerText} />} onPress={() => setDialog('logout')} />
-      <AppButton testID="logout-all" fullWidth variant="outline" title="Log out from all devices" onPress={() => setDialog('logoutAll')} />
-      <AppButton testID="delete-account" fullWidth variant="ghost" title="Delete account" icon={<Trash2 size={16} color={c.dangerText} />} onPress={() => setDialog('delete')} />
+      <View>
+        <SectionLabel>Account</SectionLabel>
+        <Group>
+          <GroupRow
+            label={isGuest ? 'Guest account' : user?.email ?? 'Not signed in'}
+            right={!isGuest && user?.email ? <Text testID="verified-status" style={[type.caption, { color: user.emailVerified ? c.success : c.warning }]}>{user.emailVerified ? 'Verified' : 'Not verified'}</Text> : undefined}
+          />
+          <GroupRow testID="row-privacy" label="Privacy & Safety" chevron onPress={() => nav.navigate('privacy_settings')} />
+          {isGuest ? (
+            <GroupRow testID="row-upgrade" label="Upgrade account" chevron onPress={() => nav.navigate('registration')} />
+          ) : (
+            <GroupRow testID="row-change-password" label="Change password" chevron onPress={() => setDialog('password')} />
+          )}
+          <GroupRow testID="logout" label="Sign Out" labelColor="#B91C1C" labelWeight="semibold" chevron onPress={() => setDialog('logout')} />
+          <GroupRow testID="logout-all" label="Sign out from all devices" labelColor="#B91C1C" chevron onPress={() => setDialog('logoutAll')} />
+          <GroupRow testID="row-about" label="App version" value={Constants.expoConfig?.version ?? '1.0.0'} />
+        </Group>
+      </View>
 
       <ConfirmDialog
         open={dialog === 'logout'}
@@ -229,20 +224,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         onCancel={() => setDialog(null)}
         onConfirm={() => void run(logoutAll, () => resetTo('welcome'))}
       />
-
-      {isGuest ? (
-        <ConfirmDialog
-          open={dialog === 'delete'}
-          title="Delete account?"
-          message="This permanently deletes your guest profile and all of its progress. This cannot be undone."
-          confirmLabel="Delete"
-          destructive
-          onCancel={() => setDialog(null)}
-          onConfirm={() => void run(() => deleteAccount(), () => resetTo('welcome'))}
-        />
-      ) : (
-        <DeleteAccountModal open={dialog === 'delete'} busy={busy} onClose={() => setDialog(null)} onDelete={(pw) => void run(() => deleteAccount(pw), () => resetTo('welcome'))} />
-      )}
 
       <ChangePasswordModal
         open={dialog === 'password'}
@@ -275,21 +256,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         ))}
       </AppModal>
     </Screen>
-  );
-};
-
-const DeleteAccountModal: React.FC<{ open: boolean; busy: boolean; onClose: () => void; onDelete: (password: string) => void }> = ({ open, busy, onClose, onDelete }) => {
-  const c = useTheme();
-  const [pw, setPw] = useState('');
-  useEffect(() => {
-    if (!open) setPw('');
-  }, [open]);
-  return (
-    <AppModal open={open} title="Delete account?" onClose={onClose}>
-      <Text style={[type.body, { color: c.textSecondary }]}>This permanently deletes your account, stats and friends. Enter your password to confirm.</Text>
-      <AppInput testID="delete-password" label="Password" value={pw} onChangeText={setPw} secureToggle autoCapitalize="none" autoCorrect={false} />
-      <AppButton testID="delete-confirm" title="Delete forever" variant="danger" fullWidth loading={busy} disabled={pw.length === 0} onPress={() => onDelete(pw)} />
-    </AppModal>
   );
 };
 

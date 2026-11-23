@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
+import { StyleSheet, Text, View } from 'react-native';
 import { Pressy } from '../../components/common/Pressy';
-import { Screen } from '../../components/common/Screen';
-import { type, fonts } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
@@ -13,7 +11,15 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { OTP_COOLDOWN_SEC, OTP_LENGTH, otpErrorInfo } from './authValidation';
 import { emptyDigits, OtpInput } from './OtpInput';
+import { ProtoButton, ProtoHeader, ProtoScreen } from './protoUi';
 import { useCountdown } from './useCountdown';
+
+/** sa****@example.com: keeps the first two characters of the address. */
+export const maskEmail = (e: string) => {
+  const [local, domain] = e.split('@');
+  if (!domain) return e;
+  return `${local.slice(0, 2)}****@${domain}`;
+};
 
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -110,56 +116,61 @@ export const OtpVerificationScreen: React.FC<RootScreenProps<'otp_verification'>
   if (purpose === 'reset') return null;
 
   return (
-    <Screen
-      title="Verify Email"
-      onBack={back}
-      testID="otp-screen"
-      footer={
-        <>
-          <AppButton
+    <ProtoScreen testID="otp-screen">
+      <ProtoHeader title="Verify Email" onBack={back} />
+      <View style={styles.body}>
+        <View>
+          <Text style={[styles.title, { color: c.text }]}>Enter verification code</Text>
+          <Text style={[styles.sub, { color: c.textSecondary }]}>
+            We sent a 6-digit code to <Text style={{ color: c.text, fontFamily: fonts.body.semibold }}>{maskEmail(email)}</Text>
+          </Text>
+        </View>
+
+        <View style={{ gap: 8 }}>
+          <OtpInput digits={digits} onChange={(d) => { setDigits(d); setError(null); }} disabled={busy || locked} hasError={!!error} shakeKey={shakeKey} autoFocus />
+          {error ? (
+            <Text testID="otp-error" accessibilityRole="alert" style={[styles.error, { color: c.danger }]}>
+              {error}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.resendRow}>
+          <Text style={[styles.resendLabel, { color: c.textSecondary }]}>{left > 0 ? 'Resend in' : 'Didn’t get a code?'}</Text>
+          {left > 0 ? (
+            <Text testID="otp-countdown" style={[styles.resendValue, { color: c.accent, fontFamily: fonts.mono.semibold }]}>
+              {mmss(left)}
+            </Text>
+          ) : (
+            <Pressy testID="otp-resend" accessibilityLabel="Resend OTP code" disabled={resending} onPress={() => void resend()} hitSlop={10}>
+              <Text style={[styles.resendValue, { color: c.accent }]}>
+                {resending ? 'Sending...' : locked ? 'Request a new code' : 'Resend Code'}
+              </Text>
+            </Pressy>
+          )}
+        </View>
+
+        <View style={styles.footer}>
+          <ProtoButton
             testID="otp-submit"
             title="Verify & Continue"
-            size="lg"
-            fullWidth
             loading={busy}
             disabled={code.length < OTP_LENGTH || locked}
             onPress={() => void verify(code)}
           />
-          <AppButton testID="otp-skip" title="Skip for now" variant="ghost" fullWidth onPress={() => resetTo('Main')} />
-        </>
-      }
-    >
-      <View style={{ gap: 4, marginTop: 4 }}>
-        <Text style={[type.headline, { color: c.text }]}>Enter verification code</Text>
-        <Text style={[type.small, { color: c.textSecondary }]}>
-          We sent a 6-digit code to <Text style={{ color: c.text, fontFamily: fonts.body.semibold }}>{email}</Text>
-        </Text>
+        </View>
       </View>
-
-      <View style={{ paddingTop: 8, gap: 10 }}>
-        <OtpInput digits={digits} onChange={(d) => { setDigits(d); setError(null); }} disabled={busy || locked} hasError={!!error} shakeKey={shakeKey} autoFocus />
-        {error ? (
-          <Text testID="otp-error" accessibilityRole="alert" style={[type.small, { color: c.danger, textAlign: 'center' }]}>
-            {error}
-          </Text>
-        ) : null}
-      </View>
-
-      {/* Resend Row matching View #8 */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, minHeight: 28 }}>
-        <Text style={[type.small, { color: c.textSecondary }]}>Resend in</Text>
-        {left > 0 ? (
-          <Text testID="otp-countdown" style={[type.smallStrong, { color: c.accent, fontFamily: fonts.mono.semibold }]}>
-            {mmss(left)}
-          </Text>
-        ) : (
-          <Pressy testID="otp-resend" accessibilityLabel="Resend OTP code" disabled={resending} onPress={() => void resend()} hitSlop={8} style={{ justifyContent: 'center' }}>
-            <Text style={[type.smallStrong, { color: c.accent }]}>
-              {resending ? 'Sending...' : locked ? 'Request a new code' : 'Resend Code'}
-            </Text>
-          </Pressy>
-        )}
-      </View>
-    </Screen>
+    </ProtoScreen>
   );
 };
+
+const styles = StyleSheet.create({
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, gap: 16 },
+  title: { fontFamily: fonts.body.semibold, fontSize: 19, lineHeight: 24, letterSpacing: -0.38 },
+  sub: { fontFamily: fonts.body.regular, fontSize: 12.5, lineHeight: 18, marginTop: 4 },
+  error: { fontFamily: fonts.body.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center' },
+  resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, minHeight: 20 },
+  resendLabel: { fontFamily: fonts.body.regular, fontSize: 12 },
+  resendValue: { fontFamily: fonts.body.semibold, fontSize: 12 },
+  footer: { marginTop: 'auto', paddingTop: 8 },
+});

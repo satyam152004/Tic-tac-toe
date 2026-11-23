@@ -1,57 +1,53 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../common/AppButton';
-import { fonts, type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
+import { formatClock, useCountdown } from '../../hooks/useOnlineGame';
 import { useTheme } from '../../hooks/useTheme';
 
 export interface DrawOfferModalProps {
   open: boolean;
   proposerName?: string;
+  /** ISO time the offer lapses (server clock, from `game:draw-offered`). */
+  expiresAt?: string | null;
+  /** Move number the offer was made on. */
+  moveCount?: number;
   onAccept: () => void;
   onDecline: () => void;
 }
 
 export const DrawOfferModal: React.FC<DrawOfferModalProps> = ({
   open,
-  proposerName = 'Aarav Patel',
+  proposerName = 'Your opponent',
+  expiresAt,
+  moveCount,
   onAccept,
   onDecline,
 }) => {
   const c = useTheme();
-  const [seconds, setSeconds] = useState(18);
+  const target = open && expiresAt ? Date.parse(expiresAt) : null;
+  const seconds = useCountdown(Number.isFinite(target) ? target : null);
 
+  // The offer lapses on the server too; closing the dialog at zero keeps both sides in sync.
   useEffect(() => {
-    if (!open) {
-      setSeconds(18);
-      return;
-    }
-    const t = setInterval(() => {
-      setSeconds((s) => {
-        if (s <= 1) {
-          onDecline();
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [open, onDecline]);
+    if (open && seconds === 0) onDecline();
+  }, [open, seconds, onDecline]);
 
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onDecline}>
       <View style={styles.scrim}>
         <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={styles.timerBadge}>
-            <Text style={styles.timerBadgeText}>
-              Expires in 00:{String(seconds).padStart(2, '0')}
-            </Text>
-          </View>
+          {seconds !== null ? (
+            <View style={styles.timerBadge}>
+              <Text style={styles.timerBadgeText}>Expires in {formatClock(seconds)}</Text>
+            </View>
+          ) : null}
 
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Text style={[styles.title, { color: c.text }]}>Draw Offered</Text>
             <Text style={[styles.desc, { color: c.textSecondary }]}>
               <Text style={{ fontFamily: fonts.body.semibold, color: c.text }}>{proposerName}</Text>{' '}
-              proposed a mutual draw on Move 6 (0 ELO change).
+              proposed a mutual draw{moveCount ? ` on Move ${moveCount}` : ''} (0 ELO change).
             </Text>
           </View>
 
@@ -63,6 +59,7 @@ export const DrawOfferModal: React.FC<DrawOfferModalProps> = ({
                 variant="secondary"
                 size="md"
                 onPress={onDecline}
+                style={{ minHeight: 40 }}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -72,6 +69,7 @@ export const DrawOfferModal: React.FC<DrawOfferModalProps> = ({
                 variant="primary"
                 size="md"
                 onPress={onAccept}
+                style={{ minHeight: 40 }}
               />
             </View>
           </View>

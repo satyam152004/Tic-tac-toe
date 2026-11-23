@@ -1,15 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff } from 'lucide-react-native';
-import { type } from '../../design-system/typography';
-import { useTheme } from '../../hooks/useTheme';
+import { fonts } from '../../design-system/typography';
 import { useNetworkStore } from '../../store/networkStore';
 
-/** Slim banner shown while the device is offline. Local games keep working, online features pause. */
+const AMBER = '#B45309';
+
+/** Compact amber banner docked below the status bar while the device is offline. Local games keep working. */
 export const NetworkStatus: React.FC = () => {
-  const c = useTheme();
   const insets = useSafeAreaInsets();
   const online = useNetworkStore((s) => s.online);
   if (online !== false) return null;
@@ -18,18 +18,24 @@ export const NetworkStatus: React.FC = () => {
       entering={FadeInUp.duration(160)}
       exiting={FadeOutUp.duration(160)}
       pointerEvents="none"
-      style={[styles.wrap, { top: 0, paddingTop: insets.top + 4, backgroundColor: c.warning }]}
+      style={[styles.wrap, { top: insets.top + 4 }]}
       accessibilityLiveRegion="polite"
+      accessibilityLabel="Offline. Reconnecting. Local games still work."
     >
-      <View style={styles.row}>
-        <WifiOff size={14} color={c.onWarning} />
-        <Text style={[type.smallStrong, { color: c.onWarning }]}>You are offline. Local games still work.</Text>
+      <View style={styles.banner}>
+        <View style={styles.left}>
+          <WifiOff size={14} color={AMBER} />
+          <Text numberOfLines={1} style={styles.text}>Offline · Reconnecting...</Text>
+        </View>
+        <ActivityIndicator size="small" color={AMBER} />
       </View>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, zIndex: 200, paddingBottom: 6, alignItems: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  wrap: { position: 'absolute', left: 16, right: 16, zIndex: 200 },
+  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 10, borderWidth: 1, borderColor: '#FDE68A', backgroundColor: '#FFFBEB', paddingHorizontal: 12, paddingVertical: 8 },
+  left: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 },
+  text: { fontSize: 11, fontFamily: fonts.body.semibold, color: AMBER },
 });

@@ -1,11 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, TextInput, TextInputKeyPressEvent, View } from 'react-native';
-import { radius } from '../../design-system/radius';
 import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { OTP_LENGTH } from './authValidation';
+import { ACCENT_SOFT, BORDER_STRONG, MUTED } from './protoUi';
 
-/** Six single-digit boxes: auto-advance, backspace to previous, paste / autofill of a full code. */
+/**
+ * Six single-digit boxes (48px, radius 10, 17px digits): auto-advance, backspace to previous, paste / autofill of a
+ * full code. The focused box gets the cobalt highlight from the prototype, filled boxes a strong border.
+ */
 export const OtpInput: React.FC<{
   digits: string[];
   onChange: (digits: string[]) => void;
@@ -19,6 +22,7 @@ export const OtpInput: React.FC<{
   const c = useTheme();
   const refs = useRef<Array<React.ElementRef<typeof TextInput> | null>>([]);
   const shake = useRef(new Animated.Value(0)).current;
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (!shakeKey) return;
@@ -72,39 +76,44 @@ export const OtpInput: React.FC<{
 
   return (
     <Animated.View style={[styles.row, { transform: [{ translateX: shake }] }]}>
-      {digits.map((d, i) => (
-        <View key={i} style={{ flex: 1 }}>
-          <TextInput
-            ref={(r) => {
-              refs.current[i] = r;
-            }}
-            testID={`${testIDPrefix}-${i}`}
-            accessibilityLabel={`Verification code digit ${i + 1}`}
-            value={d}
-            editable={!disabled}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            maxLength={OTP_LENGTH}
-            autoComplete="one-time-code"
-            textContentType="oneTimeCode"
-            autoFocus={autoFocus && i === 0}
-            selectTextOnFocus
-            caretHidden
-            onChangeText={(t) => handleChange(i, t)}
-            onKeyPress={(e) => handleKey(i, e)}
-            style={[
-              styles.box,
-              {
-                backgroundColor: c.bgCard,
-                color: c.text,
-                borderColor: hasError ? c.danger : d ? c.accent : c.border,
-                opacity: disabled ? 0.5 : 1,
-                fontFamily: fonts.mono.semibold,
-              },
-            ]}
-          />
-        </View>
-      ))}
+      {digits.map((d, i) => {
+        const active = focusedIdx === i && !hasError;
+        const box = hasError
+          ? { backgroundColor: c.bgCard, borderColor: c.danger, borderWidth: 1, color: c.text }
+          : active
+            ? { backgroundColor: ACCENT_SOFT, borderColor: c.accent, borderWidth: 1.5, color: c.accent }
+            : d
+              ? { backgroundColor: c.bgCard, borderColor: BORDER_STRONG, borderWidth: 1, color: c.text }
+              : { backgroundColor: c.bgCard, borderColor: c.border, borderWidth: 1, color: MUTED };
+        return (
+          <View key={i} style={{ flex: 1 }}>
+            <TextInput
+              ref={(r) => {
+                refs.current[i] = r;
+              }}
+              testID={`${testIDPrefix}-${i}`}
+              accessibilityLabel={`Verification code digit ${i + 1}`}
+              value={d}
+              placeholder="_"
+              placeholderTextColor={active ? c.accent : MUTED}
+              editable={!disabled}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={OTP_LENGTH}
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+              autoFocus={autoFocus && i === 0}
+              selectTextOnFocus
+              caretHidden
+              onFocus={() => setFocusedIdx(i)}
+              onBlur={() => setFocusedIdx((f) => (f === i ? null : f))}
+              onChangeText={(t) => handleChange(i, t)}
+              onKeyPress={(e) => handleKey(i, e)}
+              style={[styles.box, box, { opacity: disabled ? 0.5 : 1, fontFamily: fonts.mono.semibold }]}
+            />
+          </View>
+        );
+      })}
     </Animated.View>
   );
 };
@@ -112,6 +121,6 @@ export const OtpInput: React.FC<{
 export const emptyDigits = (): string[] => Array.from({ length: OTP_LENGTH }, () => '');
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
-  box: { height: 54, borderRadius: radius.md, borderWidth: 1, textAlign: 'center', fontSize: 20, padding: 0 },
+  row: { flexDirection: 'row', gap: 6 },
+  box: { height: 48, borderRadius: 10, textAlign: 'center', fontSize: 17, padding: 0 },
 });

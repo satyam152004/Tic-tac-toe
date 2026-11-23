@@ -1,19 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import {
-  Award,
-  BarChart3,
-  CheckCircle2,
-  ChevronRight,
-  Crown,
-  Edit2,
-  Gift,
-  History,
-  MailWarning,
-  Settings,
-  Sparkles,
-  UserPlus,
-} from 'lucide-react-native';
+import { CheckCircle2, ChevronRight, Edit2, MailWarning, UserPlus } from 'lucide-react-native';
 import { AppAvatar } from '../../components/common/AppAvatar';
 import { AppButton } from '../../components/common/AppButton';
 import { AppIconButton } from '../../components/common/AppIconButton';
@@ -33,7 +20,7 @@ import { toast } from '../../store/toastStore';
 
 export const UserProfileScreen: React.FC = () => {
   const c = useTheme();
-  const { nav } = useAppNav();
+  const { nav, goTab } = useAppNav();
   const me = useMe();
   const streaks = useStreaks();
   const refreshUser = useAuthStore((s) => s.refreshUser);
@@ -94,13 +81,12 @@ export const UserProfileScreen: React.FC = () => {
   const guest = user.accountType === 'GUEST';
 
   const menuItems = [
-    { key: 'stats', label: 'Statistics', icon: BarChart3, onPress: () => nav.navigate('game_statistics') },
-    { key: 'ach', label: 'Achievements', icon: Award, onPress: () => nav.navigate('achievements') },
-    { key: 'rewards', label: 'Daily Rewards', icon: Gift, onPress: () => nav.navigate('daily_rewards') },
-    { key: 'shop', label: 'Emblems & Shop', icon: Sparkles, onPress: () => nav.navigate('coin_shop') },
-    { key: 'leagues', label: 'Ranked Leagues', icon: Crown, onPress: () => nav.navigate('league_tiers') },
-    { key: 'history', label: 'Match History', icon: History, onPress: () => nav.navigate('offline_history') },
-    { key: 'settings', label: 'Settings', icon: Settings, onPress: () => nav.navigate('settings') },
+    { key: 'stats', label: 'Statistics', onPress: () => nav.navigate('game_statistics') },
+    { key: 'ach', label: 'Achievements', onPress: () => nav.navigate('achievements') },
+    { key: 'rewards', label: 'Daily Rewards', onPress: () => nav.navigate('daily_rewards') },
+    { key: 'friends', label: 'Friends', onPress: () => goTab('FriendsTab') },
+    { key: 'theme', label: 'Theme', onPress: () => nav.navigate('theme_selection') },
+    { key: 'settings', label: 'Settings', onPress: () => nav.navigate('settings') },
   ];
 
   return (
@@ -209,21 +195,15 @@ export const UserProfileScreen: React.FC = () => {
         <View style={[styles.groupCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           {menuItems.map((item, index) => {
             const isLast = index === menuItems.length - 1;
-            const Icon = item.icon;
 
             return (
               <React.Fragment key={item.key}>
                 <Pressy
                   accessibilityLabel={item.label}
                   onPress={item.onPress}
-                  style={[styles.menuRow, { minHeight: isTall ? 48 : 42 }]}
+                  style={[styles.menuRow, { minHeight: isTall ? 44 : 36 }]}
                 >
-                  <View style={styles.menuLeft}>
-                    <Icon size={16} color={c.textSecondary} />
-                    <Text style={[styles.menuLabel, { color: c.text, fontSize: isTall ? 13.5 : 12.5 }]}>
-                      {item.label}
-                    </Text>
-                  </View>
+                  <Text style={[styles.menuLabel, { color: c.text, fontSize: isTall ? 13 : 12 }]}>{item.label}</Text>
                   <ChevronRight size={14} color="#8E939E" />
                 </Pressy>
                 {!isLast ? <View style={[styles.divider, { backgroundColor: c.border }]} /> : null}
@@ -309,8 +289,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
   menuLeft: {
     flexDirection: 'row',
@@ -322,6 +302,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 40,
+    marginLeft: 0,
   },
 });

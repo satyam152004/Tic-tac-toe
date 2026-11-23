@@ -1,51 +1,118 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
-import { BoardCell, GameBoard } from '../../components/game/GameBoard';
-import { fonts, type } from '../../design-system/typography';
+import { AppLoader } from '../../components/feedback/AppLoader';
+import { ErrorState } from '../../components/feedback/StateViews';
+import { GameBoard } from '../../components/game/GameBoard';
+import { fonts } from '../../design-system/typography';
+import { usePublicProfile } from '../../hooks/queries';
+import { formatClock, turnDeadlineMs, useCountdown } from '../../hooks/useOnlineGame';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
+import { friendlyMessage } from '../../services/api/errors';
+import type { CheerKind, Game, PlayerCard, SpectateSnapshot } from '../../services/api/types';
+import { gameSocket } from '../../services/socket/gameSocket';
+import { socketClient } from '../../services/socket/socketClient';
 import { toast } from '../../store/toastStore';
 
-const SPECTATE_FRAMES: BoardCell[][] = [
-  ['X', '', '', '', 'O', '', '', '', ''],
-  ['X', 'O', '', '', 'O', '', 'X', '', ''],
-  ['X', 'O', '', 'O', 'X', '', 'X', '', ''],
-  ['X', 'O', 'O', 'O', 'X', '', 'X', '', ''],
+type Cards = SpectateSnapshot['players'];
+
+const CHEERS: Array<{ kind: CheerKind; emoji: string; label: string }> = [
+  { kind: 'clap', emoji: '👏', label: 'applause' },
+  { kind: 'fire', emoji: '🔥', label: 'fire' },
+  { kind: 'wow', emoji: '😮', label: 'wow' },
 ];
 
+const initials = (name: string) => name.slice(0, 2).toUpperCase();
+
+/** Read-only live view of a friend's online game (server `game:spectate`). */
 export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = ({ route }) => {
-  const { friendName } = route.params;
+  const { gameId, friendName } = route.params;
   const c = useTheme();
   const { back } = useAppNav();
-  const [frameIdx, setFrameIdx] = useState(2);
-  const [seconds, setSeconds] = useState(19);
-  const [cheers, setCheers] = useState({ clap: 12, fire: 8, wow: 4 });
+  const [game, setGame] = useState<Game | null>(null);
+  const [cards, setCards] = useState<Cards>([]);
+  const [viewers, setViewers] = useState(0);
+  const [error, setError] = useState<unknown>(null);
+  const [cheers, setCheers] = useState<Record<CheerKind, number>>({ clap: 0, fire: 0, wow: 0 });
+  const receivedAt = useRef(Date.now());
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setSeconds((s) => {
-        if (s <= 1) {
-          setFrameIdx((f) => (f + 1) % SPECTATE_FRAMES.length);
-          return 24;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
+  const apply = useCallback((g: Game) => {
+    receivedAt.current = Date.now();
+    setGame(g);
   }, []);
 
-  const board = SPECTATE_FRAMES[frameIdx] ?? SPECTATE_FRAMES[0]!;
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      await socketClient.whenReady();
+      const snap = await gameSocket.spectate(gameId);
+      setCards(snap.players);
+      setViewers(snap.spectators);
+      apply(snap.game);
+    } catch (e) {
+      setError(e);
+    }
+  }, [gameId, apply]);
 
-  const cheer = (key: 'clap' | 'fire' | 'wow', label: string) => {
-    setCheers((prev) => ({ ...prev, [key]: prev[key] + 1 }));
-    toast.info('Reaction sent', `Cheered ${label} in live room`);
+  useEffect(() => {
+    void load();
+    const offs = [
+      socketClient.on('game:updated', (p) => p.game.id === gameId && apply(p.game)),
+      socketClient.on('game:finished', (p) => p.game.id === gameId && apply(p.game)),
+      socketClient.on('game:draw', (p) => p.game.id === gameId && apply(p.game)),
+      socketClient.on('game:spectators', (p) => p.gameId === gameId && setViewers(p.count)),
+      socketClient.on('game:cheer', (p) => p.gameId === gameId && setCheers((prev) => ({ ...prev, [p.kind]: prev[p.kind] + 1 }))),
+      // After a reconnect the server forgot our spectate channel: join again.
+      socketClient.on('session:ready', () => void load()),
+    ];
+    return () => {
+      offs.forEach((off) => off());
+      gameSocket.unspectate(gameId).catch(() => undefined);
+    };
+  }, [gameId, apply, load]);
+
+  const live = game?.status === 'IN_PROGRESS';
+  const secondsLeft = useCountdown(turnDeadlineMs(game, receivedAt.current));
+
+  const cardOf = (mark: 'X' | 'O') => cards.find((p) => p.mark === mark);
+  const turnMark = game?.currentTurn ?? 'X';
+  const idleMark = turnMark === 'X' ? 'O' : 'X';
+  const mover = cardOf(turnMark);
+  const waiter = cardOf(idleMark);
+  const moverProfile = usePublicProfile(mover?.user?.id ?? '');
+  const waiterProfile = usePublicProfile(waiter?.user?.id ?? '');
+
+  const nameOf = (p: Cards[number] | undefined, fallback: string) => p?.user?.displayName ?? (p?.isAI ? 'AI' : fallback);
+  const total = game ? game.boardSize * game.boardSize : 9;
+  const pct = game ? Math.min(100, Math.round((game.moveCount / total) * 100)) : 0;
+
+  const cheer = async (kind: CheerKind) => {
+    try {
+      await gameSocket.cheer(gameId, kind);
+    } catch (e) {
+      toast.error('Could not send reaction', friendlyMessage(e));
+    }
   };
 
+  const chip = (card: PlayerCard | null | undefined, bg: string) => (
+    <View style={[styles.avatar, { backgroundColor: bg }]}>
+      <Text style={styles.avatarText}>{initials(card?.displayName ?? '?')}</Text>
+    </View>
+  );
+
+  if (error || !game) {
+    return (
+      <Screen title="Live Spectate" onBack={back} testID="spectate-match-screen">
+        {error ? <ErrorState message={friendlyMessage(error)} onRetry={() => void load()} /> : <AppLoader label={`Joining ${friendName ?? 'match'}...`} />}
+      </Screen>
+    );
+  }
+
+  const ended = !live;
   return (
     <Screen
       title="Live Spectate"
@@ -54,79 +121,64 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
       scroll={false}
       padded={false}
       rightAction={
-        <View style={styles.liveBadge}>
-          <Text style={styles.liveBadgeText}>LIVE • 18</Text>
+        <View style={[styles.liveBadge, ended && { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
+          <Text style={[styles.liveBadgeText, ended && { color: c.textSecondary }]}>{ended ? 'ENDED' : `LIVE • ${viewers}`}</Text>
         </View>
       }
       footer={
         <View style={styles.footer}>
-          <AppButton
-            testID="spectate-leave"
-            title="Leave Spectate"
-            variant="secondary"
-            fullWidth
-            onPress={back}
-          />
+          <AppButton testID="spectate-leave" title="Leave Spectate" variant="secondary" fullWidth onPress={back} />
         </View>
       }
     >
       <View style={styles.content}>
-        {/* Progress Bar */}
         <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
-          <View style={[styles.fill, { width: '63%', backgroundColor: c.accent }]} />
+          <View style={[styles.fill, { width: `${pct}%`, backgroundColor: c.accent }]} />
         </View>
 
-        {/* Live Player Bar */}
         <View style={[styles.playerCard, { backgroundColor: c.bgCard, borderColor: c.accent }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={[styles.avatar, { backgroundColor: c.accent }]}>
-              <Text style={styles.avatarText}>MR</Text>
-            </View>
+            {chip(mover?.user, c.accent)}
             <View>
               <Text style={[styles.name, { color: c.text }]}>
-                {friendName ?? 'Meera Rao'} (X) • Thinking
+                {nameOf(mover, friendName ?? 'Player')} ({turnMark}){ended ? '' : ' • Thinking'}
               </Text>
               <Text style={[styles.sub, { color: c.textSecondary }]}>
-                1,790 ELO • Move 6 of 9
+                {moverProfile.data ? `${moverProfile.data.stats.points.toLocaleString()} ELO • ` : ''}Move {Math.min(game.moveCount + (ended ? 0 : 1), total)} of {total}
               </Text>
             </View>
           </View>
-          <Text style={styles.timer}>00:{String(seconds).padStart(2, '0')}</Text>
+          <Text style={styles.timer}>{secondsLeft !== null && !ended ? formatClock(secondsLeft) : '--:--'}</Text>
         </View>
 
-        {/* Board */}
         <View style={styles.boardWrap}>
-          <GameBoard board={board} size={3} disabled maxSize={260} />
+          <GameBoard board={game.board} size={game.boardSize} winningLine={game.result?.line ?? null} disabled maxSize={260} />
         </View>
 
-        {/* Cheers Row */}
+        <View style={[styles.playerCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {chip(waiter?.user, '#141518')}
+            <Text style={[styles.name, { color: c.text }]}>
+              {nameOf(waiter, 'Opponent')} ({idleMark})
+            </Text>
+          </View>
+          {waiterProfile.data ? <Text style={[styles.sub, { color: c.textSecondary }]}>{waiterProfile.data.stats.points.toLocaleString()} ELO</Text> : null}
+        </View>
+
         <View style={styles.cheersRow}>
-          <Pressy
-            testID="cheer-clap"
-            accessibilityLabel="Send applause"
-            onPress={() => cheer('clap', 'Applause')}
-            style={[styles.cheerBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}
-          >
-            <Text style={[styles.cheerText, { color: c.text }]}>👏 {cheers.clap}</Text>
-          </Pressy>
-
-          <Pressy
-            testID="cheer-fire"
-            accessibilityLabel="Send fire"
-            onPress={() => cheer('fire', 'Fire')}
-            style={[styles.cheerBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}
-          >
-            <Text style={[styles.cheerText, { color: c.text }]}>🔥 {cheers.fire}</Text>
-          </Pressy>
-
-          <Pressy
-            testID="cheer-wow"
-            accessibilityLabel="Send wow"
-            onPress={() => cheer('wow', 'Wow')}
-            style={[styles.cheerBtn, { backgroundColor: '#EFF4FF', borderColor: c.accent }]}
-          >
-            <Text style={[styles.cheerText, { color: c.accent }]}>😮 {cheers.wow}</Text>
-          </Pressy>
+          {CHEERS.map((ch) => (
+            <Pressy
+              key={ch.kind}
+              testID={`cheer-${ch.kind}`}
+              accessibilityLabel={`Send ${ch.label}`}
+              onPress={() => void cheer(ch.kind)}
+              style={[styles.cheerBtn, ch.kind === 'wow' ? { backgroundColor: '#EFF4FF', borderColor: c.accent } : { backgroundColor: c.bgCard, borderColor: c.border }]}
+            >
+              <Text style={[styles.cheerText, { color: ch.kind === 'wow' ? c.accent : c.text }]}>
+                {ch.emoji} {cheers[ch.kind]}
+              </Text>
+            </Pressy>
+          ))}
         </View>
       </View>
     </Screen>

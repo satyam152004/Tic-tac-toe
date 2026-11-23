@@ -1,10 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Calendar, ChevronLeft, ChevronRight, Play, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { AppAvatar } from '../../components/common/AppAvatar';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
-import { AppIconButton } from '../../components/common/AppIconButton';
 import { AppModal, ConfirmDialog } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
@@ -12,7 +10,6 @@ import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
 import { BoardCell, GameBoard } from '../../components/game/GameBoard';
 import { fonts } from '../../design-system/typography';
-import { withAlpha } from '../../design-system/colors';
 import { Cell, evaluate } from '../../game-engine';
 import { useTheme } from '../../hooks/useTheme';
 import { RootScreenProps } from '../../navigation/types';
@@ -21,12 +18,22 @@ import { StoredMatch, localGameStorage } from '../../services/storage/localGameS
 import { useLocalGameStore } from '../../store/localGameStore';
 import { formatDurationMs, formatShortDate } from '../../utils/format';
 
+const DIFF_LABEL: Record<string, string> = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard', EXPERT: 'Expert', IMPOSSIBLE: 'Unbeatable' };
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toDateString() === new Date().toDateString() ? 'Today' : formatShortDate(iso);
+}
+
 export interface MatchView {
   opponent: string;
   avatar: string | undefined;
   mode: string;
   result: 'win' | 'loss' | 'draw' | 'played';
   label: string;
+  /** "AI Hard • 3×3" / "Pass & Play • 4×4" */
+  title: string;
 }
 
 /** Presentation helper: human perspective for VS_AI, winner name for two-player games. */
@@ -40,6 +47,7 @@ export function describeMatch(m: StoredMatch): MatchView {
       mode: `vs AI${r.difficulty ? ` · ${r.difficulty[0]}${r.difficulty.slice(1).toLowerCase()}` : ''}`,
       result,
       label: result === 'win' ? 'Victory' : result === 'loss' ? 'Defeat' : 'Draw',
+      title: `AI ${r.difficulty ? DIFF_LABEL[r.difficulty] ?? r.difficulty : ''} • ${r.config.size}×${r.config.size}`.replace('AI  •', 'AI •'),
     };
   }
   const winnerName = r.result === 'X' ? m.p1Name : r.result === 'O' ? m.p2Name : null;
@@ -49,6 +57,7 @@ export function describeMatch(m: StoredMatch): MatchView {
     mode: 'Pass & Play',
     result: winnerName ? 'played' : 'draw',
     label: winnerName ? `${winnerName} won` : 'Draw',
+    title: `Pass & Play • ${r.config.size}×${r.config.size}`,
   };
 }
 
@@ -130,9 +139,6 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
   const [replaying, setReplaying] = useState<StoredMatch | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const { height: screenH } = useWindowDimensions();
-  const isTall = screenH >= 780;
-
   const load = useCallback(async () => {
     try {
       setError(false);
@@ -183,19 +189,15 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
   return (
     <Screen
       title="Match History"
-      subtitle="Offline & AI rounds on this device"
       onBack={back}
       scroll={false}
       padded={false}
       testID="offline-history"
       rightAction={
         items && items.length > 0 ? (
-          <AppIconButton
-            testID="history-clear"
-            label="Clear all history"
-            icon={<Trash2 size={16} color={c.dangerText} />}
-            onPress={() => setConfirmClear(true)}
-          />
+          <Pressy testID="history-clear" accessibilityLabel="Clear all history" onPress={() => setConfirmClear(true)} hitSlop={10}>
+            <Text style={[styles.clearText, { color: c.dangerText }]}>Clear</Text>
+          </Pressy>
         ) : undefined
       }
     >
@@ -221,8 +223,8 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: active ? '#1D4ED8' : c.bgCard,
-                    borderColor: active ? '#1D4ED8' : c.border,
+                    backgroundColor: active ? c.accentFill : c.bgCard,
+                    borderColor: active ? c.accentFill : c.border,
                   },
                 ]}
               >
@@ -250,7 +252,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
         <FlatList
           data={filteredItems}
           keyExtractor={(m) => String(m.id)}
-          contentContainerStyle={[styles.pad, { gap: isTall ? 12 : 10, flexGrow: 1 }]}
+          contentContainerStyle={[styles.pad, { flexGrow: 1 }]}
           ListEmptyComponent={
             <EmptyState
               title="No Matches Played Yet"
@@ -259,57 +261,52 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
               onAction={() => goTab('PlayTab')}
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const v = describeMatch(item);
             const isWin = v.result === 'win' || v.result === 'played';
             const isLoss = v.result === 'loss';
-            const badgeBg = isWin ? '#F0FDF4' : isLoss ? '#FEF2F2' : '#F1F1EE';
-            const badgeBorder = isWin ? '#BBF7D0' : isLoss ? '#FECACA' : '#E4E4DF';
-            const badgeColor = isWin ? '#15803D' : isLoss ? '#DC2626' : '#5C606A';
+            const badge = isWin ? 'W' : isLoss ? 'L' : 'D';
+            const badgeBg = isWin ? '#F0FDF4' : isLoss ? '#FEF2F2' : c.bgSecondary;
+            const badgeColor = isWin ? '#15803D' : isLoss ? '#B91C1C' : c.textSecondary;
+            const first = index === 0;
+            const last = index === filteredItems.length - 1;
 
             return (
-              <View
+              <Pressy
                 testID={`history-row-${item.id}`}
+                accessibilityLabel={`${v.label}, ${v.title}. Replay match`}
+                onPress={() => setReplaying(item)}
+                scaleTo={0.995}
                 style={[
-                  styles.matchCard,
+                  styles.row,
                   {
-                    padding: isTall ? 14 : 11,
-                    borderRadius: isTall ? 14 : 12,
                     backgroundColor: c.bgCard,
                     borderColor: c.border,
+                    borderTopWidth: 1,
+                    borderBottomWidth: last ? 1 : 0,
+                    borderTopLeftRadius: first ? 14 : 0,
+                    borderTopRightRadius: first ? 14 : 0,
+                    borderBottomLeftRadius: last ? 14 : 0,
+                    borderBottomRightRadius: last ? 14 : 0,
                   },
                 ]}
               >
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardLeft}>
-                    <View style={[styles.outcomeBadge, { backgroundColor: badgeBg, borderColor: badgeBorder }]}>
-                      <Text style={[styles.outcomeText, { color: badgeColor }]}>{v.label}</Text>
-                    </View>
-                    <Text numberOfLines={1} style={[styles.opponentName, { color: c.text }]}>
-                      {v.opponent}
+                <View style={styles.cardLeft}>
+                  <View style={[styles.badge, { backgroundColor: badgeBg }]}>
+                    <Text style={[styles.badgeText, { color: badgeColor }]}>{badge}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={[styles.opponentName, { color: c.text }]}>{v.title}</Text>
+                    <Text numberOfLines={1} style={[styles.metaText, { color: '#8E939E' }]}>
+                      {item.record.moves.length} moves • {dayLabel(item.record.playedAt)}
                     </Text>
                   </View>
-
-                  {/* Replay Button */}
-                  <Pressy
-                    testID={`history-replay-${item.id}`}
-                    accessibilityLabel="Replay match"
-                    onPress={() => setReplaying(item)}
-                    style={[styles.replayBtn, { backgroundColor: withAlpha(c.accent, 0.12) }]}
-                  >
-                    <Play size={14} color={c.accent} fill={c.accent} />
-                  </Pressy>
                 </View>
-
-                <View style={styles.cardFooter}>
-                  <Text style={[styles.metaText, { color: c.textSecondary }]}>
-                    {v.mode} · {item.record.config.size}×{item.record.config.size} Grid · {item.record.moves.length} moves
-                  </Text>
-                  <Text style={[styles.metaText, { color: c.textSecondary }]}>
-                    {formatDurationMs(item.record.durationMs)}
-                  </Text>
+                <View style={styles.replayBtn}>
+                  <Text style={[styles.replayText, { color: c.accent }]}>Replay</Text>
+                  <ChevronRight size={12} color={c.accent} />
                 </View>
-              </View>
+              </Pressy>
             );
           }}
         />
@@ -333,38 +330,36 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
 const styles = StyleSheet.create({
   pad: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 0,
     paddingBottom: 24,
   },
   filterBar: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingTop: 8,
+    paddingBottom: 14,
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
   filterPillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.body.semibold,
   },
-  matchCard: {
-    borderWidth: 1,
-    gap: 10,
-    shadowColor: '#000000',
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  cardHeader: {
+  row: {
+    minHeight: 38,
+    paddingVertical: 10,
+    paddingHorizontal: 13,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   cardLeft: {
     flexDirection: 'row',
@@ -372,35 +367,36 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1,
   },
-  outcomeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  outcomeText: {
-    fontSize: 10.5,
-    fontFamily: fonts.body.semibold,
-  },
-  opponentName: {
-    fontSize: 13.5,
-    fontFamily: fonts.body.semibold,
-    flex: 1,
-  },
-  replayBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  badge: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardFooter: {
+  badgeText: {
+    fontSize: 11,
+    fontFamily: fonts.body.semibold,
+  },
+  opponentName: {
+    fontSize: 12.5,
+    fontFamily: fonts.body.semibold,
+  },
+  replayBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 4,
+  },
+  replayText: {
+    fontSize: 11,
+    fontFamily: fonts.body.semibold,
+  },
+  clearText: {
+    fontSize: 11,
+    fontFamily: fonts.body.semibold,
   },
   metaText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: fonts.body.regular,
   },
   replaySubtitle: {

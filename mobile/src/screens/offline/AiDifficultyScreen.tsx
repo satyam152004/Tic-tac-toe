@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
+import { StyleSheet, Text, View } from 'react-native';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { fonts } from '../../design-system/typography';
@@ -25,12 +25,12 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
   const initial = useLocalGameStore.getState().setup;
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
 
-  const { height: screenH } = useWindowDimensions();
-  const isTall = screenH >= 780;
-
-  const next = () => {
-    useLocalGameStore.getState().configure({ mode: 'VS_AI', difficulty });
-    nav.navigate('board_selection', { mode: 'VS_AI' });
+  const start = () => {
+    const store = useLocalGameStore.getState();
+    // Board size comes from the saved setup (3x3 by default) and can be switched on the board itself.
+    store.configure({ mode: 'VS_AI', difficulty, winLength: undefined });
+    store.start();
+    nav.navigate('offline_board');
   };
 
   return (
@@ -39,12 +39,11 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
       onBack={back}
       testID="ai-difficulty"
       footer={
-        <AppButton
+        <ActionButton
           testID="ai-difficulty-continue"
           fullWidth
-          size={isTall ? 'lg' : 'md'}
-          title="Choose Board"
-          onPress={next}
+          title="Start Game"
+          onPress={start}
         />
       }
     >
@@ -62,8 +61,7 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
                 style={[
                   styles.tierRow,
                   {
-                    paddingVertical: isTall ? 14 : 11,
-                    backgroundColor: selected ? c.bgElevated : 'transparent',
+                    backgroundColor: selected ? withAlpha(c.bgElevated, 0.65) : 'transparent',
                   },
                 ]}
               >
@@ -71,7 +69,7 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
                   <Text
                     style={[
                       styles.tierTitle,
-                      { color: selected ? c.accent : c.text, fontSize: isTall ? 13.5 : 12.5 },
+                      { color: selected ? c.accent : c.text },
                     ]}
                   >
                     {lvl.title}
@@ -79,7 +77,7 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
                   <Text
                     style={[
                       styles.tierNote,
-                      { color: c.textSecondary, fontSize: isTall ? 11 : 10 },
+                      { color: c.textSecondary },
                     ]}
                   >
                     {lvl.note}
@@ -90,27 +88,11 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
                 <View
                   style={[
                     styles.radioIndicator,
-                    {
-                      width: isTall ? 20 : 18,
-                      height: isTall ? 20 : 18,
-                      borderRadius: isTall ? 10 : 9,
-                      borderColor: selected ? c.accent : '#CFCFC8',
-                      borderWidth: 1.5,
-                      backgroundColor: '#FFFFFF',
-                    },
+                    selected
+                      ? { borderColor: c.accent, borderWidth: 4.5, backgroundColor: c.bgCard }
+                      : { borderColor: '#CFCFC8', borderWidth: 1 },
                   ]}
-                >
-                  {selected ? (
-                    <View
-                      style={{
-                        width: isTall ? 10 : 9,
-                        height: isTall ? 10 : 9,
-                        borderRadius: isTall ? 5 : 4.5,
-                        backgroundColor: c.accent,
-                      }}
-                    />
-                  ) : null}
-                </View>
+                />
               </Pressy>
 
               {!isLast ? (
@@ -126,7 +108,7 @@ export const AiDifficultyScreen: React.FC<RootScreenProps<'ai_difficulty'>> = ()
 
 const styles = StyleSheet.create({
   groupCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -134,25 +116,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    minHeight: 38,
   },
   textCol: {
     flex: 1,
-    gap: 2,
-    paddingRight: 10,
+    gap: 0,
+    paddingRight: 8,
   },
   tierTitle: {
     fontFamily: fonts.body.semibold,
+    fontSize: 12,
   },
   tierNote: {
     fontFamily: fonts.body.regular,
+    fontSize: 10,
   },
   radioIndicator: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginHorizontal: 14,
+    marginHorizontal: 0,
   },
 });

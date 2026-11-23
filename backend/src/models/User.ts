@@ -82,6 +82,8 @@ const userSchema = new Schema(
       achievements: { type: Boolean, default: true },
       account: { type: Boolean, default: true },
     },
+    // Privacy: whether accepted friends may watch this player's live online games.
+    privacy: { allowSpectating: { type: Boolean, default: true } },
     stats: { type: statsSchema, default: () => ({}) },
     online: { type: Boolean, default: false },
     lastActiveAt: { type: Date, default: Date.now },

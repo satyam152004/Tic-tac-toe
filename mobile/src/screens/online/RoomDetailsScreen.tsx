@@ -1,19 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
-import { fonts, type } from '../../design-system/typography';
+import { ActionButton } from '../../components/game/ActionButton';
+import { fonts } from '../../design-system/typography';
 import { useBackGuard } from '../../hooks/useBackGuard';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage } from '../../services/api/errors';
-import { leaveRoom } from '../../services/onlineActions';
+import { leaveRoom, setReady, startRoomGame } from '../../services/onlineActions';
 import { useAuthStore } from '../../store/authStore';
-import { isOfflineError, RoomEnded, useRoom } from './shared';
+import { toast } from '../../store/toastStore';
+import { isOfflineError, RoomEnded, timerLabel, useRoom } from './shared';
 
 export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ route }) => {
   const c = useTheme();
@@ -21,13 +21,15 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
   const { nav, goHome } = useAppNav();
   const meId = useAuthStore((s) => s.user?.id);
   const { room, ended, loading, error, retry } = useRoom(roomId);
+  const [busy, setBusy] = useState(false);
   const moved = useRef(false);
 
+  const isHost = !!room && room.hostId === meId;
   const live = !!room && !ended && !room.gameId;
   const guard = useBackGuard({
     when: live,
-    title: 'Close this room?',
-    message: 'Leaving closes the room and your invitation code stops working.',
+    title: isHost ? 'Close this room?' : 'Leave room?',
+    message: isHost ? 'Leaving closes the room and your invitation code stops working.' : 'You will leave this room.',
     confirmLabel: 'Leave room',
     onLeave: () => void leaveRoom(roomId).catch(() => undefined),
   });
@@ -38,24 +40,45 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
       moved.current = true;
       guard.allow();
       nav.replace('online_board', { gameId: room.gameId });
-    } else if (meId && room.hostId !== meId) {
+    } else if (!room.guest && isHost) {
+      // The opponent left: back to waiting for a new one.
       moved.current = true;
       guard.allow();
       nav.replace('waiting_room', { roomId });
     }
-  }, [room, meId, guard, nav, roomId]);
+  }, [room, isHost, guard, nav, roomId]);
 
   const toLobby = () => {
     guard.allow();
     nav.replace('online_lobby');
   };
 
+  const act = async () => {
+    if (!room || busy) return;
+    setBusy(true);
+    try {
+      if (isHost) {
+        const game = await startRoomGame(room.id);
+        moved.current = true;
+        guard.allow();
+        nav.replace('online_board', { gameId: game.id });
+        return;
+      }
+      await setReady(room.id, !room.guestReady);
+    } catch (e) {
+      toast.error(isHost ? 'Could not start match' : 'Could not update', friendlyMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (ended) return <Screen title="Room Details" onBack={toLobby}><RoomEnded reason={ended} onLeave={toLobby} /></Screen>;
   if (error && !room) return <Screen title="Room Details" onBack={toLobby}><ErrorState offline={isOfflineError(error)} message={friendlyMessage(error)} onRetry={retry} /></Screen>;
   if (loading || !room) return <Screen title="Room Details" onBack={toLobby}><AppLoader label="Loading room..." /></Screen>;
 
+  const ext = room as typeof room & { isPublic?: boolean; turnTimeoutSec?: number };
   const hostName = room.host?.displayName ?? 'Host';
-  const guestName = room.guest?.displayName ?? 'Waiting for Opponent';
+  const guestName = room.guest?.displayName ?? '';
   const codeDisplay = room.code.length >= 3 ? `${room.code.slice(0, 3)}-${room.code.slice(3)}` : room.code;
 
   return (
@@ -63,117 +86,75 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
       title="Room Details"
       onBack={() => (live ? nav.goBack() : goHome())}
       footer={
-        <AppButton
-          testID="open-waiting-room"
-          title="Ready to Start"
-          fullWidth
-          onPress={() => {
-            guard.allow();
-            nav.replace('waiting_room', { roomId });
-          }}
-        />
+        isHost ? (
+          <ActionButton testID="start-match" title="Ready to Start" fullWidth loading={busy} disabled={!room.guest || !room.guestReady} onPress={act} />
+        ) : (
+          <ActionButton
+            testID="ready-toggle"
+            title={room.guestReady ? 'Not Ready' : 'Ready to Start'}
+            variant={room.guestReady ? 'secondary' : 'primary'}
+            fullWidth
+            loading={busy}
+            onPress={act}
+          />
+        )
       }
     >
       <View style={{ gap: 14 }}>
-        {/* Player Slots Group */}
         <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={[styles.row, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={[styles.row, { borderBottomWidth: 1, borderBottomColor: c.border }]}>
+            <View style={styles.left}>
               <View style={[styles.avatar, { backgroundColor: c.accent }]}>
                 <Text style={styles.avatarText}>{hostName.slice(0, 2).toUpperCase()}</Text>
               </View>
-              <Text style={[styles.playerName, { color: c.text }]}>{hostName} (Host)</Text>
+              <Text numberOfLines={1} style={[styles.playerName, { color: c.text }]}>{hostName} (Host)</Text>
             </View>
             <View style={[styles.badge, { backgroundColor: '#F0FDF4' }]}>
               <Text style={[styles.badgeText, { color: '#15803D' }]}>Ready</Text>
             </View>
           </View>
-
           <View style={styles.row}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={styles.left}>
               <View style={[styles.avatar, { backgroundColor: '#141518' }]}>
-                <Text style={styles.avatarText}>{guestName.slice(0, 2).toUpperCase()}</Text>
+                <Text style={styles.avatarText}>{(guestName || '?').slice(0, 2).toUpperCase()}</Text>
               </View>
-              <Text style={[styles.playerName, { color: room.guest ? c.text : c.textSecondary }]}>
-                {guestName} {room.guest ? '(Opponent)' : ''}
+              <Text numberOfLines={1} style={[styles.playerName, { color: room.guest ? c.text : '#8E939E' }]}>
+                {room.guest ? `${guestName} (Opponent)` : 'Waiting for opponent...'}
               </Text>
             </View>
-            <View style={[styles.badge, { backgroundColor: room.guestReady ? '#F0FDF4' : '#EFF4FF' }]}>
+            <View testID="guest-status" style={[styles.badge, { backgroundColor: room.guestReady ? '#F0FDF4' : '#EFF4FF' }]}>
               <Text style={[styles.badgeText, { color: room.guestReady ? '#15803D' : c.accent }]}>
-                {room.guestReady ? 'Ready' : room.guest ? 'Connecting' : 'Waiting'}
+                {room.guestReady ? 'Ready' : room.guest ? 'Not ready' : 'Waiting'}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Rules Summary Card */}
-        <AppCard padding="md" style={styles.rulesCard}>
-          <Text style={[styles.rulesTag, { color: c.textSecondary }]}>RULES SUMMARY</Text>
+        <View style={[styles.rules, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <Text style={[styles.rulesTag, { color: '#8E939E' }]}>RULES SUMMARY</Text>
           <Text style={[styles.rulesMain, { color: c.text }]}>
-            {room.boardSize}×{room.boardSize} • 30s/turn • Ranked
+            {room.boardSize}×{room.boardSize} • {timerLabel(ext.turnTimeoutSec ?? 60)}/turn • {ext.isPublic ? 'Public' : 'Private'}
           </Text>
           <Text style={[styles.rulesSub, { color: c.textSecondary }]}>
-            Room {codeDisplay} • +18 / -14 ELO stakes
+            Room {codeDisplay} • {room.winLength} in a row to win
           </Text>
-        </AppCard>
+        </View>
       </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  group: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 11,
-    fontFamily: fonts.mono.semibold,
-    color: '#FFFFFF',
-  },
-  playerName: {
-    fontSize: 12.5,
-    fontFamily: fonts.body.semibold,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  badgeText: {
-    fontSize: 10.5,
-    fontFamily: fonts.body.semibold,
-  },
-  rulesCard: {
-    gap: 6,
-    padding: 14,
-  },
-  rulesTag: {
-    fontSize: 10,
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
-  },
-  rulesMain: {
-    fontSize: 13.5,
-    fontFamily: fonts.body.semibold,
-  },
-  rulesSub: {
-    fontSize: 11,
-    fontFamily: fonts.mono.medium,
-  },
+  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 13, paddingVertical: 8, gap: 8 },
+  left: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  avatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 10, fontFamily: fonts.body.semibold, color: '#FFFFFF' },
+  playerName: { fontSize: 12.5, fontFamily: fonts.body.semibold, flexShrink: 1 },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  badgeText: { fontSize: 10, fontFamily: fonts.body.semibold },
+  rules: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  rulesTag: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5 },
+  rulesMain: { fontSize: 13, fontFamily: fonts.body.semibold },
+  rulesSub: { fontSize: 11, fontFamily: fonts.body.regular },
 });

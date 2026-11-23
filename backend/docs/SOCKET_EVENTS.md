@@ -43,7 +43,12 @@ All events act for the **authenticated** user only; no user id is ever read from
 | `game:join` | `{ gameId }` | Game state | Confirms presence. When every human player has joined, the game starts (`game:started`). Invited friends accept a `WAITING` friend game with it. `NOT_A_PLAYER`, `GAME_NOT_FOUND` |
 | `game:move` | `{ gameId, position: 0..24, clientMoveId?: string(8-64, [A-Za-z0-9_-]), expectedMoveNumber?: int }` | `{ game, move, aiMove?, duplicate }` | Also emits `game:move-rejected` to the caller on failure. `NOT_YOUR_TURN`, `CELL_OCCUPIED`, `CELL_OUT_OF_RANGE`, `GAME_NOT_ACTIVE`, `MOVE_CONFLICT`, `NOT_A_PLAYER` |
 | `game:forfeit` | `{ gameId }` | Final game state | Forfeits a running game, or cancels one that has not started |
+| `game:offer-draw` _(extra)_ | `{ gameId }` | Game state | Propose a mutual draw (online games, valid 20 s, one open offer). Opponent gets `game:draw-offered`. `DRAW_OFFER_PENDING`, `GAME_NOT_ACTIVE`, `NOT_SUPPORTED` |
+| `game:respond-draw` _(extra)_ | `{ gameId, accept: boolean }` | Game state | Opponent answers: accept ends the game as a draw (`game:draw`), decline emits `game:draw-declined`. `NO_DRAW_OFFER`, `OWN_DRAW_OFFER` |
 | `game:rematch` | `{ gameId }` | `{ status: "REQUESTED"\|"STARTED", game }` | Starts when both players asked. `GAME_NOT_FINISHED` |
+| `game:spectate` _(extra)_ | `{ gameId }` | `{ game, players, spectators }` | Read-only watching of a live online game by an accepted friend of a player who allows spectating (`privacy.allowSpectating`). Joins the `spectate:<gameId>` channel: you then get every `game:*` event the players get. `NOT_A_FRIEND`, `SPECTATING_DISABLED`, `GAME_NOT_LIVE`, `ALREADY_A_PLAYER`, `BLOCKED` |
+| `game:unspectate` _(extra)_ | `{ gameId }` | `{ left: true }` | Stop watching |
+| `game:cheer` _(extra)_ | `{ gameId, kind: "clap"\|"fire"\|"wow" }` | `{ sent: true }` | Spectators only (`NOT_SPECTATING`); broadcast to players and spectators as `game:cheer` |
 | `room:create` | `{ boardSize?, winLength? }` | Room | `ALREADY_IN_ROOM`, `ALREADY_IN_GAME` |
 | `room:join` | `{ code: string(6) }` | Room | `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, `ROOM_FULL`, `BLOCKED` |
 | `room:leave` | `{ roomId }` | Room | Host leaving promotes the guest; leaving a running game forfeits it |
@@ -68,6 +73,10 @@ answered with the original move (`duplicate: true`) and is never applied twice.
 | `game:move-rejected` | `{ gameId, clientMoveId?, position?, code, message, details? }` | To the **sender only**, when a move is refused |
 | `game:finished` | `{ game }` | A player won (`result.reason`: `LINE`, `FORFEIT`, `TIMEOUT`, `DISCONNECT`) |
 | `game:draw` | `{ game }` | Board full without a winner |
+| `game:spectators` | `{ gameId, count }` | Number of friends currently watching changed |
+| `game:cheer` | `{ gameId, kind, userId }` | A spectator sent a reaction |
+| `game:draw-offered` | `{ gameId, by, expiresAt, moveCount }` | The opponent proposes a draw |
+| `game:draw-declined` | `{ gameId, by }` | Your draw offer was declined |
 | `game:rematch-requested` | `{ gameId, requestedBy }` | The opponent asked for a rematch |
 | `game:rematch-accepted` | `{ previousGameId, game }` | Both agreed; `game` is the new `IN_PROGRESS` game with swapped marks |
 | `player:connected` | `{ userId }` | A **friend** came online |

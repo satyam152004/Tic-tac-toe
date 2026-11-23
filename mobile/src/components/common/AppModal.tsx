@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../design-system/radius';
-import { type } from '../../design-system/typography';
+import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { OverlayToast } from '../feedback/AppToast';
 import { AppButton } from './AppButton';
@@ -24,10 +24,11 @@ export const AppModal: React.FC<{
         <Pressable style={[styles.backdrop, { backgroundColor: c.scrim }]} onPress={onClose} accessibilityLabel="Close dialog">
           <Pressable
             onPress={() => undefined}
-            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom, borderRadius: radius.xl }]}
+            style={[styles.sheet, { backgroundColor: c.bgCard, borderColor: c.border, paddingBottom: 20 + insets.bottom }]}
           >
+            <View style={[styles.handle, { backgroundColor: c.border }]} />
             <View style={styles.titleRow}>
-              <Text style={[type.headline, { color: c.text, flex: 1 }]}>{title}</Text>
+              <Text accessibilityRole="header" style={[styles.sheetTitle, { color: c.text }]}>{title}</Text>
               {onClose ? (
                 <Pressy accessibilityLabel="Close" onPress={onClose} style={styles.close}>
                   <X size={18} color={c.textSecondary} />
@@ -61,11 +62,11 @@ export const ConfirmDialog: React.FC<{
       <View style={styles.fill}>
         <View style={[styles.backdrop, { backgroundColor: c.scrim, justifyContent: 'center', padding: 20 }]}>
           <View style={[styles.dialog, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-            <Text style={[type.headline, { color: c.text }]}>{title}</Text>
-            <Text style={[type.body, { color: c.textSecondary, marginTop: 6 }]}>{message}</Text>
+            <Text style={[styles.dialogTitle, { color: c.text }]}>{title}</Text>
+            <Text style={[styles.dialogMessage, { color: c.textSecondary }]}>{message}</Text>
             <View style={styles.actions}>
-              <AppButton title={cancelLabel} variant="outline" size="md" onPress={onCancel} style={{ flex: 1 }} />
-              <AppButton title={confirmLabel} variant={destructive ? 'danger' : 'primary'} size="md" onPress={onConfirm} style={{ flex: 1 }} />
+              <AppButton title={cancelLabel} variant="secondary" size="md" onPress={onCancel} style={styles.dialogBtn} />
+              <AppButton title={confirmLabel} variant={destructive ? 'danger' : 'primary'} size="md" onPress={onConfirm} style={styles.dialogBtn} />
             </View>
           </View>
         </View>
@@ -77,10 +78,15 @@ export const ConfirmDialog: React.FC<{
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  backdrop: { flex: 1, justifyContent: 'flex-end', padding: 12 },
-  sheet: { borderWidth: 1, padding: 20, gap: 12 },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 12 },
+  handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center' },
+  sheetTitle: { flex: 1, fontSize: 15, lineHeight: 20, fontFamily: fonts.body.semibold },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   close: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  dialog: { borderRadius: radius.xl, borderWidth: 1, padding: 20 },
+  dialog: { width: '100%', maxWidth: 288, alignSelf: 'center', borderRadius: 20, borderWidth: 1, padding: 20 },
+  dialogTitle: { fontSize: 17, lineHeight: 22, fontFamily: fonts.body.semibold, letterSpacing: -0.2 },
+  dialogMessage: { fontSize: 12.5, lineHeight: 18, fontFamily: fonts.body.regular, marginTop: 6 },
+  dialogBtn: { flex: 1, minHeight: 40, borderRadius: 12 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
 });

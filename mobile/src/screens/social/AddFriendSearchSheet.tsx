@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { AppInput } from '../../components/common/AppInput';
 import { AppModal } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
 import { fonts, type } from '../../design-system/typography';
 import { useFriendActions } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
+import { userApi } from '../../services/api/userApi';
 import { toast } from '../../store/toastStore';
 import { socialError } from './socialShared';
 
@@ -14,16 +16,25 @@ export interface AddFriendSearchSheetProps {
   onClose: () => void;
 }
 
-const MOCK_RESULTS = [
-  { id: 'neha', init: 'NS', name: 'Neha Singh', meta: '@neha • 1,512 ELO' },
-  { id: 'nikhil', init: 'NP', name: 'Nikhil Patel', meta: '@nikhil • 1,430 ELO' },
-];
-
 export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open, onClose }) => {
   const c = useTheme();
   const actions = useFriendActions();
-  const [query, setQuery] = useState('@neha');
+  const [query, setQuery] = useState('');
+  const [debounced, setDebounced] = useState('');
   const [sentMap, setSentMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query.trim().replace(/^@/, '')), 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const search = useQuery({
+    queryKey: ['users', 'search', debounced],
+    queryFn: () => userApi.search(debounced),
+    enabled: open && debounced.length >= 2,
+    staleTime: 30_000,
+  });
+  const results = debounced.length >= 2 ? (search.data?.items ?? []) : [];
 
   const sendInvite = async (userId: string, name: string) => {
     try {
@@ -31,9 +42,7 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
       setSentMap((s) => ({ ...s, [userId]: true }));
       toast.success('Friend request sent', `Invited ${name}`);
     } catch (e) {
-      // Offline fallback state demonstration
-      setSentMap((s) => ({ ...s, [userId]: true }));
-      toast.info('Friend request sent', `Invited ${name}`);
+      toast.error('Could not send request', socialError(e));
     }
   };
 
@@ -49,12 +58,29 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
           autoCapitalize="none"
           autoCorrect={false}
           labelRight={
-            <Text style={[styles.matchCount, { color: c.accent }]}>2 matches</Text>
+            debounced.length >= 2 && !search.isFetching ? (
+              <Text style={[styles.matchCount, { color: c.accent }]}>
+                {results.length} {results.length === 1 ? 'match' : 'matches'}
+              </Text>
+            ) : search.isFetching ? (
+              <ActivityIndicator size="small" color={c.accent} />
+            ) : null
           }
         />
 
         <View style={[styles.resultsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          {MOCK_RESULTS.map((r, i) => {
+          {results.length === 0 ? (
+            <Text style={[styles.meta, { color: c.textSecondary, padding: 14, textAlign: 'center' }]}>
+              {debounced.length < 2
+                ? 'Type at least 2 characters to search'
+                : search.isError
+                  ? 'Search failed. Check your connection and try again.'
+                  : search.isFetching
+                    ? 'Searching…'
+                    : 'No players found'}
+            </Text>
+          ) : null}
+          {results.map((r, i) => {
             const sent = !!sentMap[r.id];
             return (
               <View
@@ -66,17 +92,17 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[styles.avatar, { backgroundColor: '#F1F1EE' }]}>
-                    <Text style={[styles.avatarText, { color: c.text }]}>{r.init}</Text>
+                    <Text style={[styles.avatarText, { color: c.text }]}>{r.displayName.slice(0, 2).toUpperCase()}</Text>
                   </View>
                   <View>
-                    <Text style={[styles.name, { color: c.text }]}>{r.name}</Text>
-                    <Text style={[styles.meta, { color: c.textSecondary }]}>{r.meta}</Text>
+                    <Text style={[styles.name, { color: c.text }]}>{r.displayName}</Text>
+                    <Text style={[styles.meta, { color: c.textSecondary }]}>@{r.username} • Lv {r.level}</Text>
                   </View>
                 </View>
 
                 <Pressy
                   testID={`send-invite-${r.id}`}
-                  onPress={() => sendInvite(r.id, r.name)}
+                  onPress={() => sendInvite(r.id, r.displayName)}
                   style={[
                     styles.inviteBtn,
                     { backgroundColor: sent ? '#F0FDF4' : c.accent },

@@ -19,6 +19,7 @@ import { registerEvent, socketRate } from './events/register.js';
 
 const gameRef = z.object({ gameId: objectId });
 const moveEvent = gameRef.extend({ position: z.number().int().min(0).max(24), clientMoveId: z.string().min(8).max(64).regex(/^[A-Za-z0-9_-]+$/).optional(), expectedMoveNumber: z.number().int().min(1).max(25).optional() });
+const cheerEvent = gameRef.extend({ kind: z.enum(['clap', 'fire', 'wow']) });
 const roomRef = z.object({ roomId: objectId });
 const readyEvent = roomRef.extend({ ready: z.boolean() });
 
@@ -83,8 +84,31 @@ async function onConnection(io: Server, socket: Socket): Promise<void> {
     s.emit('game:updated', { game, resumed: true });
     return game;
   });
+  // Friends watching a live game (read-only): joins spectate:<id>, receives every game event the players do.
+  const publishSpectators = async (gameId: string) => realtime.emitToGame(gameId, 'game:spectators', { gameId, count: await games.spectatorCount(gameId) });
+  reg('game:spectate', gameRef, async (uid, p, s) => {
+    const snapshot = await games.spectate(uid, p.gameId);
+    await s.join(`spectate:${p.gameId}`);
+    s.data.spectating = [...new Set([...((s.data.spectating as string[] | undefined) ?? []), p.gameId])];
+    const count = await games.spectatorCount(p.gameId);
+    realtime.emitToGame(p.gameId, 'game:spectators', { gameId: p.gameId, count });
+    return { ...snapshot, spectators: count };
+  });
+  reg('game:unspectate', gameRef, async (_uid, p, s) => {
+    await s.leave(`spectate:${p.gameId}`);
+    s.data.spectating = ((s.data.spectating as string[] | undefined) ?? []).filter((id) => id !== p.gameId);
+    await publishSpectators(p.gameId);
+    return { left: true };
+  });
+  reg('game:cheer', cheerEvent, async (uid, p, s) => {
+    if (!s.rooms.has(`spectate:${p.gameId}`)) throw Errors.forbidden('Join the match as a spectator first', 'NOT_SPECTATING');
+    realtime.emitToGame(p.gameId, 'game:cheer', { gameId: p.gameId, kind: p.kind, userId: uid });
+    return { sent: true };
+  });
   reg('game:move', moveEvent, (uid, p) => games.makeMove(uid, p.gameId, p), true);
   reg('game:forfeit', gameRef, (uid, p) => games.forfeit(uid, p.gameId));
+  reg('game:offer-draw', gameRef, (uid, p) => games.offerDraw(uid, p.gameId));
+  reg('game:respond-draw', gameRef.extend({ accept: z.boolean() }), (uid, p) => games.respondDraw(uid, p.gameId, p.accept));
   reg('game:rematch', gameRef, (uid, p) => games.requestRematch(uid, p.gameId));
 
   reg('room:create', sv.roomCreateBody, (uid, p) => rooms.create(uid, p));
@@ -96,6 +120,11 @@ async function onConnection(io: Server, socket: Socket): Promise<void> {
   reg('player:heartbeat', null, async (uid) => {
     await UserModel.updateOne({ _id: uid }, { $set: { online: true, lastActiveAt: new Date() } });
     return { serverTime: new Date().toISOString() };
+  });
+
+  socket.on('disconnecting', () => {
+    // rooms are already being left when `disconnect` fires; refresh the spectator count shortly after.
+    for (const id of (socket.data.spectating as string[] | undefined) ?? []) setTimeout(() => void games.spectatorCount(id).then((count) => realtime.emitToGame(id, 'game:spectators', { gameId: id, count })).catch(() => undefined), 50);
   });
 
   socket.on('disconnect', async () => {

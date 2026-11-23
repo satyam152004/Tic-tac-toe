@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
+import { StyleSheet, Text, View } from 'react-native';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { fonts } from '../../design-system/typography';
@@ -10,15 +10,14 @@ import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { seatsOf, useLocalGameStore } from '../../store/localGameStore';
 
+const AI_LABEL = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard', EXPERT: 'Expert', IMPOSSIBLE: 'Unbeatable' } as const;
+
 export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
   const c = useTheme();
   const { nav, goHome, back } = useAppNav();
   const game = useLocalGameStore((s) => s.game);
   const setup = useLocalGameStore((s) => s.setup);
   const [swapSymbols, setSwapSymbols] = useState(false);
-
-  const { height: screenH } = useWindowDimensions();
-  const isTall = screenH >= 780;
 
   const missing = !game;
   useEffect(() => {
@@ -32,11 +31,24 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
   const p2Mark = p1Mark === 'X' ? 'O' : 'X';
   const nextP1Mark = swapSymbols ? p2Mark : p1Mark;
 
+  const p1Name = seats[p1Mark].name;
+  const p2Name = seats[p2Mark].name;
+  const p1Score = game.scores[p1Mark];
+  const p2Score = game.scores[p2Mark];
+  const aiName = game.difficulty ? `AI ${AI_LABEL[game.difficulty]}` : 'AI';
+
   const startRematch = () => {
     const store = useLocalGameStore.getState();
     if (swapSymbols) {
       store.configure({ p1Mark: nextP1Mark });
       store.start();
+      // New game, same series: carry the running scores over to the swapped marks.
+      const fresh = useLocalGameStore.getState().game;
+      if (fresh) {
+        useLocalGameStore.setState({
+          game: { ...fresh, scores: { ...fresh.scores, [nextP1Mark]: p1Score, [nextP1Mark === 'X' ? 'O' : 'X']: p2Score, draws: game.scores.draws } },
+        });
+      }
     } else {
       store.rematch();
     }
@@ -49,51 +61,38 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
       onBack={back}
       testID="rematch"
       footer={
-        <View style={{ gap: isTall ? 10 : 8 }}>
-          <AppButton
+        <View style={{ gap: 8 }}>
+          <ActionButton
             testID="rematch-again"
             fullWidth
-            size={isTall ? 'lg' : 'md'}
             title="Start Rematch"
             onPress={startRematch}
           />
-          <AppButton
+          <ActionButton
             testID="rematch-home"
             fullWidth
             variant="secondary"
-            size={isTall ? 'lg' : 'md'}
+            compact
             title="Exit to Home"
             onPress={() => {
               useLocalGameStore.getState().quit();
               goHome();
             }}
           />
-          <AppButton
-            testID="rematch-opponent"
-            fullWidth
-            variant="ghost"
-            size="md"
-            title={game.mode === 'VS_AI' ? 'Change Difficulty' : 'Change Opponent'}
-            onPress={() =>
-              game.mode === 'VS_AI'
-                ? nav.navigate('ai_difficulty')
-                : nav.navigate('player_setup', { mode: 'LOCAL_2P' })
-            }
-          />
         </View>
       }
     >
-      <View style={[styles.container, { gap: isTall ? 14 : 12 }]}>
+      <View style={styles.container}>
         {/* Series Score Card */}
         <View style={[styles.seriesCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <Text style={[styles.seriesOverline, { color: c.textSecondary }]}>CURRENT SERIES</Text>
           <View style={styles.scoresRow}>
             <View style={styles.scoreCol}>
               <Text style={[styles.playerName, { color: c.textSecondary }]}>
-                {seats[p1Mark].name} ({p1Mark})
+                {p1Name} ({nextP1Mark})
               </Text>
               <Text testID="series-score" style={[styles.scoreNumber, { color: c.accent }]}>
-                {game.scores[p1Mark]}
+                {p1Score}
               </Text>
             </View>
 
@@ -101,10 +100,10 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
 
             <View style={styles.scoreCol}>
               <Text style={[styles.playerName, { color: c.textSecondary }]}>
-                {seats[p2Mark].name} ({p2Mark})
+                {p2Name} ({swapSymbols ? p1Mark : p2Mark})
               </Text>
               <Text style={[styles.scoreNumber, { color: c.text }]}>
-                {game.scores[p2Mark]}
+                {p2Score}
               </Text>
             </View>
           </View>
@@ -119,16 +118,14 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
             accessibilityLabel="Swap symbols"
             accessibilityState={{ checked: swapSymbols }}
             onPress={() => setSwapSymbols((v) => !v)}
-            style={[styles.groupRow, { paddingVertical: isTall ? 14 : 11 }]}
+            style={styles.groupRow}
           >
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={[styles.rowTitle, { color: c.text, fontSize: isTall ? 13.5 : 12.5 }]}>
+              <Text style={[styles.rowTitle, { color: c.text }]}>
                 Swap Symbols (X ↔ O)
               </Text>
-              <Text style={[styles.rowSub, { color: c.textSecondary, fontSize: isTall ? 11 : 10.5 }]}>
-                {swapSymbols
-                  ? `${seats[p2Mark].name} (X) moves first next`
-                  : `${seats[p1Mark].name} (X) moves first next`}
+              <Text style={[styles.rowSub, { color: c.textSecondary }]}>
+                {`${(nextP1Mark === 'X' ? p1Name : p2Name)} (X) moves first next`}
               </Text>
             </View>
 
@@ -155,12 +152,12 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
           <View style={[styles.divider, { backgroundColor: c.border }]} />
 
           {/* Row 2: Keep Settings */}
-          <View style={[styles.groupRow, { paddingVertical: isTall ? 14 : 11 }]}>
-            <Text style={[styles.rowTitle, { color: c.textSecondary, fontSize: isTall ? 13 : 12 }]}>
+          <View style={styles.groupRow}>
+            <Text style={[styles.rowTitle, { color: c.textSecondary }]}>
               Keep Settings
             </Text>
-            <Text style={[styles.settingsVal, { color: c.text, fontSize: isTall ? 13 : 12 }]}>
-              {game.config.size}×{game.config.size} • {game.mode === 'VS_AI' ? `AI ${game.difficulty ?? 'MEDIUM'}` : 'Pass & Play'}
+            <Text style={[styles.settingsVal, { color: c.text }]}>
+              {game.config.size}×{game.config.size} • {game.mode === 'VS_AI' ? aiName : 'Pass & Play'}
             </Text>
           </View>
         </View>
@@ -171,10 +168,10 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 4,
+    gap: 14,
   },
   seriesCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     padding: 16,
     alignItems: 'center',
@@ -201,8 +198,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   playerName: {
-    fontSize: 12,
-    fontFamily: fonts.body.medium,
+    fontSize: 11.5,
+    fontFamily: fonts.body.semibold,
   },
   scoreNumber: {
     fontSize: 28,
@@ -214,7 +211,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono.semibold,
   },
   groupCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -222,20 +219,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    minHeight: 38,
   },
   rowTitle: {
     fontFamily: fonts.body.semibold,
+    fontSize: 12.5,
   },
   rowSub: {
     fontFamily: fonts.body.regular,
+    fontSize: 10.5,
   },
   settingsVal: {
     fontFamily: fonts.body.semibold,
+    fontSize: 12,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginHorizontal: 14,
+    marginHorizontal: 0,
   },
   switchTrack: {
     width: 36,

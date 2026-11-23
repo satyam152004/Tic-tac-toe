@@ -5,6 +5,7 @@ import type { Server } from 'socket.io';
  * importing the socket layer (avoids circular deps). Rooms:
  *   user:<userId>  - every socket of a user (all devices)
  *   game:<gameId>  - sockets of verified players of a game
+ *   spectate:<gameId> - friends watching a running online game (read-only)
  *   room:<roomId>  - sockets of members of a private room
  * All operations go through the adapter, so they work across instances with the Redis adapter.
  */
@@ -21,7 +22,8 @@ export const realtime = {
     io?.to(`user:${String(userId)}`).emit(event, payload);
   },
   emitToGame(gameId: unknown, event: string, payload: unknown): void {
-    io?.to(`game:${String(gameId)}`).emit(event, payload);
+    // Spectators (accepted friends watching) receive exactly what the players receive; a socket in both rooms gets it once.
+    io?.to(`game:${String(gameId)}`).to(`spectate:${String(gameId)}`).emit(event, payload);
   },
   emitToRoom(roomId: unknown, event: string, payload: unknown): void {
     io?.to(`room:${String(roomId)}`).emit(event, payload);

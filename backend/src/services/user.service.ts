@@ -32,6 +32,7 @@ export interface UpdateMeInput {
   language?: string;
   sound?: { effects?: boolean; music?: boolean; volume?: number };
   notificationPrefs?: { social?: boolean; game?: boolean; achievements?: boolean };
+  privacy?: { allowSpectating?: boolean };
 }
 
 export async function updateMe(userId: string, input: UpdateMeInput) {
@@ -43,6 +44,7 @@ export async function updateMe(userId: string, input: UpdateMeInput) {
   if (input.language !== undefined) set.language = input.language;
   for (const [k, v] of Object.entries(input.sound ?? {})) set[`sound.${k}`] = v;
   for (const [k, v] of Object.entries(input.notificationPrefs ?? {})) set[`notificationPrefs.${k}`] = v;
+  for (const [k, v] of Object.entries(input.privacy ?? {})) set[`privacy.${k}`] = v;
   if (input.timezone !== undefined) {
     // Daily rewards follow the user's local day, so switching zones is limited (stops claiming twice by hopping zones).
     const cur = await UserModel.findById(userId).select('timezone timezoneChangedAt').lean();

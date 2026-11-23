@@ -77,8 +77,6 @@ export function evaluate(board: readonly Cell[], cfg: BoardConfig): Outcome {
   return { status: 'IN_PROGRESS' };
 }
 
-export const checkOutcome = evaluate;
-
 export function legalMoves(board: readonly Cell[]): number[] {
   const out: number[] = [];
   for (let i = 0; i < board.length; i++) if (board[i] === '') out.push(i);

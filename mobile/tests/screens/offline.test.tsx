@@ -152,10 +152,10 @@ describe('AiDifficultyScreen', () => {
     const cards = await screen.findAllByTestId(/^difficulty-/);
     expect(cards.map((c) => c.props.testID)).toEqual(['difficulty-EASY', 'difficulty-MEDIUM', 'difficulty-HARD', 'difficulty-EXPERT', 'difficulty-IMPOSSIBLE']);
     await fireEvent.press(screen.getByTestId('difficulty-HARD'));
-    await fireEvent.press(screen.getByTestId('side-O'));
     await fireEvent.press(screen.getByTestId('ai-difficulty-continue'));
-    expect(st().setup).toMatchObject({ mode: 'VS_AI', difficulty: 'HARD', p1Mark: 'O' });
-    expect(await screen.findByTestId('board-selection')).toBeTruthy();
+    expect(st().setup).toMatchObject({ mode: 'VS_AI', difficulty: 'HARD' });
+    expect(st().game?.difficulty).toBe('HARD');
+    expect(await screen.findByTestId('offline-board')).toBeTruthy();
   });
 });
 
@@ -187,7 +187,7 @@ describe('GameResultScreen', () => {
       lastMatchId: 'abc',
     });
     await mount('game_result');
-    expect(await screen.findByText('You Win!')).toBeTruthy();
+    expect(await screen.findByText('You Won!')).toBeTruthy();
     expect(screen.getByTestId('result-saved')).toBeTruthy();
   });
 
@@ -219,17 +219,13 @@ describe('OfflineHistoryScreen', () => {
     await localGameStorage.saveMatch(record('X'), 'You', 'Vortex AI');
     await localGameStorage.saveMatch(record('O'), 'You', 'Vortex AI');
     await mount('offline_history');
-    expect(await screen.findByText('Victory')).toBeTruthy();
-    expect(screen.getByText('Defeat')).toBeTruthy();
-    expect(screen.getAllByText('On this device')).toHaveLength(2);
-
-    const [first] = await localGameStorage.listMatches();
-    await fireEvent.press(screen.getByTestId(`history-delete-${first!.id}`));
-    await fireEvent.press(await screen.findByText('Delete'));
-    await waitFor(() => expect(screen.getAllByTestId(/^history-row-/)).toHaveLength(1));
+    expect(await screen.findByText('All 2')).toBeTruthy();
+    expect(screen.getByText('Wins 1')).toBeTruthy();
+    expect(screen.getAllByText('Replay')).toHaveLength(2);
+    expect(screen.getAllByText('AI Hard • 3×3')).toHaveLength(2);
 
     await fireEvent.press(screen.getByTestId('history-clear'));
-    await fireEvent.press(await screen.findByText('Clear all'));
+    await fireEvent.press(await screen.findByText('Clear History'));
     expect(await screen.findByText('No Matches Played Yet')).toBeTruthy();
     await act(async () => undefined);
   });

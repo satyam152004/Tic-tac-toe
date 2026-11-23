@@ -3,7 +3,13 @@ import { paginationQuery } from '../utils/pagination.js';
 import { boardSize, objectId, username, winLength } from './common.js';
 
 export const matchmakingJoinBody = z.object({ boardSize: boardSize.default(3), winLength });
-export const roomCreateBody = z.object({ boardSize: boardSize.default(3), winLength });
+export const roomCreateBody = z.object({
+  boardSize: boardSize.default(3),
+  winLength,
+  isPublic: z.boolean().default(false).describe('List the room in GET /rooms/open while it waits for a guest (default: private, code only)'),
+  turnTimeoutSec: z.union([z.literal(0), z.literal(15), z.literal(30), z.literal(60)]).optional().describe('Per-turn clock in seconds, 0 = off (default: server turn timeout)'),
+});
+export const roomOpenQuery = z.object({ limit: z.coerce.number().int().min(1).max(50).default(20) });
 export const roomJoinBody = z.object({ code: z.string().trim().length(6).regex(/^[A-Za-z0-9]+$/) });
 export const roomReadyBody = z.object({ ready: z.boolean() });
 export const roomInviteBody = z.object({ friendId: objectId });

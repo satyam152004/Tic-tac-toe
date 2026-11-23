@@ -4,10 +4,12 @@ import React from 'react';
 import { FriendProfileScreen } from '../../src/screens/social/FriendProfileScreen';
 import { FriendsScreen } from '../../src/screens/social/FriendsScreen';
 import { LeaderboardScreen } from '../../src/screens/social/LeaderboardScreen';
+import { ReportPlayerModal } from '../../src/screens/social/ReportPlayerModal';
 import { ApiError } from '../../src/services/api/errors';
 import { friendApi } from '../../src/services/api/friendApi';
 import { gameApi } from '../../src/services/api/gameApi';
 import { leaderboardApi } from '../../src/services/api/leaderboardApi';
+import { statisticsApi } from '../../src/services/api/statisticsApi';
 import { userApi } from '../../src/services/api/userApi';
 import { useAuthStore } from '../../src/store/authStore';
 import { useOnlineStore } from '../../src/store/onlineStore';
@@ -20,6 +22,7 @@ jest.mock('../../src/services/api/leaderboardApi');
 jest.mock('../../src/services/api/userApi');
 jest.mock('../../src/services/api/gameApi');
 jest.mock('../../src/services/api/roomApi');
+jest.mock('../../src/services/api/statisticsApi');
 
 const mockNavigate = jest.fn();
 const mockGoTab = jest.fn();
@@ -32,6 +35,7 @@ const lb = leaderboardApi as jest.Mocked<typeof leaderboardApi>;
 const fr = friendApi as jest.Mocked<typeof friendApi>;
 const users = userApi as jest.Mocked<typeof userApi>;
 const games = gameApi as jest.Mocked<typeof gameApi>;
+const stats = statisticsApi as jest.Mocked<typeof statisticsApi>;
 
 const card = (id: string, name: string, online = false) => ({ id, username: name.toLowerCase(), displayName: name, avatar: 'av_1', level: 3, online });
 const page = <T,>(items: T[]) => ({ items, page: 1, limit: 50, total: items.length, totalPages: 1, meta: {} });
@@ -52,10 +56,11 @@ beforeEach(() => {
   useToastStore.setState({ toast: null });
   fr.list.mockResolvedValue(page([]));
   fr.blocked.mockResolvedValue(page([]));
+  stats.history.mockResolvedValue(page([]) as never);
 });
 
 describe('LeaderboardScreen', () => {
-  it('calls the endpoint for each scope and metric', async () => {
+  it('calls the endpoint for each scope', async () => {
     lb.get.mockResolvedValue({ rows: [row(1, 'u1', 'Ann')], me: null, total: 1 });
     await wrap(<LeaderboardScreen />);
     await screen.findByText('Ann');
@@ -64,8 +69,6 @@ describe('LeaderboardScreen', () => {
     await waitFor(() => expect(lb.get).toHaveBeenCalledWith('weekly', 'points'));
     await fireEvent.press(screen.getByTestId('lb-scope-friends'));
     await waitFor(() => expect(lb.get).toHaveBeenCalledWith('friends', 'points'));
-    await fireEvent.press(screen.getByTestId('lb-metric-wins'));
-    await waitFor(() => expect(lb.get).toHaveBeenCalledWith('friends', 'wins'));
   });
 
   it('highlights own row and routes taps', async () => {
@@ -73,28 +76,37 @@ describe('LeaderboardScreen', () => {
     await wrap(<LeaderboardScreen />);
     await screen.findByText('Me (You)');
     expect(screen.getByTestId('lb-me-card')).toBeTruthy();
-    expect(screen.getAllByText('#2').length).toBeGreaterThan(1);
+    expect(screen.getByText('Your Rank #2')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText(/Rank 2, Me/));
     expect(mockGoTab).toHaveBeenCalledWith('ProfileTab');
     await fireEvent.press(screen.getByLabelText(/Rank 1, Ann/));
     expect(mockNavigate).toHaveBeenCalledWith('friend_profile', { userId: 'u1' });
   });
 
-  it('shows a helpful message when rank is null', async () => {
+  it('lists ranks beyond the podium as rows and routes taps', async () => {
+    lb.get.mockResolvedValue({ rows: [1, 2, 3, 4].map((n) => row(n, `u${n}`, `P${n}`)), me: null, total: 4 });
+    await wrap(<LeaderboardScreen />);
+    await screen.findByText('P4');
+    await fireEvent.press(screen.getByLabelText('Rank 4, P4'));
+    expect(mockNavigate).toHaveBeenCalledWith('friend_profile', { userId: 'u4' });
+  });
+
+  it('shows a dash for rank when unranked', async () => {
     lb.get.mockResolvedValue({ rows: [], me: { rank: null, points: 0, wins: 0 }, total: 0 });
     await wrap(<LeaderboardScreen />);
-    await screen.findByTestId('lb-me-unranked');
-    expect(screen.getByText('No ranked games yet')).toBeTruthy();
+    await screen.findByText('No players yet');
+    expect(screen.getByText('Your Rank –')).toBeTruthy();
   });
 
   it('shows the per-scope empty state', async () => {
     lb.get.mockResolvedValue({ rows: [], me: null, total: 0 });
     await wrap(<LeaderboardScreen />);
-    await fireEvent.press(screen.getByTestId('lb-scope-daily'));
-    await screen.findByText('No ranked games today yet');
+    await screen.findByText('No players yet');
+    await fireEvent.press(screen.getByTestId('lb-scope-friends'));
+    await screen.findByText('No friends ranked yet');
   });
 
-  it('shows error and offline states with retry', async () => {
+  it('shows error state with retry', async () => {
     lb.get.mockRejectedValueOnce(new ApiError('INTERNAL', 'Boom'));
     await wrap(<LeaderboardScreen />);
     await screen.findByText('Boom');
@@ -118,8 +130,8 @@ describe('FriendsScreen', () => {
     setLists([friendItem('f1', 'u1', 'Ann', true)], [friendItem('f2', 'u2', 'Bob')], [friendItem('f3', 'u3', 'Cy')]);
     await wrap(<FriendsScreen />);
     await screen.findByText('Ann');
-    expect(screen.getByText('Online · Level 3')).toBeTruthy();
-    expect(screen.getByText('Requests (2)')).toBeTruthy();
+    expect(screen.getByText('Online • Level 3')).toBeTruthy();
+    await screen.findByText('Requests 2');
     await fireEvent.press(screen.getByTestId('friends-segment-requests'));
     expect(screen.getByText('Bob')).toBeTruthy();
     expect(screen.getByText('Cy')).toBeTruthy();
@@ -130,7 +142,9 @@ describe('FriendsScreen', () => {
     await wrap(<FriendsScreen />);
     await screen.findByText('No friends yet');
     await fireEvent.press(screen.getByTestId('friends-segment-requests'));
-    expect(screen.getByText('No pending requests')).toBeTruthy();
+    expect(screen.getByText('No pending friend requests.')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('friends-segment-blocked'));
+    expect(screen.getByText('No blocked users')).toBeTruthy();
   });
 
   it('shows the offline state', async () => {
@@ -139,29 +153,48 @@ describe('FriendsScreen', () => {
     await screen.findByText('No Internet Connection');
   });
 
-  it('accepts and rejects incoming requests with the friendshipId', async () => {
+  it('accepts an incoming request with the friendshipId', async () => {
     setLists([], [friendItem('f2', 'u2', 'Bob'), friendItem('f4', 'u4', 'Dee')]);
     fr.accept.mockResolvedValue({ id: 'f2', status: 'ACCEPTED', friendId: 'u2' });
-    fr.reject.mockResolvedValue({ rejected: true });
     await wrap(<FriendsScreen />);
-    await screen.findByText('Requests (2)');
+    await screen.findByText('Requests 2');
     await fireEvent.press(screen.getByTestId('friends-segment-requests'));
-    await fireEvent.press(screen.getByTestId('accept-u2'));
+    await fireEvent.press(screen.getByLabelText('Accept Bob'));
     await waitFor(() => expect(fr.accept).toHaveBeenCalledWith('f2'));
-    await fireEvent.press(screen.getByTestId('reject-u4'));
-    await waitFor(() => expect(fr.reject).toHaveBeenCalledWith('f4'));
   });
 
-  it('adds a friend by username on success', async () => {
+  it('declines an incoming request with the friendshipId', async () => {
+    setLists([], [friendItem('f2', 'u2', 'Bob')]);
+    fr.reject.mockResolvedValue({ rejected: true });
+    await wrap(<FriendsScreen />);
+    await screen.findByText('Requests 1');
+    await fireEvent.press(screen.getByTestId('friends-segment-requests'));
+    await fireEvent.press(screen.getByLabelText('Decline Bob'));
+    await waitFor(() => expect(fr.reject).toHaveBeenCalledWith('f2'));
+  });
+
+  it('long-press on a friend asks for confirmation, then removes by friendshipId', async () => {
+    setLists([friendItem('f1', 'u1', 'Ann', true)]);
+    fr.remove.mockResolvedValue({ removed: true });
+    await wrap(<FriendsScreen />);
+    const row = await screen.findByText('Ann');
+    await fireEvent(row, 'longPress');
+    expect(fr.remove).not.toHaveBeenCalled();
+    await fireEvent.press(await screen.findByText('Remove'));
+    await waitFor(() => expect(fr.remove).toHaveBeenCalledWith('f1'));
+  });
+
+  it('adds a friend from search results', async () => {
     setLists([]);
+    users.search.mockResolvedValue(page([card('u9', 'Zed')]) as never);
     fr.request.mockResolvedValue({ id: 'x', status: 'PENDING' });
-    users.search.mockResolvedValue(page([]) as never);
     await wrap(<FriendsScreen />);
     await screen.findByText('No friends yet');
-    await fireEvent.press(screen.getByTestId('friends-add'));
-    await fireEvent.changeText(screen.getByTestId('add-friend-input'), 'devon');
-    await fireEvent.press(screen.getByTestId('add-friend-submit'));
-    await waitFor(() => expect(fr.request).toHaveBeenCalledWith({ username: 'devon' }));
+    await fireEvent.press(screen.getByTestId('friends-add-button'));
+    await fireEvent.changeText(screen.getByTestId('add-friend-search-input'), 'ze');
+    await fireEvent.press(await screen.findByTestId('send-invite-u9'));
+    await waitFor(() => expect(fr.request).toHaveBeenCalledWith({ userId: 'u9' }));
+    await screen.findByText('Sent ✓');
   });
 
   it.each([
@@ -173,47 +206,38 @@ describe('FriendsScreen', () => {
   ])('maps add-friend error %s', async (code, msg) => {
     setLists([]);
     fr.request.mockRejectedValue(new ApiError(code, 'raw'));
-    users.search.mockResolvedValue(page([]) as never);
+    users.search.mockResolvedValue(page([card('u9', 'Zed')]) as never);
     await wrap(<FriendsScreen />);
     await screen.findByText('No friends yet');
-    await fireEvent.press(screen.getByTestId('friends-add'));
-    await fireEvent.changeText(screen.getByTestId('add-friend-input'), 'someone');
-    await fireEvent.press(screen.getByTestId('add-friend-submit'));
-    await screen.findByText(msg);
+    await fireEvent.press(screen.getByTestId('friends-add-button'));
+    await fireEvent.changeText(screen.getByTestId('add-friend-search-input'), 'someone');
+    await fireEvent.press(await screen.findByTestId('send-invite-u9'));
+    await waitFor(() => expect(useToastStore.getState().toast?.message).toBe(msg));
   });
 
-  it('searches players (debounced) and adds from results', async () => {
+  it('search is debounced', async () => {
     setLists([]);
     users.search.mockResolvedValue(page([card('u9', 'Zed')]) as never);
-    fr.request.mockResolvedValue({ id: 'x', status: 'PENDING' });
     await wrap(<FriendsScreen />);
     await screen.findByText('No friends yet');
-    await fireEvent.press(screen.getByTestId('friends-add'));
-    await fireEvent.changeText(screen.getByTestId('add-friend-input'), 'ze');
+    await fireEvent.press(screen.getByTestId('friends-add-button'));
+    const input = screen.getByTestId('add-friend-search-input');
+    await fireEvent.changeText(input, 'z');
+    await fireEvent.changeText(input, 'ze');
+    await fireEvent.changeText(input, '@zed');
+    expect(users.search).not.toHaveBeenCalled();
     await screen.findByText('Zed', undefined, { timeout: 2000 });
     expect(users.search).toHaveBeenCalledTimes(1);
-    await fireEvent.press(screen.getByTestId('add-result-u9'));
-    await waitFor(() => expect(fr.request).toHaveBeenCalledWith({ userId: 'u9' }));
-  });
-
-  it('confirms before removing a friend', async () => {
-    setLists([friendItem('f1', 'u1', 'Ann')]);
-    fr.remove.mockResolvedValue({ removed: true });
-    await wrap(<FriendsScreen />);
-    await screen.findByText('Ann');
-    await fireEvent.press(screen.getByTestId('remove-u1'));
-    expect(fr.remove).not.toHaveBeenCalled();
-    await fireEvent.press(screen.getByText('Remove'));
-    await waitFor(() => expect(fr.remove).toHaveBeenCalledWith('f1'));
+    expect(users.search).toHaveBeenCalledWith('zed');
   });
 
   it('cancels an outgoing request', async () => {
     setLists([], [], [friendItem('f3', 'u3', 'Cy')]);
     fr.remove.mockResolvedValue({ removed: true });
     await wrap(<FriendsScreen />);
-    await screen.findByText('Requests (1)');
+    await screen.findByText('Requests 1');
     await fireEvent.press(screen.getByTestId('friends-segment-requests'));
-    await fireEvent.press(screen.getByTestId('cancel-u3'));
+    await fireEvent.press(screen.getByLabelText('Cancel request to Cy'));
     await waitFor(() => expect(fr.remove).toHaveBeenCalledWith('f3'));
   });
 
@@ -222,9 +246,10 @@ describe('FriendsScreen', () => {
     fr.blocked.mockResolvedValue(page([card('u8', 'Bad')]) as never);
     fr.unblock.mockResolvedValue({ blocked: false });
     await wrap(<FriendsScreen />);
-    await screen.findByText('No friends yet');
-    await fireEvent.press(screen.getByTestId('friends-blocked'));
-    await fireEvent.press(await screen.findByTestId('unblock-u8'));
+    await screen.findByText('Blocked 1');
+    await fireEvent.press(screen.getByTestId('friends-segment-blocked'));
+    expect(screen.getByText('Bad')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Unblock'));
     await waitFor(() => expect(fr.unblock).toHaveBeenCalledWith('u8'));
   });
 
@@ -242,6 +267,18 @@ describe('FriendsScreen', () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('online_board', { gameId: 'g1' }));
     spy.mockRestore();
   });
+
+  it('Spectate replaces Challenge only when the friend is in a match', async () => {
+    setLists([{ ...friendItem('f1', 'u1', 'Ann', true), activeGameId: 'g7' }, friendItem('f2', 'u2', 'Bob', true)]);
+    await wrap(<FriendsScreen />);
+    await screen.findByText('Ann');
+    expect(screen.getByText('In Match • Level 3')).toBeTruthy();
+    expect(screen.queryByTestId('challenge-u1')).toBeNull();
+    expect(screen.queryByTestId('spectate-u2')).toBeNull();
+    expect(screen.getByTestId('challenge-u2')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('spectate-u1'));
+    expect(mockNavigate).toHaveBeenCalledWith('spectate_match', { gameId: 'g7', friendName: 'Ann' });
+  });
 });
 
 describe('FriendProfileScreen', () => {
@@ -255,12 +292,21 @@ describe('FriendProfileScreen', () => {
 
   beforeEach(() => users.get.mockResolvedValue(profile as never));
 
-  it('shows profile details', async () => {
+  it('shows profile details and head-to-head from shared games', async () => {
+    setLists();
+    const g = (id: string, result: string) => ({ id, type: 'ONLINE_RANDOM', boardSize: 3, result, playedAt: '2026-01-01T00:00:00Z', opponent: { id: 'u1' } });
+    stats.history.mockResolvedValue(page([g('a', 'WIN'), g('b', 'WIN'), g('c', 'LOSS')]) as never);
+    await open();
+    await screen.findByText('1,200 ELO');
+    await screen.findByText('You 2');
+    expect(screen.getByText('1 Ann')).toBeTruthy();
+    expect(screen.getAllByText('You Won').length).toBe(2);
+  });
+
+  it('shows the empty shared-games state', async () => {
     setLists();
     await open();
-    await screen.findByText('Hello there');
-    expect(screen.getByText('60%')).toBeTruthy();
-    expect(screen.getByText('Level 5 · 1200 Rating')).toBeTruthy();
+    await screen.findByTestId('no-shared-games');
   });
 
   it('friend: shows challenge + remove (with confirm)', async () => {
@@ -272,67 +318,63 @@ describe('FriendProfileScreen', () => {
     expect(fr.remove).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByText('Remove'));
     await waitFor(() => expect(fr.remove).toHaveBeenCalledWith('f1'));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it('friend: challenge creates a friend game', async () => {
+    setLists([friendItem('f1', 'u1', 'Ann')]);
+    games.inviteFriend.mockResolvedValue({ id: 'g1', type: 'FRIEND', status: 'WAITING', boardSize: 3, board: [], players: [] } as never);
+    await open();
+    await fireEvent.press(await screen.findByTestId('profile-challenge'));
+    await fireEvent.press(screen.getByTestId('challenge-send'));
+    await waitFor(() => expect(games.inviteFriend).toHaveBeenCalledWith({ opponentId: 'u1', boardSize: 3 }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('online_board', { gameId: 'g1' }));
   });
 
   it('stranger: add friend', async () => {
     setLists();
     fr.request.mockResolvedValue({ id: 'x', status: 'PENDING' });
     await open();
-    await fireEvent.press(await screen.findByTestId('profile-add'));
+    await fireEvent.press(await screen.findByTestId('profile-add-friend'));
     await waitFor(() => expect(fr.request).toHaveBeenCalledWith({ userId: 'u1' }));
     expect(screen.queryByTestId('profile-challenge')).toBeNull();
   });
 
-  it('incoming request: accept / decline', async () => {
-    setLists([], [friendItem('f2', 'u1', 'Ann')]);
-    fr.accept.mockResolvedValue({ id: 'f2', status: 'ACCEPTED', friendId: 'u1' });
-    await open();
-    await fireEvent.press(await screen.findByTestId('profile-accept'));
-    await waitFor(() => expect(fr.accept).toHaveBeenCalledWith('f2'));
-    expect(screen.getByTestId('profile-reject')).toBeTruthy();
-  });
-
-  it('outgoing request: cancel', async () => {
-    setLists([], [], [friendItem('f3', 'u1', 'Ann')]);
-    fr.remove.mockResolvedValue({ removed: true });
-    await open();
-    await fireEvent.press(await screen.findByTestId('profile-cancel'));
-    await waitFor(() => expect(fr.remove).toHaveBeenCalledWith('f3'));
-  });
-
-  it('block asks for confirmation, then blocks by userId', async () => {
-    setLists();
-    fr.block.mockResolvedValue({ blocked: true });
-    await open();
-    await fireEvent.press(await screen.findByTestId('profile-block'));
-    expect(fr.block).not.toHaveBeenCalled();
-    await fireEvent.press(screen.getAllByText('Block').slice(-1)[0]!);
-    await waitFor(() => expect(fr.block).toHaveBeenCalledWith('u1'));
-  });
-
-  it('blocked player: unblock with confirm', async () => {
-    setLists();
-    fr.blocked.mockResolvedValue(page([card('u1', 'Ann')]) as never);
-    fr.unblock.mockResolvedValue({ blocked: false });
-    await open();
-    await fireEvent.press(await screen.findByTestId('profile-unblock'));
-    await fireEvent.press(screen.getAllByText('Unblock').slice(-1)[0]!);
-    await waitFor(() => expect(fr.unblock).toHaveBeenCalledWith('u1'));
-  });
+  // Removed by design (prototype parity): the profile no longer has accept/decline/cancel-request, block
+  // or unblock actions; requests and unblock live on the Friends screen (Requests / Blocked tabs).
 
   it('report opens reason sheet and submits', async () => {
     setLists();
     users.report.mockResolvedValue({} as never);
     await open();
     await fireEvent.press(await screen.findByTestId('profile-report'));
-    await fireEvent.press(screen.getByTestId('report-SPAM'));
-    await waitFor(() => expect(users.report).toHaveBeenCalledWith('u1', 'SPAM'));
+    await fireEvent.press(screen.getByTestId('report-reason-ABUSE'));
+    await fireEvent.press(screen.getByTestId('report-submit'));
+    await waitFor(() => expect(users.report).toHaveBeenCalledWith('u1', 'ABUSE', undefined, undefined));
   });
 
-  it('404 shows Player not found', async () => {
+  it('404 shows the API error message', async () => {
     setLists();
     users.get.mockRejectedValue(new ApiError('USER_NOT_FOUND', 'nope', 404));
     await open();
-    await screen.findByText('Player not found');
+    await screen.findByText('nope');
+  });
+});
+
+describe('ReportPlayerModal', () => {
+  it('defaults to CHEATING and submits userId + reason', async () => {
+    users.report.mockResolvedValue({} as never);
+    await wrap(<ReportPlayerModal open userId="u5" playerName="Zed" onClose={jest.fn()} />);
+    await screen.findByText('Report Zed');
+    await fireEvent.press(screen.getByTestId('report-submit'));
+    await waitFor(() => expect(users.report).toHaveBeenCalledWith('u5', 'CHEATING', undefined, undefined));
+  });
+
+  it('cancel closes without reporting', async () => {
+    const onClose = jest.fn();
+    await wrap(<ReportPlayerModal open userId="u5" onClose={onClose} />);
+    await fireEvent.press(screen.getByTestId('report-cancel'));
+    expect(onClose).toHaveBeenCalled();
+    expect(users.report).not.toHaveBeenCalled();
   });
 });

@@ -3,16 +3,19 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { ConfirmDialog } from '../../components/common/AppModal';
+import { Pressy } from '../../components/common/Pressy';
+import { ReportPlayerModal } from './ReportPlayerModal';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
 import { fonts, type } from '../../design-system/typography';
-import { useFriendActions, useFriends, usePublicProfile } from '../../hooks/queries';
+import { useFriendActions, useFriends, useHistory, usePublicProfile } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { toApiError } from '../../services/api/errors';
 import { toast } from '../../store/toastStore';
+import { formatShortDate } from '../../utils/format';
 import { isOffline, socialError, useChallenge } from './socialShared';
 
 export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = ({ route }) => {
@@ -22,10 +25,26 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
   const profile = usePublicProfile(userId);
   const accepted = useFriends('accepted');
   const actions = useFriendActions();
-  const { challenge } = useChallenge();
+  const { challenge, sheet } = useChallenge();
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const friend = accepted.data?.items.find((f) => f.user.id === userId);
+  const history = useHistory({});
+  // Shared games come from my own recent history (no head-to-head endpoint exists).
+  const shared = (history.data?.items ?? []).filter((g) => g.opponent && 'id' in g.opponent && g.opponent.id === userId && g.result);
+  const myWins = shared.filter((g) => g.result === 'WIN').length;
+  const theirWins = shared.filter((g) => g.result === 'LOSS').length;
+  const typeLabel = (t: string) => (t === 'ONLINE_RANDOM' ? 'Ranked' : t === 'FRIEND' || t === 'PRIVATE_ROOM' ? 'Private' : 'Casual');
+
+  if (profile.isError && !profile.data) {
+    const offline = isOffline(profile.error);
+    return (
+      <Screen title="Player Profile" onBack={back}>
+        <ErrorState offline={offline} message={offline ? 'Connect to the internet to view this profile.' : toApiError(profile.error).message} onRetry={() => void profile.refetch()} />
+      </Screen>
+    );
+  }
 
   if (profile.isLoading) {
     return (
@@ -36,8 +55,8 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
   }
 
   const p = profile.data;
-  const name = p?.displayName || p?.username || 'Aarav Patel';
-  const elo = p?.stats?.points ?? 1540;
+  const name = p?.displayName || p?.username || 'Player';
+  const elo = p?.stats?.points ?? 0;
 
   const removeFriend = async () => {
     setConfirmRemove(false);
@@ -51,25 +70,35 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
     }
   };
 
+  const addFriend = async () => {
+    try {
+      await actions.request.mutateAsync({ userId });
+      toast.success('Friend request sent', `Invited ${name}`);
+    } catch (e) {
+      toast.error('Could not send request', socialError(e));
+    }
+  };
+
   return (
     <Screen
       title="Player Profile"
       onBack={back}
       footer={
         <View style={styles.footer}>
-          <AppButton
-            testID="profile-challenge"
-            title="Challenge to Match"
-            fullWidth
-            onPress={() => challenge(userId, name)}
-          />
-          <AppButton
-            testID="profile-remove"
-            title="Remove Friend"
-            variant="danger"
-            fullWidth
-            onPress={() => setConfirmRemove(true)}
-          />
+          {friend ? (
+            <>
+              <AppButton testID="profile-challenge" title="Challenge to Match" fullWidth onPress={() => challenge(userId, name)} />
+              <AppButton testID="profile-remove" title="Remove Friend" variant="secondary" fullWidth onPress={() => setConfirmRemove(true)} />
+            </>
+          ) : (
+            <AppButton
+              testID="profile-add-friend"
+              title="Add Friend"
+              fullWidth
+              loading={actions.request.isPending}
+              onPress={() => void addFriend()}
+            />
+          )}
         </View>
       }
     >
@@ -80,7 +109,7 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
             <Text style={styles.avatarText}>{name.slice(0, 2).toUpperCase()}</Text>
           </View>
           <Text style={[styles.name, { color: c.text }]}>
-            {name} • <Text style={{ color: '#15803D' }}>Online</Text>
+            {name} • <Text style={{ color: friend?.activeGameId ? '#B45309' : p?.online ? '#15803D' : c.textSecondary }}>{friend?.activeGameId ? 'In Match' : p?.online ? 'Online' : 'Offline'}</Text>
           </Text>
           <Text style={[styles.elo, { color: c.textSecondary }]}>{elo.toLocaleString()} ELO</Text>
         </View>
@@ -89,34 +118,42 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
         <AppCard padding="md" style={styles.h2hCard}>
           <Text style={[styles.h2hTag, { color: c.textSecondary }]}>HEAD-TO-HEAD</Text>
           <View style={styles.h2hRow}>
-            <Text style={[styles.scoreYou, { color: c.accent }]}>You 4</Text>
+            <Text style={[styles.scoreYou, { color: c.accent }]}>You {myWins}</Text>
             <Text style={[styles.scoreDash, { color: c.border }]}>—</Text>
-            <Text style={[styles.scoreOpp, { color: c.text }]}>3 {name.split(' ')[0]}</Text>
+            <Text style={[styles.scoreOpp, { color: c.text }]}>{theirWins} {name.split(' ')[0]}</Text>
           </View>
         </AppCard>
 
         {/* Recent Shared Games */}
-        <View style={{ gap: 6 }}>
-          <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>RECENT DUELS</Text>
+        {shared.length > 0 ? (
           <View style={[styles.duelsCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-            <View style={[styles.duelRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border }]}>
-              <View>
-                <Text style={[styles.duelTitle, { color: c.text }]}>Won 3×3 Classic</Text>
-                <Text style={[styles.duelSub, { color: c.textSecondary }]}>Nov 18 • 8 moves</Text>
+            {shared.slice(0, 5).map((g, i) => (
+              <View
+                key={g.id}
+                style={[styles.duelRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.border }]}
+              >
+                <Text style={[styles.duelTitle, { color: c.text }]}>
+                  {g.boardSize}×{g.boardSize} {typeLabel(g.type)} • {formatShortDate(g.playedAt)}
+                </Text>
+                <Text style={[styles.duelElo, { color: g.result === 'WIN' ? '#15803D' : c.textSecondary }]}>
+                  {g.result === 'WIN' ? 'You Won' : g.result === 'LOSS' ? `${name.split(' ')[0]} Won` : 'Draw'}
+                </Text>
               </View>
-              <Text style={[styles.duelElo, { color: '#15803D' }]}>+18 ELO</Text>
-            </View>
-
-            <View style={styles.duelRow}>
-              <View>
-                <Text style={[styles.duelTitle, { color: c.text }]}>Lost 3×3 Blitz</Text>
-                <Text style={[styles.duelSub, { color: c.textSecondary }]}>Nov 16 • 9 moves</Text>
-              </View>
-              <Text style={[styles.duelElo, { color: '#DC2626' }]}>-14 ELO</Text>
-            </View>
+            ))}
           </View>
-        </View>
+        ) : (
+          <Text testID="no-shared-games" style={[styles.duelSub, { color: c.textSecondary, textAlign: 'center' }]}>
+            No games played together yet.
+          </Text>
+        )}
+
+        <Pressy testID="profile-report" accessibilityRole="button" accessibilityLabel={`Report ${name}`} onPress={() => setReporting(true)} style={{ alignSelf: 'center', paddingVertical: 6 }}>
+          <Text style={{ fontSize: 11.5, color: c.textSecondary }}>Report player</Text>
+        </Pressy>
       </View>
+
+      <ReportPlayerModal open={reporting} userId={userId} playerName={name} onClose={() => setReporting(false)} />
+      {sheet}
 
       <ConfirmDialog
         open={confirmRemove}
@@ -147,25 +184,25 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   avatarText: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: fonts.mono.semibold,
     color: '#FFFFFF',
   },
   name: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontFamily: fonts.body.semibold,
   },
   elo: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontFamily: fonts.mono.medium,
   },
   h2hCard: {
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
+    gap: 4,
+    paddingVertical: 12,
   },
   h2hTag: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
@@ -175,15 +212,15 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   scoreYou: {
-    fontSize: 18,
+    fontSize: 19,
     fontFamily: fonts.mono.semibold,
   },
   scoreDash: {
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: fonts.body.medium,
   },
   scoreOpp: {
-    fontSize: 18,
+    fontSize: 19,
     fontFamily: fonts.mono.semibold,
   },
   sectionLabel: {
@@ -200,19 +237,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    minHeight: 34,
   },
   duelTitle: {
-    fontSize: 12.5,
-    fontFamily: fonts.body.semibold,
+    fontSize: 11.5,
+    fontFamily: fonts.body.medium,
   },
   duelSub: {
     fontSize: 10.5,
     marginTop: 1,
   },
   duelElo: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.mono.semibold,
   },
   footer: {

@@ -25,7 +25,7 @@ const reportSchema = new Schema(
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     reportedId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     gameId: { type: Schema.Types.ObjectId, ref: 'Game' },
-    reason: { type: String, enum: ['CHEATING', 'ABUSE', 'SPAM', 'INAPPROPRIATE_NAME', 'OTHER'], required: true },
+    reason: { type: String, enum: ['CHEATING', 'ABUSE', 'STALLING', 'SPAM', 'INAPPROPRIATE_NAME', 'OTHER'], required: true },
     details: { type: String, maxlength: 1000 },
     status: { type: String, enum: ['OPEN', 'REVIEWED', 'DISMISSED'], default: 'OPEN' },
   },

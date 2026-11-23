@@ -1,11 +1,16 @@
 import { toApiError } from '../api/errors';
-import type { Game, MoveResult } from '../api/types';
+import type { CheerKind, Game, MoveResult, SpectateSnapshot } from '../api/types';
 import { socketClient } from './socketClient';
 
 /** Exact events/payloads from the backend (docs/SOCKET_EVENTS.md). */
 export const gameSocket = {
   join: (gameId: string) => socketClient.request<Game>('game:join', { gameId }),
   forfeit: (gameId: string) => socketClient.request<Game>('game:forfeit', { gameId }),
+  spectate: (gameId: string) => socketClient.request<SpectateSnapshot>('game:spectate', { gameId }),
+  unspectate: (gameId: string) => socketClient.request<{ left: true }>('game:unspectate', { gameId }),
+  cheer: (gameId: string, kind: CheerKind) => socketClient.request<{ sent: true }>('game:cheer', { gameId, kind }),
+  offerDraw: (gameId: string) => socketClient.request<Game>('game:offer-draw', { gameId }),
+  respondDraw: (gameId: string, accept: boolean) => socketClient.request<Game>('game:respond-draw', { gameId, accept }),
   rematch: (gameId: string) => socketClient.request<{ status: 'REQUESTED' | 'STARTED'; game: Game }>('game:rematch', { gameId }),
 
   /**

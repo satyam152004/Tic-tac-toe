@@ -19,7 +19,10 @@ jest.mock('../../src/navigation/useAppNav', () => {
 
 jest.mock('expo-clipboard', () => ({ getStringAsync: jest.fn(async () => 'abc123'), setStringAsync: jest.fn(async () => true) }));
 jest.mock('../../src/services/socket/socketClient', () => ({
-  socketClient: { status: 'ready', connected: true, onStatus: jest.fn(() => () => undefined), connect: jest.fn(), newId: jest.fn(() => 'id') },
+  socketClient: { status: 'ready', connected: true, onStatus: jest.fn(() => () => undefined), on: jest.fn(() => () => undefined), connect: jest.fn(), newId: jest.fn(() => 'id') },
+}));
+jest.mock('../../src/services/socket/gameSocket', () => ({
+  gameSocket: { offerDraw: jest.fn(async () => undefined), respondDraw: jest.fn(async () => undefined) },
 }));
 jest.mock('../../src/services/onlineActions', () => ({
   submitMove: jest.fn(async () => undefined),
@@ -45,14 +48,18 @@ import { MatchmakingScreen } from '../../src/screens/online/MatchmakingScreen';
 import { OnlineBoardScreen } from '../../src/screens/online/OnlineBoardScreen';
 import { OnlineLobbyScreen } from '../../src/screens/online/OnlineLobbyScreen';
 import { OnlineResultScreen } from '../../src/screens/online/OnlineResultScreen';
+import { RoomDetailsScreen } from '../../src/screens/online/RoomDetailsScreen';
 import { WaitingRoomScreen } from '../../src/screens/online/WaitingRoomScreen';
 import { ApiError } from '../../src/services/api/errors';
 import * as actions from '../../src/services/onlineActions';
+import { gameSocket } from '../../src/services/socket/gameSocket';
+import { socketClient } from '../../src/services/socket/socketClient';
 import { useAuthStore } from '../../src/store/authStore';
 import { useOnlineStore } from '../../src/store/onlineStore';
 import { useToastStore } from '../../src/store/toastStore';
 
 const a = actions as jest.Mocked<typeof actions>;
+const gs = gameSocket as jest.Mocked<typeof gameSocket>;
 
 async function wrap(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -76,16 +83,15 @@ describe('OnlineBoardScreen', () => {
 
   it('renders both players and the board from the server state', async () => {
     await open(gameFixture({ board: ['X', '', '', '', 'O', '', '', '', ''], moveCount: 2, currentTurn: 'X' }));
-    expect(await screen.findByText('Me Player')).toBeTruthy();
-    expect(screen.getByText('Opponent Pro')).toBeTruthy();
-    expect(screen.getByText('Your turn to move')).toBeTruthy();
+    expect(await screen.findByText('You (X) • Your Turn')).toBeTruthy();
+    expect(screen.getByText('Opponent Pro (O) • Online')).toBeTruthy();
     expect(screen.getByLabelText('Cell 1 marked X')).toBeTruthy();
     expect(screen.getByLabelText('Cell 5 marked O')).toBeTruthy();
   });
 
   it('disables the board when it is not my turn', async () => {
     await open(gameFixture({ currentTurn: 'O' }));
-    await screen.findByText('Opponent Pro is thinking...');
+    await screen.findByText('You (X) • Waiting');
     await fireEvent.press(screen.getByTestId('cell-0'));
     expect(a.submitMove).not.toHaveBeenCalled();
   });
@@ -115,7 +121,7 @@ describe('OnlineBoardScreen', () => {
     await act(async () => useOnlineStore.getState().setOpponentOffline({ userId: OPP_ID, graceSeconds: 30, since: Date.now() }));
     const banner = await screen.findByTestId('opponent-offline-banner');
     expect(banner).toBeTruthy();
-    expect(screen.getByText(/forfeit in 00:/)).toBeTruthy();
+    expect(screen.getByText(/Opponent Pro disconnected\. They forfeit in 00:/)).toBeTruthy();
     await act(async () => useOnlineStore.getState().setReconnecting(true));
     expect(await screen.findByTestId('reconnecting-overlay')).toBeTruthy();
   });
@@ -128,6 +134,29 @@ describe('OnlineBoardScreen', () => {
     const forfeits = screen.getAllByText('Forfeit');
     await fireEvent.press(forfeits[forfeits.length - 1]);
     await waitFor(() => expect(a.forfeitGame).toHaveBeenCalledWith('game-1'));
+  });
+
+  it('Offer Draw asks for confirmation, calls gameSocket.offerDraw and is disabled while the offer is sent', async () => {
+    await open();
+    await fireEvent.press(await screen.findByTestId('offer-draw'));
+    expect(gs.offerDraw).not.toHaveBeenCalled();
+    await screen.findByText('Offer Mutual Draw?');
+    await fireEvent.press(screen.getByText('Send Draw Offer'));
+    await waitFor(() => expect(gs.offerDraw).toHaveBeenCalledWith('game-1'));
+    const expiresAt = new Date(Date.now() + 60000).toISOString();
+    await act(async () => useOnlineStore.getState().applyGame(gameFixture({ drawOffer: { by: ME_ID, expiresAt } })));
+    await waitFor(() => expect(screen.getByTestId('offer-draw').props.accessibilityState.disabled).toBe(true));
+  });
+
+  it('an incoming draw offer shows DrawOfferModal and Accept responds with true', async () => {
+    await open();
+    await screen.findByTestId('offer-draw');
+    const handler = (socketClient.on as jest.Mock).mock.calls.filter((c) => c[0] === 'game:draw-offered').pop()![1];
+    await act(async () => handler({ gameId: 'game-1', by: OPP_ID, expiresAt: new Date(Date.now() + 60000).toISOString(), moveCount: 3 }));
+    expect(await screen.findByText('Draw Offered')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('draw-accept'));
+    await waitFor(() => expect(gs.respondDraw).toHaveBeenCalledWith('game-1', true));
+    await waitFor(() => expect(screen.queryByText('Draw Offered')).toBeNull());
   });
 
   it('navigates to the result screen when the server finishes the game', async () => {
@@ -160,20 +189,21 @@ describe('OnlineResultScreen', () => {
 
   it('shows the server outcome, reason and points for a win', async () => {
     await open(finished('WIN', 'FORFEIT'));
-    expect((await screen.findByTestId('result-title')).props.children).toBe('You Win!');
-    expect(screen.getByText('Your opponent forfeited')).toBeTruthy();
-    expect(screen.getByTestId('result-points').props.children.join('')).toBe('+25 points');
+    expect(await screen.findByText('Ranked Victory')).toBeTruthy();
+    expect(screen.getByText('+25 ELO (1,030)')).toBeTruthy();
+    expect(screen.getByText('6 Moves')).toBeTruthy();
   });
 
   it('shows a loss from the server outcome (not from the board)', async () => {
     await open(finished('LOSS', 'TIMEOUT'));
-    expect((await screen.findByTestId('result-title')).props.children).toBe('You Lost');
-    expect(screen.getByText('You ran out of time')).toBeTruthy();
+    expect(await screen.findByText('Ranked Defeat')).toBeTruthy();
+    expect(screen.getByText('-10 ELO (1,030)')).toBeTruthy();
   });
 
   it('shows a draw', async () => {
     await open(finished('DRAW', 'DRAW'));
-    expect((await screen.findByTestId('result-title')).props.children).toBe("It's a Draw");
+    expect(await screen.findByText('Ranked Draw')).toBeTruthy();
+    expect(screen.getByText('+0 ELO (1,030)')).toBeTruthy();
   });
 
   it('rematch: sends a request, then shows waiting state', async () => {
@@ -187,7 +217,7 @@ describe('OnlineResultScreen', () => {
   it('shows when the opponent wants a rematch and navigates to the new game', async () => {
     await open(finished('WIN', 'LINE'));
     await act(async () => useOnlineStore.getState().setRematch({ requestedByOpponent: true }));
-    expect(await screen.findByTestId('rematch-banner')).toBeTruthy();
+    expect(await screen.findByTestId('rematch')).toBeTruthy();
     await act(async () => useOnlineStore.getState().setRematchGameId('game-2'));
     await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('online_board', { gameId: 'game-2' }));
   });
@@ -246,11 +276,13 @@ describe('JoinRoomScreen', () => {
 describe('MatchmakingScreen', () => {
   it('starts the search once, shows searching state and cancels', async () => {
     await wrap(<MatchmakingScreen {...props({ boardSize: 4 })} />);
-    expect(await screen.findByText('Searching for Opponent')).toBeTruthy();
+    expect(await screen.findByText('Searching Arena...')).toBeTruthy();
+    expect(screen.getByTestId('search-spec').props.children).toBe('4×4 Ranked • ~1,030 ELO');
     expect(a.startQuickMatch).toHaveBeenCalledTimes(1);
     expect(a.startQuickMatch).toHaveBeenCalledWith(4);
     await fireEvent.press(screen.getByTestId('cancel-search'));
     await waitFor(() => expect(a.cancelQuickMatch).toHaveBeenCalledTimes(1));
+    expect(a.startQuickMatch).toHaveBeenCalledTimes(1);
   });
 
   it('shows the opponent and enters the match when found', async () => {
@@ -263,8 +295,8 @@ describe('MatchmakingScreen', () => {
       useOnlineStore.getState().applyGame(gameFixture());
       useOnlineStore.getState().setMatchmaking({ phase: 'found', startedAt: null });
     });
-    expect(await screen.findByText('Opponent found!')).toBeTruthy();
-    expect(screen.getAllByText('Opponent Pro').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Opponent Found!')).toBeTruthy();
+    expect(screen.getByText('vs Opponent Pro')).toBeTruthy();
     await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('online_board', { gameId: 'game-1' }), { timeout: 4000 });
   });
 
@@ -289,10 +321,10 @@ describe('WaitingRoomScreen', () => {
     hostId: 'h', guestId: ME_ID, boardSize: 3, winLength: 3, guestReady: false, gameId: null, expiresAt: new Date(Date.now() + 600000).toISOString(), ...over,
   });
 
-  it('guest toggles ready and is sent to the board when the game appears', async () => {
+  it('Room Details: guest toggles ready and is sent to the board when the game appears', async () => {
     useOnlineStore.getState().setRoom(room() as never);
-    await wrap(<WaitingRoomScreen {...props({ roomId: 'room-1' })} />);
-    expect(await screen.findByText('VTX409')).toBeTruthy();
+    await wrap(<RoomDetailsScreen {...props({ roomId: 'room-1' })} />);
+    expect(await screen.findByTestId('guest-status')).toBeTruthy();
     (a.setReady as jest.Mock).mockResolvedValueOnce(room({ guestReady: true }));
     await fireEvent.press(screen.getByTestId('ready-toggle'));
     expect(a.setReady).toHaveBeenCalledWith('room-1', true);
@@ -303,8 +335,8 @@ describe('WaitingRoomScreen', () => {
   it('host can start only when the guest is present and ready', async () => {
     useAuthStore.setState({ user: meFixture({ id: 'h' }) });
     useOnlineStore.getState().setRoom(room({ guestReady: false }) as never);
-    await wrap(<WaitingRoomScreen {...props({ roomId: 'room-1' })} />);
-    await screen.findByText('VTX409');
+    await wrap(<RoomDetailsScreen {...props({ roomId: 'room-1' })} />);
+    await screen.findByTestId('guest-status');
     await fireEvent.press(screen.getByTestId('start-match'));
     expect(a.startRoomGame).not.toHaveBeenCalled();
     await act(async () => useOnlineStore.getState().setRoom(room({ guestReady: true, status: 'READY' }) as never));
@@ -314,9 +346,9 @@ describe('WaitingRoomScreen', () => {
   });
 
   it('shows the room-ended state when the server expires the room', async () => {
-    useOnlineStore.getState().setRoom(room() as never);
+    useOnlineStore.getState().setRoom(room({ guest: null, guestId: null, status: 'WAITING' }) as never);
     await wrap(<WaitingRoomScreen {...props({ roomId: 'room-1' })} />);
-    await screen.findByText('VTX409');
+    await screen.findByText('VTX-409');
     await act(async () => {
       useOnlineStore.getState().setRoom(null);
       useOnlineStore.getState().setRoomEnded('EXPIRED');
@@ -326,11 +358,10 @@ describe('WaitingRoomScreen', () => {
 });
 
 describe('OnlineLobbyScreen', () => {
-  it('navigates to quick match with the chosen board size, create and join', async () => {
+  it('navigates to quick match (3x3), create and join', async () => {
     await wrap(<OnlineLobbyScreen {...props()} />);
-    await fireEvent.press(await screen.findByTestId('size-5'));
-    await fireEvent.press(screen.getByTestId('quick-match'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('matchmaking', { boardSize: 5 });
+    await fireEvent.press(await screen.findByTestId('quick-match'));
+    expect(mockNav.navigate).toHaveBeenCalledWith('matchmaking', { boardSize: 3 });
     await fireEvent.press(screen.getByTestId('create-room'));
     expect(mockNav.navigate).toHaveBeenCalledWith('create_room');
     await fireEvent.press(screen.getByTestId('join-room'));

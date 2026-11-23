@@ -1,20 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
-import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { GameBoard } from '../../components/game/GameBoard';
-import { fonts, type } from '../../design-system/typography';
-import { useOnlineGame } from '../../hooks/useOnlineGame';
+import { fonts } from '../../design-system/typography';
+import { formatClock, useOnlineGame } from '../../hooks/useOnlineGame';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage } from '../../services/api/errors';
 import type { Game } from '../../services/api/types';
 import { openGame, requestRematch } from '../../services/onlineActions';
+
 import { useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 import { isOfflineError } from './shared';
@@ -69,9 +69,9 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
   const isWin = myPlayer?.outcome === 'WIN';
   const isLoss = myPlayer?.outcome === 'LOSS';
   const title = isWin ? 'Ranked Victory' : isLoss ? 'Ranked Defeat' : 'Ranked Draw';
-  const pts = myPlayer?.pointsAwarded ?? 18;
-  const eloTotal = 1516;
-  const totalMoves = shown.board.filter((x) => x !== '').length || 9;
+  const pts = myPlayer?.pointsAwarded ?? 0;
+  const eloTotal = authMe?.stats?.points;
+  const totalMoves = shown.moveCount ?? shown.board.filter((x) => x !== '').length;
 
   return (
     <Screen
@@ -81,18 +81,19 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
       padded={false}
       footer={
         <View style={styles.footer}>
-          <AppButton
+          <ActionButton
             testID="rematch"
-            title={rematch.requestedByMe ? 'Waiting for opponent...' : 'Request Rematch'}
+            title={rematch.requestedByMe ? 'Waiting for opponent...' : rematch.requestedByOpponent ? 'Accept Rematch' : 'Request Rematch'}
             fullWidth
             loading={rematching}
             disabled={rematch.requestedByMe}
             onPress={askRematch}
           />
-          <AppButton
+          <ActionButton
             testID="back-lobby"
             title="Back to Lobby"
             variant="secondary"
+            compact
             fullWidth
             onPress={toLobby}
           />
@@ -124,7 +125,7 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
           {/* ELO Pill */}
           <View style={styles.eloPill}>
             <Text style={styles.eloPillText}>
-              {pts >= 0 ? '+' : ''}{pts} ELO ({eloTotal})
+              {pts >= 0 ? '+' : ''}{pts} ELO{eloTotal != null ? ` (${eloTotal.toLocaleString()})` : ''}
             </Text>
           </View>
         </View>
@@ -137,21 +138,21 @@ export const OnlineResultScreen: React.FC<RootScreenProps<'online_result'>> = ({
             winningLine={shown.result?.line ?? null}
             compact
             disabled
-            maxSize={180}
+            maxSize={136}
           />
         </View>
 
         {/* 2-col Stats Card */}
-        <AppCard padding="sm" style={styles.statsCard}>
-          <View style={[styles.statCol, { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: c.border }]}>
+        <View style={[styles.statsCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <View style={[styles.statCol, { borderRightWidth: 1, borderRightColor: c.border }]}>
             <Text style={[styles.statVal, { color: c.text }]}>{totalMoves} Moves</Text>
             <Text style={[styles.statLabel, { color: c.textSecondary }]}>Total Turns</Text>
           </View>
           <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: c.text }]}>01:34</Text>
+            <Text testID="result-duration" style={[styles.statVal, { color: c.text }]}>{shown.durationMs != null ? formatClock(Math.round(shown.durationMs / 1000)) : '--:--'}</Text>
             <Text style={[styles.statLabel, { color: c.textSecondary }]}>Duration</Text>
           </View>
-        </AppCard>
+        </View>
       </View>
     </Screen>
   );
@@ -161,27 +162,28 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 16,
     alignItems: 'center',
-    gap: 16,
+    gap: 14,
   },
   badgeWrap: {
     alignItems: 'center',
     gap: 8,
   },
   outcomeBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
     borderRadius: 999,
     borderWidth: 1,
   },
   outcomeBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.body.semibold,
   },
   eloPill: {
     paddingHorizontal: 14,
     paddingVertical: 6,
+    marginTop: 0,
     borderRadius: 11,
     backgroundColor: '#EFF4FF',
     borderWidth: 1,
@@ -193,12 +195,15 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
   },
   boardPreview: {
-    paddingVertical: 6,
+    marginTop: -2,
   },
   statsCard: {
     flexDirection: 'row',
     width: '100%',
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   statCol: {
     flex: 1,
@@ -207,12 +212,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statVal: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontFamily: fonts.mono.semibold,
   },
   statLabel: {
-    fontSize: 10.5,
-    fontFamily: fonts.body.medium,
+    fontSize: 10,
+    fontFamily: fonts.body.regular,
   },
   footer: {
     paddingHorizontal: 20,

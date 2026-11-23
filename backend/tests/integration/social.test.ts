@@ -212,3 +212,34 @@ describe('reports', () => {
     expect(await UserModel.countDocuments()).toBe(2);
   });
 });
+
+describe('open rooms', () => {
+  it('lists only public waiting rooms of other players, honours the turn timer and hides blocked hosts', async () => {
+    const priv = (await api().post('/api/v1/rooms').set(auth(alice)).send({ boardSize: 3 })).body.data;
+    expect(priv).toMatchObject({ isPublic: false });
+    expect((await api().get('/api/v1/rooms/open').set(auth(bob))).body.data.items).toHaveLength(0); // private rooms are never listed
+    await api().post(`/api/v1/rooms/${priv.id}/leave`).set(auth(alice));
+
+    const pub = await api().post('/api/v1/rooms').set(auth(alice)).send({ boardSize: 4, isPublic: true, turnTimeoutSec: 15 });
+    expect(pub.status).toBe(201);
+    expect(pub.body.data).toMatchObject({ isPublic: true, turnTimeoutSec: 15 });
+    expect((await api().post('/api/v1/rooms').set(auth(bob)).send({ boardSize: 3, turnTimeoutSec: 7 })).status).toBe(400);
+
+    const own = await api().get('/api/v1/rooms/open').set(auth(alice));
+    expect(own.body.data.items).toHaveLength(0); // never your own room
+    const list = await api().get('/api/v1/rooms/open').set(auth(bob));
+    expect(list.status).toBe(200);
+    expect(list.body.data.items).toHaveLength(1);
+    expect(list.body.data.items[0]).toMatchObject({ id: pub.body.data.id, code: pub.body.data.code, boardSize: 4, turnTimeoutSec: 15, host: { id: alice.id } });
+
+    // blocking removes the room for the blocked user
+    await api().post(`/api/v1/friends/${bob.id}/block`).set(auth(alice));
+    expect((await api().get('/api/v1/rooms/open').set(auth(bob))).body.data.items).toHaveLength(0);
+    await api().post(`/api/v1/friends/${bob.id}/unblock`).set(auth(alice));
+
+    // a room that got its guest is no longer open
+    expect((await api().post('/api/v1/rooms/join').set(auth(bob)).send({ code: pub.body.data.code })).status).toBe(200);
+    const carol = await registerUser(env.app, 'carol');
+    expect((await api().get('/api/v1/rooms/open').set(auth(carol))).body.data.items).toHaveLength(0);
+  });
+});

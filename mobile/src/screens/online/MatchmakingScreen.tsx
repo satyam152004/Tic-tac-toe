@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AppAvatar } from '../../components/common/AppAvatar';
-import { AppButton } from '../../components/common/AppButton';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Screen } from '../../components/common/Screen';
-import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { fonts, type } from '../../design-system/typography';
 import { formatClock, useOnlineGame } from '../../hooks/useOnlineGame';
@@ -126,9 +124,9 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
   return (
     <Screen
       title="Finding Opponent"
-      onBack={cancel}
+      testID="matchmaking"
       footer={
-        <AppButton
+        <ActionButton
           testID="cancel-search"
           title="Cancel Search"
           variant="secondary"
@@ -154,41 +152,10 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
         </Text>
 
         <View style={styles.specPill}>
-          <Text style={[styles.specText, { color: c.textSecondary }]}>
-            {boardSize}×{boardSize} Ranked • ~1,500 ELO
+          <Text testID="search-spec" style={[styles.specText, { color: c.textSecondary }]}>
+            {found ? `vs ${oppName}` : `${boardSize}×${boardSize} Ranked • ~${(me?.stats?.points ?? 0).toLocaleString()} ELO`}
           </Text>
         </View>
-
-        {/* Player vs Opponent preview */}
-        <View style={styles.vsRow}>
-          <View style={styles.avatarCol}>
-            <AppAvatar avatarId={me?.avatar} name={me?.displayName} size="md" activeRing />
-            <Text numberOfLines={1} style={[styles.playerName, { color: c.text }]}>
-              {me?.displayName ?? 'You'}
-            </Text>
-          </View>
-
-          <Text style={[styles.vsText, { color: c.textSecondary }]}>VS</Text>
-
-          <View style={styles.avatarCol} testID="opponent-slot">
-            {found ? (
-              <AppAvatar avatarId={opponentCard?.avatar} name={oppName} size="md" activeRing />
-            ) : (
-              <View style={[styles.unknownBox, { borderColor: c.border }]}>
-                <Text style={[styles.unknownText, { color: c.textSecondary }]}>?</Text>
-              </View>
-            )}
-            <Text numberOfLines={1} style={[styles.playerName, { color: found ? c.text : c.textSecondary }]}>
-              {found ? oppName : 'Searching...'}
-            </Text>
-          </View>
-        </View>
-
-        {found ? (
-          <View style={{ marginTop: 12 }}>
-            <AppLoader label="Entering match..." />
-          </View>
-        ) : null}
       </View>
     </Screen>
   );
@@ -200,13 +167,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
-    gap: 12,
+    gap: 8,
   },
   outerRadar: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#EFF4FF',
+    width: 144,
+    height: 144,
+    borderRadius: 72,
+    backgroundColor: 'rgba(239,244,255,0.55)',
     borderWidth: 1,
     borderColor: '#DBEAFE',
     alignItems: 'center',
@@ -243,11 +210,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontFamily: fonts.body.semibold,
-    marginTop: 6,
+    marginTop: 12,
   },
   specPill: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -255,7 +222,7 @@ const styles = StyleSheet.create({
   },
   specText: {
     fontSize: 11,
-    fontFamily: fonts.body.medium,
+    fontFamily: fonts.body.semibold,
   },
   vsRow: {
     flexDirection: 'row',

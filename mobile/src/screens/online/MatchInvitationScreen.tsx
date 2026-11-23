@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { AppAvatar } from '../../components/common/AppAvatar';
-import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
@@ -17,7 +16,7 @@ import { userApi } from '../../services/api/userApi';
 import { joinGame, joinRoomByCode } from '../../services/onlineActions';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
-import { isOfflineError } from './shared';
+import { isOfflineError, timerLabel } from './shared';
 import { joinErrorMessage } from './JoinRoomScreen';
 
 export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>> = ({ route }) => {
@@ -80,8 +79,8 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
     );
   }
 
-  const name = inviter.data?.displayName ?? fromName ?? 'Aarav Patel';
-  const elo = inviter.data?.stats?.points ?? 1540;
+  const name = inviter.data?.displayName ?? fromName ?? 'Player';
+  const elo = inviter.data?.stats?.points ?? 0;
 
   const accept = async () => {
     if (busy) return;
@@ -120,7 +119,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
       onBack={close}
       footer={
         <View style={{ gap: 8 }}>
-          <AppButton
+          <ActionButton
             testID="accept-invite"
             title="Accept Challenge"
             fullWidth
@@ -128,7 +127,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
             disabled={busy === 'decline'}
             onPress={accept}
           />
-          <AppButton
+          <ActionButton
             testID="decline-invite"
             title="Decline"
             variant="secondary"
@@ -141,8 +140,8 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
       }
     >
       <View style={{ gap: 14 }}>
-        <AppCard padding="lg" style={styles.card}>
-          <AppAvatar avatarId={inviter.data?.avatar} name={name} size="xl" status="online" activeRing />
+        <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <AppAvatar avatarId={inviter.data?.avatar} name={name} size="xl" />
           <View style={{ alignItems: 'center', gap: 2 }}>
             <Text testID="inviter-name" style={[styles.name, { color: c.text }]}>
               {name}
@@ -152,19 +151,17 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
             </Text>
           </View>
 
-          <View style={styles.pillRow}>
-            <View style={[styles.pill, { backgroundColor: c.bgSecondary }]}>
-              <Text style={[styles.pillText, { color: c.text }]}>
-                {g ? `${g.boardSize}×${g.boardSize}` : '3×3'}
-              </Text>
+          {g ? (
+            <View style={styles.pillRow}>
+              <View style={[styles.pill, { backgroundColor: c.bgSecondary }]}>
+                <Text style={[styles.pillText, { color: c.text }]}>{g.boardSize}×{g.boardSize}</Text>
+              </View>
+              <View style={[styles.pill, { backgroundColor: c.bgSecondary }]}>
+                <Text style={[styles.pillText, { color: c.text }]}>{g.turnTimeoutSec > 0 ? `${g.turnTimeoutSec}s turn` : `${timerLabel(0)} timer`}</Text>
+              </View>
             </View>
-            <View style={[styles.pill, { backgroundColor: c.bgSecondary }]}>
-              <Text style={[styles.pillText, { color: c.text }]}>
-                {g ? `${g.turnTimeoutSec}s turn` : '30s turn'}
-              </Text>
-            </View>
-          </View>
-        </AppCard>
+          ) : null}
+        </View>
 
         {failure ? (
           <Text testID="invitation-error" accessibilityRole="alert" style={[type.small, { color: c.danger, textAlign: 'center' }]}>
@@ -177,31 +174,10 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
 };
 
 const styles = StyleSheet.create({
-  card: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 24,
-  },
-  name: {
-    fontSize: 17,
-    fontFamily: fonts.body.semibold,
-  },
-  sub: {
-    fontSize: 12,
-    fontFamily: fonts.mono.medium,
-  },
-  pillRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  pillText: {
-    fontSize: 11.5,
-    fontFamily: fonts.body.semibold,
-  },
+  card: { alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, borderWidth: 1 },
+  name: { fontSize: 16.5, fontFamily: fonts.body.semibold },
+  sub: { fontSize: 11.5, fontFamily: fonts.body.regular },
+  pillRow: { flexDirection: 'row', gap: 8 },
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  pillText: { fontSize: 11, fontFamily: fonts.body.semibold },
 });

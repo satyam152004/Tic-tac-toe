@@ -1,130 +1,67 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { BookOpen, Bot, Globe, UserCheck, Users } from 'lucide-react-native';
-import { AppButton } from '../../components/common/AppButton';
-import { AppIconButton } from '../../components/common/AppIconButton';
-import { Screen } from '../../components/common/Screen';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { GuestUpgradeModal } from '../../components/auth/GuestUpgradeModal';
 import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, useIsGuest } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
+import { BORDER_STRONG, BotIcon, GlobeIcon, ProtoButton, ProtoHeader, ProtoScreen, UsersIcon } from '../auth/protoUi';
 
-type ModeKey = 'ai' | 'local' | 'online' | 'friends';
+type ModeKey = 'ai' | 'local' | 'online';
 
 interface ModeOption {
   key: ModeKey;
   testID: string;
   title: string;
   sub: string;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
-  isOnline?: boolean;
+  icon: React.ReactNode;
 }
 
 const MODES: ModeOption[] = [
-  {
-    key: 'ai',
-    testID: 'mode-ai',
-    title: 'vs AI Bot',
-    sub: 'Offline practice against calibrated bot',
-    icon: Bot,
-  },
-  {
-    key: 'local',
-    testID: 'mode-local',
-    title: 'Pass & Play',
-    sub: 'Alternating turns on one device',
-    icon: Users,
-  },
-  {
-    key: 'online',
-    testID: 'mode-online',
-    title: 'Online Ranked',
-    sub: 'Rated 1v1 matchmaking near your ELO',
-    icon: Globe,
-    isOnline: true,
-  },
-  {
-    key: 'friends',
-    testID: 'mode-friends',
-    title: 'Play with Friends',
-    sub: 'Create a private room code & invite friends',
-    icon: UserCheck,
-    isOnline: true,
-  },
+  { key: 'ai', testID: 'mode-ai', title: 'vs AI Bot', sub: 'Offline practice against calibrated bot', icon: <BotIcon size={15} /> },
+  { key: 'local', testID: 'mode-local', title: 'Pass & Play', sub: 'Alternating turns on one device', icon: <UsersIcon size={15} /> },
+  { key: 'online', testID: 'mode-online', title: 'Online Ranked', sub: 'Rated 1v1 matchmaking near your ELO', icon: <GlobeIcon size={15} /> },
 ];
 
 export const GameModeScreen: React.FC = () => {
   const c = useTheme();
   const { nav, back } = useAppNav();
   const offline = useAuthStore((s) => s.offline);
+  const isGuest = useIsGuest();
+  const coins = useAuthStore((s) => s.user?.wallet.coins ?? 0);
   const [selected, setSelected] = useState<ModeKey>('ai');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  const { height: screenH } = useWindowDimensions();
-  const isTall = screenH >= 780;
-  const isVeryTall = screenH >= 860;
-
-  const handleProceed = (modeKey: ModeKey) => {
-    if ((modeKey === 'online' || modeKey === 'friends') && offline) {
-      toast.warning('You are offline', 'Connect to the internet to play online or with friends.');
-      return;
-    }
-    switch (modeKey) {
+  const proceed = () => {
+    switch (selected) {
       case 'ai':
         nav.navigate('ai_difficulty');
         break;
       case 'local':
-        nav.navigate('player_setup', { mode: 'LOCAL_2P' });
+        // Board size first, then player names / symbols.
+        nav.navigate('board_selection', { mode: 'LOCAL_2P' });
         break;
       case 'online':
+        if (offline) {
+          toast.warning('You are offline', 'Connect to the internet to play online.');
+          return;
+        }
+        if (isGuest) {
+          setUpgradeOpen(true);
+          return;
+        }
         nav.navigate('online_lobby');
-        break;
-      case 'friends':
-        nav.navigate('create_room');
         break;
     }
   };
 
-  const handleCardPress = (mode: ModeOption) => {
-    setSelected(mode.key);
-  };
-
-  const cardPad = isVeryTall ? 18 : isTall ? 16 : 14;
-  const iconBoxSize = isVeryTall ? 44 : isTall ? 40 : 34;
-  const iconSize = isVeryTall ? 21 : isTall ? 19 : 17;
-  const cardGap = isVeryTall ? 14 : isTall ? 12 : 10;
-  const titleSize = isVeryTall ? 15.5 : isTall ? 14.5 : 13.5;
-  const subSize = isVeryTall ? 12 : isTall ? 11.5 : 10.5;
-  const radioOuterSize = isVeryTall ? 24 : isTall ? 22 : 20;
-  const radioInnerSize = isVeryTall ? 12 : isTall ? 11 : 10;
-
   return (
-    <Screen
-      tabs
-      title="Select Mode"
-      onBack={back}
-      testID="game-mode-screen"
-      rightAction={
-        <AppIconButton
-          label="Game rules"
-          onPress={() => nav.navigate('game_rules')}
-          icon={<BookOpen size={isTall ? 20 : 18} color={c.textSecondary} />}
-        />
-      }
-      footer={
-        <AppButton
-          title="Continue"
-          size={isTall ? 'lg' : 'md'}
-          fullWidth
-          onPress={() => handleProceed(selected)}
-        />
-      }
-    >
-      <View style={[styles.container, { gap: cardGap }]}>
+    <ProtoScreen testID="game-mode-screen" tabs>
+      <ProtoHeader title="Select Mode" onBack={back} />
+      <View style={styles.body}>
         {MODES.map((m) => {
           const active = selected === m.key;
-          const IconComponent = m.icon;
-
           return (
             <Pressable
               key={m.key}
@@ -134,125 +71,57 @@ export const GameModeScreen: React.FC = () => {
               accessibilityLabel={`${m.title}${active ? ', selected' : ''}`}
               accessibilityRole="radio"
               accessibilityState={{ selected: active }}
-              onPress={() => handleCardPress(m)}
-              style={({ pressed }) => [
-                styles.modeCard,
-                {
-                  padding: cardPad,
-                  borderRadius: isTall ? 16 : 14,
-                  backgroundColor: active
-                    ? (c.bgCard === '#FFFFFF' || c.bgCard === '#FFFDF9' ? '#EFF4FF' : c.bgElevated)
-                    : c.bgCard,
-                  borderColor: active ? c.accent : c.border,
-                  borderWidth: active ? 1.5 : 1,
-                  opacity: pressed ? 0.94 : 1,
-                  transform: [{ scale: pressed ? 0.985 : 1 }],
-                },
+              onPress={() => setSelected(m.key)}
+              style={[
+                styles.card,
+                active
+                  ? { backgroundColor: 'rgba(239,244,255,0.55)', borderColor: c.accent, borderWidth: 1.5 }
+                  : { backgroundColor: c.bgCard, borderColor: c.border, borderWidth: 1 },
               ]}
             >
-              <View style={styles.cardLeft}>
-                <View
-                  style={[
-                    styles.iconSquircle,
-                    {
-                      width: iconBoxSize,
-                      height: iconBoxSize,
-                      borderRadius: isTall ? 11 : 9,
-                      backgroundColor: active ? '#FFFFFF' : (c.bgCard === '#FFFFFF' || c.bgCard === '#FFFDF9' ? '#F8F8F6' : c.bgElevated),
-                      borderColor: active ? '#BFDBFE' : c.border,
-                    },
-                  ]}
-                >
-                  <IconComponent size={iconSize} color={active ? c.accent : c.text} />
-                </View>
-
+              <View style={styles.left}>
+                <View style={[styles.iconBox, { backgroundColor: c.bgCard, borderColor: c.border }]}>{m.icon}</View>
                 <View style={styles.textCol}>
-                  <Text
-                    style={[
-                      styles.modeTitle,
-                      { color: c.text, fontSize: titleSize },
-                    ]}
-                  >
-                    {m.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.modeSubtitle,
-                      { color: c.textSecondary, fontSize: subSize },
-                    ]}
-                  >
-                    {m.sub}
-                  </Text>
+                  <Text style={[styles.title, { color: c.text }]}>{m.title}</Text>
+                  <Text style={[styles.sub, { color: c.textSecondary }]}>{m.sub}</Text>
                 </View>
               </View>
-
-              {/* Clean Cross-Platform Radio Indicator */}
               <View
                 style={[
-                  styles.radioOuter,
-                  {
-                    width: radioOuterSize,
-                    height: radioOuterSize,
-                    borderRadius: radioOuterSize / 2,
-                    borderColor: active ? c.accent : '#CFCFC8',
-                    borderWidth: active ? 5 : 1.5,
-                    backgroundColor: '#FFFFFF',
-                  },
+                  styles.radio,
+                  active ? { borderWidth: 5, borderColor: c.accent, backgroundColor: c.bgCard } : { borderWidth: 1, borderColor: BORDER_STRONG },
                 ]}
-              >
-                {active ? (
-                  <View
-                    style={{
-                      width: radioInnerSize,
-                      height: radioInnerSize,
-                      borderRadius: radioInnerSize / 2,
-                      backgroundColor: c.accent,
-                    }}
-                  />
-                ) : null}
-              </View>
+              />
             </Pressable>
           );
         })}
+
+        <View style={styles.footer}>
+          <ProtoButton testID="mode-continue" title="Continue" onPress={proceed} />
+        </View>
       </View>
-    </Screen>
+
+      <GuestUpgradeModal
+        open={upgradeOpen}
+        coins={coins}
+        onUpgrade={() => {
+          setUpgradeOpen(false);
+          nav.navigate('registration');
+        }}
+        onDismiss={() => setUpgradeOpen(false)}
+      />
+    </ProtoScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: 6,
-  },
-  modeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 0,
-  },
-  cardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  iconSquircle: {
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textCol: {
-    flex: 1,
-    gap: 2,
-  },
-  modeTitle: {
-    fontFamily: fonts.body.semibold,
-  },
-  modeSubtitle: {
-    fontFamily: fonts.body.regular,
-  },
-  radioOuter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 12 },
+  card: { padding: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  left: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  iconBox: { width: 32, height: 32, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  textCol: { flex: 1 },
+  title: { fontFamily: fonts.body.semibold, fontSize: 13, lineHeight: 18 },
+  sub: { fontFamily: fonts.body.regular, fontSize: 11, lineHeight: 15, marginTop: 2 },
+  radio: { width: 20, height: 20, borderRadius: 10, marginLeft: 8 },
+  footer: { marginTop: 'auto', paddingTop: 8 },
 });

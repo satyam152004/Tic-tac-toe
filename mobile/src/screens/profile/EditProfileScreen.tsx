@@ -20,16 +20,6 @@ import { usernameError } from '../auth/authValidation';
 
 const BIO_MAX = 160;
 
-/** Avatar presets matching the prototype's 6-item selector grid */
-const PROTOTYPE_AVATARS = [
-  { id: 'av_1', label: 'SP', bg: '#1D4ED8', fg: '#FFFFFF' },
-  { id: 'av_2', label: 'X', bg: '#141518', fg: '#FFFFFF' },
-  { id: 'av_3', label: 'O', bg: '#EFF4FF', fg: '#1D4ED8' },
-  { id: 'av_4', label: 'S', bg: '#15803D', fg: '#FFFFFF' },
-  { id: 'av_5', label: '★', bg: '#B45309', fg: '#FFFFFF' },
-  { id: 'av_custom', label: '◈', bg: '#F1F1EE', fg: '#141518' },
-];
-
 export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () => {
   const c = useTheme();
   const { height } = useWindowDimensions();
@@ -125,8 +115,8 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
         <View style={{ gap: 8 }}>
           <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>CHOOSE AVATAR</Text>
           <View style={styles.avatarGrid}>
-            {PROTOTYPE_AVATARS.map((av) => {
-              const active = avatar === av.id || (av.id === 'av_1' && !PROTOTYPE_AVATARS.some((p) => p.id === avatar));
+            {SELECTABLE_AVATARS.map((av) => {
+              const active = avatar === av.id;
               return (
                 <Pressy
                   key={av.id}
@@ -137,7 +127,7 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
                   style={[
                     styles.avatarCell,
                     {
-                      backgroundColor: av.bg,
+                      backgroundColor: av.colors[0],
                       borderColor: active ? c.accent : c.border,
                       borderWidth: active ? 2 : 1,
                     },
@@ -150,7 +140,7 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
                     },
                   ]}
                 >
-                  <Text style={[styles.avatarText, { color: av.fg }]}>{av.label}</Text>
+                  <Text style={[styles.avatarText, { color: c.onAccent }]}>{av.initials}</Text>
                 </Pressy>
               );
             })}
@@ -231,17 +221,17 @@ const styles = StyleSheet.create({
   },
   avatarGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   avatarCell: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontFamily: fonts.mono.semibold,
   },
   footer: {

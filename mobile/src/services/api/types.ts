@@ -32,6 +32,7 @@ export interface Me {
   accountType: 'GUEST' | 'REGISTERED'; theme: ThemeId; language: string;
   sound: { effects: boolean; music: boolean; volume: number };
   notificationPrefs: { social: boolean; game: boolean; achievements: boolean; account: boolean };
+  privacy?: { allowSpectating: boolean };
   online: boolean; lastActiveAt: string; createdAt: string; stats: Stats;
 }
 
@@ -66,6 +67,7 @@ export interface Game {
   endedAt: string | null;
   durationMs: number | null;
   result: { winner: Mark | null; winnerId: string | null; line: number[]; reason: 'LINE' | 'DRAW' | 'FORFEIT' | 'TIMEOUT' | 'DISCONNECT' | null } | null;
+  drawOffer?: { by: string; expiresAt: string } | null;
   rematch: { requestedBy: string[]; gameId: string | null };
   previousGameId: string | null;
   serverTime: string;
@@ -90,7 +92,12 @@ export interface FriendItem {
   since: string | null;
   requestedAt: string;
   user: PlayerCard & { lastActiveAt?: string };
+  /** Present for accepted friends: the live online game that may be watched, if any. */
+  activeGameId?: string | null;
 }
+
+export type CheerKind = 'clap' | 'fire' | 'wow';
+export interface SpectateSnapshot { game: Game; players: Array<{ mark: Mark; isAI: boolean; user: PlayerCard | null }>; spectators: number }
 
 export interface LeaderboardRow {
   rank: number;
@@ -150,6 +157,10 @@ export interface ServerEvents {
   'game:move-rejected': { gameId?: string; clientMoveId?: string; position?: number; code: string; message: string };
   'game:finished': { game: Game };
   'game:draw': { game: Game };
+  'game:draw-offered': { gameId: string; by: string; expiresAt: string; moveCount: number };
+  'game:draw-declined': { gameId: string; by: string };
+  'game:spectators': { gameId: string; count: number };
+  'game:cheer': { gameId: string; kind: CheerKind; userId: string };
   'game:rematch-requested': { gameId: string; requestedBy: string };
   'game:rematch-accepted': { previousGameId: string; game: Game };
   'player:connected': { userId: string };

@@ -1,20 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Flag, Handshake } from 'lucide-react-native';
+import { WifiOff } from 'lucide-react-native';
+import { AppButton } from '../../components/common/AppButton';
 import { ConfirmDialog } from '../../components/common/AppModal';
-import { Pressy } from '../../components/common/Pressy';
+import { ActionButton } from '../../components/game/ActionButton';
+import { SymbolMark } from '../../components/game/SymbolMark';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
+import { DrawOfferModal } from '../../components/game/DrawOfferModal';
 import { GameBoard } from '../../components/game/GameBoard';
 import { fonts, type } from '../../design-system/typography';
 import { formatClock, useCountdown, useOnlineGame } from '../../hooks/useOnlineGame';
 import { useBackGuard } from '../../hooks/useBackGuard';
+import { useDrawOffer } from '../../hooks/useDrawOffer';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage, toApiError } from '../../services/api/errors';
 import { forfeitGame, joinGame, openGame, submitMove } from '../../services/onlineActions';
+import { usePublicProfile } from '../../hooks/queries';
 import { useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 import { isOfflineError } from './shared';
@@ -27,9 +32,13 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
   const { gameId } = route.params;
   const { nav } = useAppNav();
   const { game, me, myMark, opponentCard, isMyTurn, canMove, secondsLeft, finished } = useOnlineGame();
+  const draw = useDrawOffer(game, me?.id);
+  const opponentProfile = usePublicProfile(opponentCard?.id ?? '');
   const lastMove = useOnlineStore((s) => s.lastMove);
   const moveError = useOnlineStore((s) => s.moveError);
   const reconnecting = useOnlineStore((s) => s.reconnecting);
+  const opponentOffline = useOnlineStore((s) => s.opponentOffline);
+  const graceLeft = useCountdown(opponentOffline ? opponentOffline.since + opponentOffline.graceSeconds * 1000 : null);
   const rematchGameId = useOnlineStore((s) => s.rematchGameId);
 
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -106,11 +115,11 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
   };
 
   const oppMark = myMark === 'X' ? 'O' : 'X';
-  const oppName = opponentCard?.displayName ?? 'Aarav';
-  const oppElo = 1540;
-  const myElo = me?.stats?.points ?? 1498;
-  const turnClock = secondsLeft !== null ? formatClock(secondsLeft) : '00:30';
-  const turnPct = secondsLeft !== null ? Math.min(100, Math.max(5, Math.round((secondsLeft / 30) * 100))) : 100;
+  const oppName = opponentCard?.displayName ?? 'Opponent';
+  const oppElo = opponentProfile.data?.stats.points ?? '–';
+  const myElo = me?.stats?.points ?? '–';
+  const turnClock = secondsLeft !== null ? formatClock(secondsLeft) : '--:--';
+  const turnPct = secondsLeft !== null ? Math.min(100, Math.max(5, Math.round((secondsLeft / (game?.turnTimeoutSec || 30)) * 100))) : 100;
 
   if (loadError && !mine) {
     return (
@@ -140,11 +149,20 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
         </Text>
       }
     >
-      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 16, justifyContent: 'space-between' }}>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 2, paddingBottom: 16, justifyContent: 'space-between' }}>
         {/* Turn Progress Bar */}
         <View style={[styles.progressTrack, { backgroundColor: c.bgSecondary }]}>
           <View style={[styles.progressFill, { width: `${turnPct}%`, backgroundColor: c.accent }]} />
         </View>
+
+        {opponentOffline && !finished ? (
+          <View testID="opponent-offline-banner" accessibilityRole="alert" style={[styles.banner, { backgroundColor: c.warning + '26', borderColor: c.warning + '66' }]}>
+            <WifiOff size={14} color={c.warning} />
+            <Text style={[styles.playerName, { color: c.text, flex: 1 }]}>
+              {oppName} disconnected. They forfeit in {formatClock(graceLeft ?? 0)} unless they come back.
+            </Text>
+          </View>
+        ) : null}
 
         {/* Opponent Card (Top) */}
         <View style={[styles.playerCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
@@ -153,10 +171,10 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
               <View style={[styles.avatar, { backgroundColor: '#141518' }]}>
                 <Text style={styles.avatarText}>{oppName.slice(0, 2).toUpperCase()}</Text>
               </View>
-              <View style={styles.onlineBadge} />
+              {opponentCard?.online !== false ? <View style={styles.onlineBadge} /> : null}
             </View>
             <Text style={[styles.playerName, { color: c.text }]}>
-              {oppName} ({oppMark}) • Online
+              {oppName} ({oppMark}){opponentCard?.online !== false ? ' • Online' : ' • Offline'}
             </Text>
           </View>
           <Text style={[styles.playerElo, { color: c.textSecondary }]}>{oppElo}</Text>
@@ -187,7 +205,7 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
             ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={[styles.markText, { color: c.accent }]}>✕</Text>
+              <SymbolMark value={myMark ?? 'X'} size={14} animate={false} />
               <Text style={[styles.playerName, { color: c.text }]}>
                 You ({myMark ?? 'X'}) • {isMyTurn ? 'Your Turn' : 'Waiting'}
               </Text>
@@ -197,30 +215,26 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
 
           {/* Offer Draw & Forfeit */}
           <View style={styles.actionRow}>
-            <Pressy
+            <ActionButton
               testID="offer-draw"
-              accessibilityLabel="Offer Draw"
-              disabled={!active}
+              title="Offer Draw"
+              variant="secondary"
+              compact
+              style={styles.flex}
+              disabled={!active || draw.sent || draw.busy}
               onPress={() => setConfirmDraw(true)}
-              style={[styles.btnAction, { backgroundColor: c.bgCard, borderColor: c.border }]}
-            >
-              <Handshake size={15} color={c.text} />
-              <Text style={[styles.btnActionText, { color: c.text }]}>Offer Draw</Text>
-            </Pressy>
-
-            <Pressy
-              testID="forfeit"
-              accessibilityLabel="Forfeit"
-              disabled={!active}
-              onPress={() => setConfirmForfeit(true)}
-              style={[styles.btnAction, { backgroundColor: '#FEF2F2', borderColor: '#FEE2E2' }]}
-            >
-              <Flag size={15} color="#DC2626" />
-              <Text style={[styles.btnActionText, { color: '#DC2626' }]}>Forfeit</Text>
-            </Pressy>
+            />
+            <ActionButton testID="forfeit" title="Forfeit" variant="danger" compact style={styles.flex} disabled={!active} onPress={() => setConfirmForfeit(true)} />
           </View>
         </View>
       </View>
+
+      {reconnecting && !finished ? (
+        <View testID="reconnecting-overlay" accessibilityRole="alert" style={[styles.overlay, { backgroundColor: c.bgPrimary + 'E6' }]}>
+          <AppLoader label="Reconnecting..." sublabel="Your seat is kept while we restore the connection." />
+          {longReconnect ? <AppButton testID="open-reconnection" title="Open Reconnection Screen" variant="secondary" onPress={() => nav.navigate('reconnection', { gameId })} /> : null}
+        </View>
+      ) : null}
 
       <ConfirmDialog
         open={confirmDraw}
@@ -230,9 +244,18 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
         cancelLabel="Cancel"
         onConfirm={() => {
           setConfirmDraw(false);
-          toast.info('Draw offer sent', 'Waiting for opponent response');
+          void draw.send();
         }}
         onCancel={() => setConfirmDraw(false)}
+      />
+
+      <DrawOfferModal
+        open={!!draw.incoming}
+        proposerName={oppName}
+        expiresAt={draw.incoming?.expiresAt}
+        moveCount={draw.incoming?.moveCount}
+        onAccept={() => void draw.respond(true)}
+        onDecline={() => void draw.respond(false)}
       />
 
       <ConfirmDialog
@@ -250,8 +273,11 @@ export const OnlineBoardScreen: React.FC<RootScreenProps<'online_board'>> = ({ r
 };
 
 const styles = StyleSheet.create({
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 8, marginBottom: 6 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  flex: { flex: 1 },
   headerTimer: {
-    fontSize: 12.5,
+    fontSize: 11,
     fontFamily: fonts.mono.semibold,
     color: '#1D4ED8',
     paddingHorizontal: 8,
@@ -271,7 +297,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
   },
@@ -279,15 +305,15 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 10,
-    fontFamily: fonts.mono.semibold,
+    fontSize: 9.5,
+    fontFamily: fonts.body.semibold,
     color: '#FFFFFF',
   },
   onlineBadge: {
@@ -302,11 +328,11 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   playerName: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontFamily: fonts.body.semibold,
   },
   playerElo: {
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontFamily: fonts.mono.semibold,
   },
   markText: {

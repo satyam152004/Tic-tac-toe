@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { env } from '../config/env.js';
-import { FriendshipModel, makePairKey, RoomDoc, RoomModel, UserModel } from '../models/index.js';
+import { BlockedUserModel, FriendshipModel, makePairKey, RoomDoc, RoomModel, UserModel } from '../models/index.js';
 import { randomRoomCode } from '../utils/crypto.js';
 import { Errors } from '../utils/errors.js';
 import { addMs, DAY_MS } from '../utils/time.js';
@@ -31,6 +31,8 @@ async function presentRoom(room: RoomDoc | (Record<string, unknown> & { _id: Typ
     boardSize: r.boardSize,
     winLength: r.winLength,
     guestReady: r.guestReady,
+    isPublic: r.isPublic ?? false,
+    turnTimeoutSec: r.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
     gameId: r.gameId ? String(r.gameId) : null,
     expiresAt: r.expiresAt,
     createdAt: (r as { createdAt?: Date }).createdAt,
@@ -60,7 +62,7 @@ async function broadcast(room: RoomDoc, event = 'room:updated') {
   realtime.emitToRoom(room._id, event, { room: await presentRoom(room) });
 }
 
-export async function create(userId: string, input: { boardSize: number; winLength?: number }) {
+export async function create(userId: string, input: { boardSize: number; winLength?: number; isPublic?: boolean; turnTimeoutSec?: number }) {
   const config = resolveConfig(input.boardSize, input.winLength);
   await assertNotInLiveRoom(userId);
   await assertNoActiveOnlineGame(userId);
@@ -74,6 +76,8 @@ export async function create(userId: string, input: { boardSize: number; winLeng
         boardSize: config.size,
         winLength: config.winLength,
         status: 'WAITING',
+        isPublic: input.isPublic ?? false,
+        turnTimeoutSec: input.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
         expiresAt,
         purgeAt: addMs(expiresAt, 7 * DAY_MS),
       });
@@ -87,6 +91,43 @@ export async function create(userId: string, input: { boardSize: number; winLeng
     }
   }
   throw Errors.internal('Could not allocate a room code');
+}
+
+/**
+ * Rooms whose host opted in (`isPublic`) and that are still waiting for a guest. Own rooms, rooms of blocked users
+ * (either direction) and expired rooms are left out. Newest first.
+ */
+export async function listOpen(userId: string, limit = 20) {
+  const now = new Date();
+  const rows = await RoomModel.find({ isPublic: true, status: 'WAITING', guestId: null, expiresAt: { $gt: now }, hostId: { $ne: userId } })
+    .sort({ createdAt: -1 })
+    .limit(limit * 2)
+    .lean();
+  const hostIds = rows.map((r) => r.hostId);
+  const [hosts, blocks] = await Promise.all([
+    UserModel.find({ _id: { $in: hostIds } }).select(`${CARD_FIELDS} stats.points`).lean(),
+    BlockedUserModel.find({ $or: [{ blockerId: userId, blockedId: { $in: hostIds } }, { blockedId: userId, blockerId: { $in: hostIds } }] }).lean(),
+  ]);
+  const blocked = new Set(blocks.flatMap((b) => [String(b.blockerId), String(b.blockedId)]));
+  const items = [];
+  for (const r of rows) {
+    if (blocked.has(String(r.hostId))) continue;
+    const host = hosts.find((h) => String(h._id) === String(r.hostId));
+    if (!host) continue;
+    items.push({
+      id: String(r._id),
+      code: r.code,
+      host: toCard(host),
+      hostPoints: host.stats?.points ?? 0,
+      boardSize: r.boardSize,
+      winLength: r.winLength,
+      turnTimeoutSec: r.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
+      expiresAt: r.expiresAt,
+      createdAt: (r as { createdAt?: Date }).createdAt,
+    });
+    if (items.length >= limit) break;
+  }
+  return { items };
 }
 
 export async function join(userId: string, code: string) {
@@ -157,6 +198,7 @@ export async function start(userId: string, id: string) {
       status: 'READY',
       roomId: claimed._id,
       createdBy: claimed.hostId,
+      turnTimeoutSec: claimed.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
     });
     claimed.gameId = game._id;
     await claimed.save();

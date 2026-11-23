@@ -2,9 +2,9 @@ import { toApiError } from '../../services/api/errors';
 
 /** Mirrors backend/src/validators/common.ts (password, username, email). */
 export const PASSWORD_RULES = [
-  { id: 'len', label: 'At least 8 characters', test: (v: string) => v.length >= 8 },
-  { id: 'letter', label: 'Contains a letter', test: (v: string) => /[A-Za-z]/.test(v) },
-  { id: 'digit', label: 'Contains a number', test: (v: string) => /\d/.test(v) },
+  { id: 'len', label: '8+ chars', test: (v: string) => v.length >= 8 },
+  { id: 'digit', label: '1 number', test: (v: string) => /\d/.test(v) },
+  { id: 'letter', label: '1 letter', test: (v: string) => /[A-Za-z]/.test(v) },
 ] as const;
 
 export const passwordValid = (v: string): boolean => v.length <= 128 && PASSWORD_RULES.every((r) => r.test(v));

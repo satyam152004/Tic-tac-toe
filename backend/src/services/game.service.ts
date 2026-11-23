@@ -54,6 +54,7 @@ export function presentGame(g: G) {
     result: g.result
       ? { winner: g.result.winner ?? null, winnerId: g.result.winnerId ? String(g.result.winnerId) : null, line: g.result.line ?? [], reason: g.result.reason ?? null }
       : null,
+    drawOffer: g.drawOffer?.by && g.drawOffer.expiresAt && new Date(g.drawOffer.expiresAt).getTime() > Date.now() ? { by: String(g.drawOffer.by), expiresAt: g.drawOffer.expiresAt } : null,
     rematch: { requestedBy: (g.rematchRequestedBy ?? []).map(String), gameId: g.rematchGameId ? String(g.rematchGameId) : null },
     previousGameId: g.previousGameId ? String(g.previousGameId) : null,
     createdAt: g.createdAt,
@@ -75,6 +76,35 @@ async function loadGame(gameId: string): Promise<G> {
   const g = (await GameModel.findById(gameId).lean()) as G | null;
   if (!g) throw Errors.notFound('Game not found', 'GAME_NOT_FOUND');
   return g;
+}
+
+/**
+ * Read-only access to a running online game for an accepted friend of one of its human players
+ * (that player must allow spectating). Returns the state plus both player cards.
+ */
+export async function spectate(viewerId: string, gameId: string) {
+  const g = await loadGame(gameId);
+  if (memberOf(g, viewerId)) throw Errors.badRequest('You are playing in this game', 'ALREADY_A_PLAYER');
+  if (!ONLINE_TYPES.includes(g.type as (typeof ONLINE_TYPES)[number]) || g.status !== 'IN_PROGRESS') {
+    throw Errors.conflict('This match is not live', 'GAME_NOT_LIVE');
+  }
+  const humans = g.players.filter((p) => p.userId).map((p) => p.userId!);
+  const friendships = await FriendshipModel.find({
+    status: 'ACCEPTED',
+    $or: humans.flatMap((h) => [{ requesterId: viewerId, recipientId: h }, { requesterId: h, recipientId: viewerId }]),
+  }).select('requesterId recipientId').lean();
+  const friendOf = new Set(friendships.map((f) => (String(f.requesterId) === viewerId ? String(f.recipientId) : String(f.requesterId))));
+  if (friendOf.size === 0) throw Errors.forbidden('You can only watch friends', 'NOT_A_FRIEND');
+  const owners = await UserModel.find({ _id: { $in: [...friendOf] } }).select('privacy').lean();
+  if (!owners.some((u) => u.privacy?.allowSpectating !== false)) throw Errors.forbidden('Your friend does not allow spectating', 'SPECTATING_DISABLED');
+  const blocked = await BlockedUserModel.exists({ $or: humans.flatMap((h) => [{ blockerId: h, blockedId: viewerId }, { blockerId: viewerId, blockedId: h }]) });
+  if (blocked) throw Errors.forbidden('You cannot watch this match', 'BLOCKED');
+  return { game: presentGame(g), players: await playerCards(g) };
+}
+
+export async function spectatorCount(gameId: string): Promise<number> {
+  const io = realtime.getIo();
+  return io ? (await io.in(`spectate:${gameId}`).fetchSockets()).length : 0;
 }
 
 async function loadMemberGame(userId: string, gameId: string): Promise<G> {
@@ -108,6 +138,8 @@ export interface CreateGameInput {
   createdBy?: Types.ObjectId | string;
   invitedUserId?: Types.ObjectId | string;
   previousGameId?: Types.ObjectId | string;
+  /** Per-turn clock override (seconds, 0 = off). Defaults to the server turn timeout for human games. */
+  turnTimeoutSec?: number;
 }
 
 /** Single place that builds game documents (AI, matchmaking, rooms, friends, rematches). */
@@ -119,7 +151,7 @@ export async function createGameDoc(input: CreateGameInput): Promise<G> {
     const humanMark = input.humans[0]!.mark;
     players.push({ userId: null, mark: otherMark(humanMark), isAI: true, joinedAt: now });
   }
-  const timeout = input.type === 'AI' ? 0 : env.TURN_TIMEOUT_SEC;
+  const timeout = input.type === 'AI' ? 0 : input.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC;
   const doc = await GameModel.create({
     ...(input._id ? { _id: input._id } : {}),
     type: input.type,
@@ -489,6 +521,62 @@ export async function forfeit(userId: string, gameId: string) {
     return presentGame(done ?? (await loadGame(gameId)));
   }
   throw Errors.conflict('Game is already finished', 'GAME_NOT_ACTIVE');
+}
+
+// ------------------------------------------------------------------ mutual draw
+
+const DRAW_OFFER_TTL_MS = 20_000;
+
+/** Proposes a mutual draw to the opponent of an online game (valid for 20 s). One open offer per game. */
+export async function offerDraw(userId: string, gameId: string) {
+  const g = await loadMemberGame(userId, gameId);
+  if (g.status !== 'IN_PROGRESS') throw Errors.conflict('Game is not in progress', 'GAME_NOT_ACTIVE');
+  if (!ONLINE_TYPES.includes(g.type as (typeof ONLINE_TYPES)[number])) throw Errors.badRequest('Draws can only be offered in online games', 'NOT_SUPPORTED');
+  const now = new Date();
+  const expiresAt = addMs(now, DRAW_OFFER_TTL_MS);
+  const updated = (await GameModel.findOneAndUpdate(
+    { _id: g._id, status: 'IN_PROGRESS', $or: [{ 'drawOffer.by': null }, { 'drawOffer.expiresAt': { $lte: now } }, { 'drawOffer.expiresAt': null }] },
+    { $set: { 'drawOffer.by': new Types.ObjectId(userId), 'drawOffer.expiresAt': expiresAt } },
+    { new: true },
+  ).lean()) as G | null;
+  if (!updated) throw Errors.conflict('A draw offer is already pending', 'DRAW_OFFER_PENDING');
+  realtime.emitToGame(g._id, 'game:draw-offered', { gameId, by: userId, expiresAt, moveCount: updated.moveCount });
+  return presentGame(updated);
+}
+
+/** The opponent accepts (game ends as a DRAW) or declines the open offer. */
+export async function respondDraw(userId: string, gameId: string, accept: boolean) {
+  const g = await loadMemberGame(userId, gameId);
+  const now = new Date();
+  const offer = g.drawOffer;
+  if (g.status !== 'IN_PROGRESS' || !offer?.by || !offer.expiresAt || new Date(offer.expiresAt) <= now) throw Errors.conflict('There is no open draw offer', 'NO_DRAW_OFFER');
+  if (String(offer.by) === userId) throw Errors.badRequest('You cannot answer your own offer', 'OWN_DRAW_OFFER');
+  if (!accept) {
+    const cleared = (await GameModel.findOneAndUpdate({ _id: g._id, 'drawOffer.by': offer.by }, { $set: { 'drawOffer.by': null, 'drawOffer.expiresAt': null } }, { new: true }).lean()) as G | null;
+    realtime.emitToGame(g._id, 'game:draw-declined', { gameId, by: userId });
+    return presentGame(cleared ?? (await loadGame(gameId)));
+  }
+  const updated = (await GameModel.findOneAndUpdate(
+    { _id: g._id, status: 'IN_PROGRESS', 'drawOffer.by': offer.by, 'drawOffer.expiresAt': { $gt: now } },
+    {
+      $set: {
+        status: 'DRAW',
+        endedAt: now,
+        durationMs: g.startedAt ? now.getTime() - new Date(g.startedAt).getTime() : 0,
+        turnDeadline: null,
+        purgeAt: addMs(now, RETAIN_FINISHED_MS),
+        'result.winner': null,
+        'result.winnerId': null,
+        'result.line': [],
+        'result.reason': 'DRAW',
+        'drawOffer.by': null,
+        'drawOffer.expiresAt': null,
+      },
+    },
+    { new: true },
+  ).lean()) as G | null;
+  if (!updated) throw Errors.conflict('There is no open draw offer', 'NO_DRAW_OFFER');
+  return presentGame(await onGameEnded(updated));
 }
 
 // ------------------------------------------------------------------ rematch

@@ -1,11 +1,8 @@
-import { Pause, Play, RotateCcw, Settings } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { iconSize } from '../../design-system/icons';
-import { type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { AppButton } from '../common/AppButton';
-import { AppCard } from '../common/AppCard';
 import { ConfirmDialog } from '../common/AppModal';
 
 /**
@@ -20,34 +17,30 @@ export const PausedOverlay: React.FC<{
   reason: 'manual' | 'interrupted' | null;
   onResume: () => void;
   onRestart: () => void;
-  onSettings: () => void;
+  onSettings?: () => void;
   onExit: () => void;
-}> = ({ matchLabel, elapsedLabel, reason, onResume, onRestart, onSettings, onExit }) => {
+}> = ({ matchLabel, elapsedLabel, reason, onResume, onRestart, onExit }) => {
   const c = useTheme();
   const [confirmQuit, setConfirmQuit] = useState(false);
 
   return (
-    <View testID="game-pause" style={[styles.fill, { backgroundColor: c.bgPrimary }]} accessibilityViewIsModal importantForAccessibility="yes">
-      <AppCard padding="lg" style={styles.card}>
-        <View style={[styles.badge, { backgroundColor: c.bgElevated, borderColor: c.border }]}>
-          <Pause size={24} color={c.accent} />
-        </View>
+    <View testID="game-pause" style={[styles.fill, { backgroundColor: c.scrim }]} accessibilityViewIsModal importantForAccessibility="yes">
+      <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
         <View style={styles.titles}>
-          <Text accessibilityRole="header" style={[type.heading, { color: c.text }]}>Game Paused</Text>
-          <Text testID="pause-detail" style={[type.body, { color: c.textSecondary, textAlign: 'center' }]}>
-            {reason === 'interrupted' ? 'The game was paused while you were away.' : 'Take your time. The clock is stopped.'}
-          </Text>
-          <Text style={[type.small, { color: c.textSecondary, textAlign: 'center' }]} numberOfLines={1}>
+          <Text accessibilityRole="header" style={[styles.title, { color: c.text }]}>Game Paused</Text>
+          <Text testID="pause-detail" style={[styles.sub, { color: c.textSecondary }]} numberOfLines={1}>
             {matchLabel} · {elapsedLabel}
           </Text>
+          {reason === 'interrupted' ? (
+            <Text style={[styles.note, { color: c.textSecondary }]}>The game was paused while you were away.</Text>
+          ) : null}
         </View>
         <View style={styles.actions}>
-          <AppButton testID="pause-resume" fullWidth title="Resume Game" icon={<Play size={iconSize.sm} color={c.onAccent} />} onPress={onResume} />
-          <AppButton testID="pause-restart" fullWidth variant="secondary" title="Restart Match" icon={<RotateCcw size={16} color={c.text} />} onPress={onRestart} />
-          <AppButton testID="pause-settings" fullWidth variant="secondary" title="Settings" icon={<Settings size={16} color={c.text} />} onPress={onSettings} />
-          <AppButton testID="pause-quit" fullWidth variant="outline" title="Exit to Home" onPress={() => setConfirmQuit(true)} />
+          <AppButton testID="pause-resume" fullWidth size="md" title="Resume Match" onPress={onResume} style={styles.btn} />
+          <AppButton testID="pause-restart" fullWidth size="md" variant="secondary" title="Restart" onPress={onRestart} style={styles.btn} />
+          <AppButton testID="pause-quit" fullWidth size="md" variant="ghost" title="Quit to Home" onPress={() => setConfirmQuit(true)} style={styles.btnSm} />
         </View>
-      </AppCard>
+      </View>
 
       <ConfirmDialog
         open={confirmQuit}
@@ -67,9 +60,13 @@ export const PausedOverlay: React.FC<{
 };
 
 const styles = StyleSheet.create({
-  fill: { ...StyleSheet.absoluteFill, justifyContent: 'center', padding: 20, zIndex: 10, elevation: 10 },
-  card: { gap: 20, alignItems: 'center' },
-  badge: { width: 52, height: 52, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  titles: { alignItems: 'center', gap: 4 },
-  actions: { gap: 10, alignSelf: 'stretch' },
+  fill: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 10, elevation: 10 },
+  card: { width: '100%', maxWidth: 280, borderRadius: 20, borderWidth: 1, padding: 20, gap: 14, alignItems: 'center' },
+  titles: { alignItems: 'center', gap: 2 },
+  title: { fontSize: 18, fontFamily: fonts.body.semibold },
+  sub: { fontSize: 12, fontFamily: fonts.mono.medium },
+  note: { fontSize: 11, textAlign: 'center', marginTop: 4 },
+  actions: { gap: 8, alignSelf: 'stretch' },
+  btn: { minHeight: 40, borderRadius: 12 },
+  btnSm: { minHeight: 32, borderRadius: 12 },
 });

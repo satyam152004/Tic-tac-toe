@@ -63,8 +63,9 @@ Auth levels: **public** (no token), **user** (any valid access token, guests inc
 | POST | `/api/v1/games/:id/rematch` | user | Request a rematch; starts when both players asked (AI games restart immediately) |
 | GET | `/api/v1/games/:id/history` | user | Move history of a game |
 | GET | `/api/v1/games/:id/replay` | user | Move-by-move replay (board snapshot after every move) |
-| POST | `/api/v1/rooms` | user | Create a private room (host) |
+| POST | `/api/v1/rooms` | user | Create a room (host). Private by default; isPublic lists it in /rooms/open |
 | POST | `/api/v1/rooms/join` | user | Join a room with its 6 character code |
+| GET | `/api/v1/rooms/open` | user | Public open rooms: waiting for a guest, host opted in (own and blocked users excluded) |
 | GET | `/api/v1/rooms/:id` | user | Get a room I am in (or was invited to) |
 | POST | `/api/v1/rooms/:id/leave` | user | Leave a room (host leaving promotes the guest; forfeits a running game) |
 | POST | `/api/v1/rooms/:id/ready` | user | Guest sets readiness (host is always ready) |
@@ -99,6 +100,9 @@ Auth levels: **public** (no token), **user** (any valid access token, guests inc
 | GET | `/api/v1/rewards/daily` | user | Daily reward status: 7-day cycle, which day is claimable, my coin balance |
 | POST | `/api/v1/rewards/daily/claim` | user | Claim the daily reward (amount decided by the server; one claim per local day) |
 | GET | `/api/v1/rewards/daily/history` | user | My most recent daily reward claims |
+| GET | `/api/v1/shop/emblems` | user | Emblem catalog with my coin balance, what I own and what is equipped |
+| POST | `/api/v1/shop/emblems/:id/unlock` | user | Spend coins to unlock an emblem (price decided by the server) and equip it |
+| POST | `/api/v1/shop/emblems/:id/equip` | user | Equip an emblem I own |
 
 
 ---
@@ -1003,6 +1007,7 @@ Update my profile and preferences
 | `language` | string | no | pattern `^[a-z]{2}(-[A-Za-z]{2,4})?$` |
 | `sound` | object | no | - |
 | `notificationPrefs` | object | no | - |
+| `privacy` | object | no | - |
 
 **Response** `200`: Updated profile
 
@@ -1167,7 +1172,7 @@ Report a player
 
 | Field | Type | Required | Validation |
 |---|---|---|---|
-| `reason` | "CHEATING" \| "ABUSE" \| "SPAM" \| "INAPPROPRIATE_NAME" \| "OTHER" | yes | - |
+| `reason` | "CHEATING" \| "ABUSE" \| "STALLING" \| "SPAM" \| "INAPPROPRIATE_NAME" \| "OTHER" | yes | - |
 | `details` | string | no | max length 1000 |
 | `gameId` | string | no | pattern `^[0-9a-fA-F]{24}$` |
 
@@ -1836,7 +1841,7 @@ curl -X GET "$API_URL/api/v1/games/<id>/replay" \
 
 ### POST `/api/v1/rooms`
 
-Create a private room (host)
+Create a room (host). Private by default; isPublic lists it in /rooms/open
 
 - **HTTP method:** POST
 - **Authentication:** Bearer access token
@@ -1848,6 +1853,8 @@ Create a private room (host)
 |---|---|---|---|
 | `boardSize` | 3 \| 4 \| 5 | no | default `3`; One of 3, 4, 5 |
 | `winLength` | integer | no | min 3; max 5; Marks in a row needed to win (3..boardSize). Defaults: 3x3=3, 4x4=4, 5x5=4 |
+| `isPublic` | boolean | no | default `false`; List the room in GET /rooms/open while it waits for a guest (default: private, code only) |
+| `turnTimeoutSec` | 0 \| 15 \| 30 \| 60 | no | Per-turn clock in seconds, 0 = off (default: server turn timeout) |
 
 **Response** `201`: Room { id, code, status, host, guest, ... }
 
@@ -1885,6 +1892,8 @@ curl -X POST "$API_URL/api/v1/rooms" \
     "boardSize": 3,
     "winLength": 3,
     "guestReady": false,
+    "isPublic": false,
+    "turnTimeoutSec": 60,
     "gameId": null,
     "expiresAt": "2026-11-17T10:30:00.000Z",
     "createdAt": "2026-11-17T10:00:00.000Z"
@@ -1949,9 +1958,66 @@ curl -X POST "$API_URL/api/v1/rooms/join" \
     "boardSize": 3,
     "winLength": 3,
     "guestReady": false,
+    "isPublic": false,
+    "turnTimeoutSec": 60,
     "gameId": null,
     "expiresAt": "2026-11-17T10:30:00.000Z",
     "createdAt": "2026-11-17T10:00:00.000Z"
+  }
+}
+```
+
+### GET `/api/v1/rooms/open`
+
+Public open rooms: waiting for a guest, host opted in (own and blocked users excluded)
+
+- **HTTP method:** GET
+- **Authentication:** Bearer access token
+- **Success status:** 200
+
+**Query parameters**
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `limit` | integer | no | min 1; max 50; default `20` |
+
+**Response** `200`: { items: [{ id, code, host, hostPoints, boardSize, winLength, turnTimeoutSec, expiresAt }] }
+
+**Errors:** 400 VALIDATION_ERROR, 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X GET "$API_URL/api/v1/rooms/open" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "665f1c2e8b3a4c0012340001",
+        "code": "K7M3QX",
+        "host": {
+          "id": "665f1c2e8b3a4c0012345678",
+          "username": "player_one",
+          "displayName": "Player One",
+          "avatar": "avatar_default",
+          "level": 3,
+          "online": true
+        },
+        "hostPoints": 215,
+        "boardSize": 3,
+        "winLength": 3,
+        "turnTimeoutSec": 60,
+        "expiresAt": "2026-11-17T10:30:00.000Z",
+        "createdAt": "2026-11-17T10:00:00.000Z"
+      }
+    ]
   }
 }
 ```
@@ -3282,5 +3348,107 @@ curl -X GET "$API_URL/api/v1/rewards/daily/history" \
 {
   "success": true,
   "data": "<Array of { id, dayKey, cycleDay, coins, claimedAt }>"
+}
+```
+
+---
+
+## Shop
+
+### GET `/api/v1/shop/emblems`
+
+Emblem catalog with my coin balance, what I own and what is equipped
+
+- **HTTP method:** GET
+- **Authentication:** Bearer access token
+- **Success status:** 200
+
+_No parameters or body._
+
+**Response** `200`: { coins, equipped, emblems[{ id, name, sub, cost, badge, bg, fg, unlocked, equipped }] }
+
+**Errors:** 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X GET "$API_URL/api/v1/shop/emblems" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<{ coins, equipped, emblems[{ id, name, sub, cost, badge, bg, fg, unlocked, equipped }] }>"
+}
+```
+
+### POST `/api/v1/shop/emblems/:id/unlock`
+
+Spend coins to unlock an emblem (price decided by the server) and equip it
+
+- **HTTP method:** POST
+- **Authentication:** Bearer access token
+- **Success status:** 200
+
+**Path parameters**
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `id` | "cobalt" \| "tactical" \| "crown" \| "frame" | yes | - |
+
+**Response** `200`: Same shape as GET /shop/emblems
+
+**Errors:** 400 VALIDATION_ERROR, 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, domain `INSUFFICIENT_COINS`, domain `EMBLEM_ALREADY_OWNED`, domain `EMBLEM_NOT_FOUND`, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X POST "$API_URL/api/v1/shop/emblems/<id>/unlock" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<Same shape as GET /shop/emblems>"
+}
+```
+
+### POST `/api/v1/shop/emblems/:id/equip`
+
+Equip an emblem I own
+
+- **HTTP method:** POST
+- **Authentication:** Bearer access token
+- **Success status:** 200
+
+**Path parameters**
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `id` | "cobalt" \| "tactical" \| "crown" \| "frame" | yes | - |
+
+**Response** `200`: Same shape as GET /shop/emblems
+
+**Errors:** 400 VALIDATION_ERROR, 401 UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN, domain `EMBLEM_LOCKED`, domain `EMBLEM_NOT_FOUND`, 429 RATE_LIMITED
+
+**Example request**
+
+```bash
+curl -X POST "$API_URL/api/v1/shop/emblems/<id>/equip" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Example response** `200`
+
+```json
+{
+  "success": true,
+  "data": "<Same shape as GET /shop/emblems>"
 }
 ```

@@ -20,6 +20,7 @@ import { notificationApi } from '../../src/services/api/notificationApi';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useToastStore } from '../../src/store/toastStore';
+import { PrivacySettingsScreen } from '../../src/screens/settings/PrivacySettingsScreen';
 import { SettingsScreen } from '../../src/screens/settings/SettingsScreen';
 import { ThemeSelectionScreen } from '../../src/screens/settings/ThemeSelectionScreen';
 import { NotificationsScreen } from '../../src/screens/settings/NotificationsScreen';
@@ -144,7 +145,7 @@ describe('SettingsScreen', () => {
   });
 
   it('delete account asks for the password of registered accounts', async () => {
-    await wrap(<SettingsScreen {...props} />);
+    await wrap(<PrivacySettingsScreen {...(props as unknown as React.ComponentProps<typeof PrivacySettingsScreen>)} />);
     await fireEvent.press(screen.getByTestId('delete-account'));
     await fireEvent.changeText(await screen.findByTestId('delete-password'), 'Secret123');
     await fireEvent.press(screen.getByTestId('delete-confirm'));
@@ -179,25 +180,25 @@ describe('SettingsScreen', () => {
 });
 
 describe('ThemeSelectionScreen', () => {
-  it('lists all six themes', async () => {
+  it('lists the three kit themes', async () => {
     await wrap(<ThemeSelectionScreen {...props} />);
-    for (const id of ['dark', 'light', 'classic', 'neon', 'ocean', 'sunset']) expect(screen.getByTestId(`theme-${id}`)).toBeTruthy();
+    for (const id of ['dark', 'light', 'classic']) expect(screen.getByTestId(`theme-${id}`)).toBeTruthy();
   });
 
   it('applies the theme immediately and PATCHes users/me in the background', async () => {
     await wrap(<ThemeSelectionScreen {...props} />);
-    await fireEvent.press(screen.getByTestId('theme-neon'));
-    expect(useSettingsStore.getState().theme).toBe('neon');
-    await waitFor(() => expect(userApi.update).toHaveBeenCalledWith({ theme: 'neon' }));
+    await fireEvent.press(screen.getByTestId('theme-classic'));
+    expect(useSettingsStore.getState().theme).toBe('classic');
+    await waitFor(() => expect(userApi.update).toHaveBeenCalledWith({ theme: 'classic' }));
   });
 
   it('keeps the theme locally when the sync fails (offline) and warns', async () => {
     m(userApi.update).mockRejectedValue(new ApiError('NETWORK_ERROR', 'x'));
     await wrap(<ThemeSelectionScreen {...props} />);
-    await fireEvent.press(screen.getByTestId('theme-ocean'));
-    expect(useSettingsStore.getState().theme).toBe('ocean');
+    await fireEvent.press(screen.getByTestId('theme-classic'));
+    expect(useSettingsStore.getState().theme).toBe('classic');
     await waitFor(() => expect(JSON.stringify(useToastStore.getState())).toContain('Theme saved on this device only'));
-    expect(useSettingsStore.getState().theme).toBe('ocean');
+    expect(useSettingsStore.getState().theme).toBe('classic');
   });
 });
 
@@ -234,11 +235,12 @@ describe('NotificationsScreen', () => {
     load([n('a', 'LEVEL_UP'), n('b', 'FRIEND_REQUEST')]);
     await wrap(<NotificationsScreen {...props} />);
     expect(await screen.findByText('Title a')).toBeTruthy();
-    expect(screen.getAllByText('5m ago')).toHaveLength(2);
-    expect(screen.getByText('2 unread')).toBeTruthy();
+    expect(screen.getAllByText(/5m ago/)).toHaveLength(2);
+    expect(screen.getByText('UNREAD')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('mark-all-read'));
     await waitFor(() => expect(notificationApi.readAll).toHaveBeenCalled());
-    expect(await screen.findByText('All caught up')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('UNREAD')).toBeNull());
+    expect(screen.getByText('EARLIER')).toBeTruthy();
   });
 
   it('deletes a notification via the row action', async () => {

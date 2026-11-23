@@ -2,9 +2,8 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react-native';
 import { lift } from '../../design-system/shadows';
-import { type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useToastStore } from '../../store/toastStore';
 import { Pressy } from '../common/Pressy';
@@ -17,11 +16,7 @@ const ToastView: React.FC = () => {
   const dismiss = useToastStore((s) => s.dismiss);
 
   if (!toast) return null;
-  const icon =
-    toast.type === 'success' ? <CheckCircle2 size={16} color={c.success} /> :
-    toast.type === 'error' ? <AlertTriangle size={16} color={c.danger} /> :
-    toast.type === 'warning' ? <AlertTriangle size={16} color={c.warning} /> :
-    <Info size={16} color={c.x} />;
+  const dot = toast.type === 'success' ? c.success : toast.type === 'error' ? c.danger : toast.type === 'warning' ? c.warning : c.accent;
 
   return (
     <Animated.View
@@ -30,18 +25,17 @@ const ToastView: React.FC = () => {
       entering={FadeInUp.duration(180)}
       exiting={FadeOutUp.duration(150)}
       pointerEvents="box-none"
-      style={[styles.wrap, { top: insets.top + 8 }]}
+      style={[styles.wrap, { top: insets.top + 6 }]}
     >
-      <View accessibilityLiveRegion="polite" style={[styles.toast, { backgroundColor: c.bgElevated, borderColor: c.border }]}>
-        {icon}
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>{toast.title}</Text>
-          {toast.message ? <Text numberOfLines={2} style={[type.caption, { color: c.textSecondary }]}>{toast.message}</Text> : null}
+      <Pressy accessibilityLabel="Dismiss notification" onPress={dismiss} style={styles.toast}>
+        <View accessibilityLiveRegion="polite" style={styles.row}>
+          <View style={[styles.dot, { backgroundColor: dot }]} />
+          <View style={{ flexShrink: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} style={styles.title}>{toast.title}</Text>
+            {toast.message ? <Text numberOfLines={2} style={styles.message}>{toast.message}</Text> : null}
+          </View>
         </View>
-        <Pressy accessibilityLabel="Dismiss notification" onPress={dismiss} hitSlop={10}>
-          <X size={14} color={c.textSecondary} />
-        </Pressy>
-      </View>
+      </Pressy>
     </Animated.View>
   );
 };
@@ -82,6 +76,10 @@ export function withOverlayToast<P extends object>(Component: React.ComponentTyp
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100, elevation: 100 },
-  toast: { borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10, ...lift },
+  wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100, elevation: 100, alignItems: 'center' },
+  toast: { backgroundColor: '#141518', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 8, maxWidth: '100%', ...lift },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  title: { color: '#FFFFFF', fontSize: 11.5, lineHeight: 16, fontFamily: fonts.body.medium },
+  message: { color: 'rgba(255,255,255,0.72)', fontSize: 10.5, lineHeight: 14, fontFamily: fonts.body.regular },
 });

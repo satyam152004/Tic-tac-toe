@@ -28,7 +28,7 @@ process.on('SIGTERM', stop);
 
 for (let i = 0; i < 100; i++) {
   try {
-    const r = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+    const r = await fetch(`http://127.0.0.1:${port}/readyz`);
     if (r.ok) break;
   } catch {
     /* not up yet */

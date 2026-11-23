@@ -50,14 +50,14 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
   const s = stats.data;
 
   // Breakdown metrics
-  const totalMatches = s?.totalGames ?? 42;
-  const winRate = s ? s.winPercentage.toFixed(1) : '76.2';
-  const bestStreak = s?.bestStreak ?? 11;
-  const avgTime = s ? formatDurationSec(s.averageGameDurationSec) : '00:52';
+  const totalMatches = s?.totalGames ?? 0;
+  const winRate = s ? s.winPercentage.toFixed(1) : '0.0';
+  const bestStreak = s?.bestStreak ?? 0;
+  const avgTime = s ? formatDurationSec(s.averageGameDurationSec) : '--:--';
 
-  const wins = s?.wins ?? 32;
-  const draws = s?.draws ?? 6;
-  const losses = s?.losses ?? 4;
+  const wins = s?.wins ?? 0;
+  const draws = s?.draws ?? 0;
+  const losses = s?.losses ?? 0;
   const sumGames = Math.max(1, wins + draws + losses);
   const winPct = Math.round((wins / sumGames) * 100);
   const drawPct = Math.round((draws / sumGames) * 100);
@@ -131,8 +131,8 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
 
         <View style={styles.multiBar}>
           <View style={[styles.barSlice, { width: `${winPct}%`, backgroundColor: c.accent }]} />
-          <View style={[styles.barSlice, { width: `${drawPct}%`, backgroundColor: '#CBD5E1' }]} />
-          <View style={[styles.barSlice, { width: `${lossPct}%`, backgroundColor: '#1E293B' }]} />
+          <View style={[styles.barSlice, { width: `${drawPct}%`, backgroundColor: '#CFCFC8' }]} />
+          <View style={[styles.barSlice, { width: `${lossPct}%`, backgroundColor: '#141518' }]} />
         </View>
       </AppCard>
 
@@ -263,13 +263,13 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
 const styles = StyleSheet.create({
   segmentContainer: {
     flexDirection: 'row',
-    padding: 3,
-    borderRadius: 10,
+    padding: 2,
+    borderRadius: 9,
     borderWidth: 1,
   },
   segmentItem: {
     flex: 1,
-    paddingVertical: 7,
+    paddingVertical: 4,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   segmentText: {
-    fontSize: 11.5,
+    fontSize: 11,
   },
   kpiGrid: {
     flexDirection: 'row',
@@ -295,20 +295,20 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   kpiVal: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: fonts.mono.semibold,
   },
   kpiLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: fonts.body.medium,
     marginTop: 2,
   },
   barCard: {
     gap: 8,
-    padding: 14,
+    padding: 12,
   },
   barTitle: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontFamily: fonts.body.semibold,
     letterSpacing: 0.8,
   },
@@ -317,11 +317,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   barCount: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontFamily: fonts.mono.semibold,
   },
   multiBar: {
-    height: 7,
+    height: 8,
     borderRadius: 999,
     overflow: 'hidden',
     flexDirection: 'row',

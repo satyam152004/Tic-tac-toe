@@ -52,6 +52,8 @@ const gameSchema = new Schema(
     },
     /** Set exactly once (atomically) when stats/points/achievements have been applied. */
     finalizedAt: { type: Date, default: null },
+    /** Pending mutual-draw proposal (online games). Valid only until `expiresAt`. */
+    drawOffer: { by: { type: Schema.Types.ObjectId, default: null }, expiresAt: { type: Date, default: null } },
     rematchRequestedBy: { type: [Schema.Types.ObjectId], default: [] },
     rematchGameId: { type: Schema.Types.ObjectId, default: null },
     previousGameId: { type: Schema.Types.ObjectId, default: null },

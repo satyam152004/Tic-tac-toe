@@ -9,8 +9,9 @@ import { route } from './registry.js';
 const roomErrors = ['ROOM_NOT_FOUND', 'NOT_IN_ROOM'];
 
 export const roomRoutes = [
-  route({ method: 'post', path: '/rooms', tag: 'Rooms', summary: 'Create a private room (host)', body: sv.roomCreateBody, status: 201, response: 'Room { id, code, status, host, guest, ... }', errors: ['ALREADY_IN_ROOM', 'ALREADY_IN_GAME', 'INVALID_BOARD_CONFIG'], handler: room.create }),
+  route({ method: 'post', path: '/rooms', tag: 'Rooms', summary: 'Create a room (host). Private by default; isPublic lists it in /rooms/open', body: sv.roomCreateBody, status: 201, response: 'Room { id, code, status, host, guest, ... }', errors: ['ALREADY_IN_ROOM', 'ALREADY_IN_GAME', 'INVALID_BOARD_CONFIG'], handler: room.create }),
   route({ method: 'post', path: '/rooms/join', tag: 'Rooms', summary: 'Join a room with its 6 character code', body: sv.roomJoinBody, response: 'Room', errors: ['ROOM_NOT_FOUND', 'ROOM_EXPIRED', 'ROOM_FULL', 'ALREADY_IN_ROOM', 'ALREADY_IN_GAME', 'BLOCKED'], handler: room.join }),
+  route({ method: 'get', path: '/rooms/open', tag: 'Rooms', summary: 'Public open rooms: waiting for a guest, host opted in (own and blocked users excluded)', query: sv.roomOpenQuery, response: '{ items: [{ id, code, host, hostPoints, boardSize, winLength, turnTimeoutSec, expiresAt }] }', handler: room.listOpen }),
   route({ method: 'get', path: '/rooms/:id', tag: 'Rooms', summary: 'Get a room I am in (or was invited to)', params: idParam, response: 'Room', errors: roomErrors, handler: room.get }),
   route({ method: 'post', path: '/rooms/:id/leave', tag: 'Rooms', summary: 'Leave a room (host leaving promotes the guest; forfeits a running game)', params: idParam, response: 'Room (status EXPIRED when the last member left)', errors: roomErrors, handler: room.leave }),
   route({ method: 'post', path: '/rooms/:id/ready', tag: 'Rooms', summary: 'Guest sets readiness (host is always ready)', params: idParam, body: sv.roomReadyBody, response: 'Room', errors: [...roomErrors, 'HOST_ALWAYS_READY', 'ROOM_STATE'], handler: room.ready }),

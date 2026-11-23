@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
-import { AppButton } from '../../components/common/AppButton';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { fonts } from '../../design-system/typography';
@@ -31,9 +31,6 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
   const mode = route.params?.mode ?? setupMode;
   const [size, setSize] = useState<BoardSize>(useLocalGameStore.getState().setup.size);
 
-  const { height: screenH } = useWindowDimensions();
-  const isTall = screenH >= 780;
-
   const next = () => {
     const store = useLocalGameStore.getState();
     store.configure({ size, mode, winLength: undefined });
@@ -51,16 +48,15 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
       onBack={back}
       testID="board-selection"
       footer={
-        <AppButton
+        <ActionButton
           testID="board-selection-continue"
           fullWidth
-          size={isTall ? 'lg' : 'md'}
-          title={mode === 'VS_AI' ? 'Start Match' : 'Next'}
+          title="Next"
           onPress={next}
         />
       }
     >
-      <View style={[styles.container, { gap: isTall ? 14 : 11 }]}>
+      <View style={styles.container}>
         {BOARDS.map((b) => {
           const selected = size === b.size;
 
@@ -73,62 +69,36 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
               style={[
                 styles.boardCard,
                 {
-                  padding: isTall ? 16 : 14,
-                  borderRadius: isTall ? 16 : 14,
-                  backgroundColor: selected ? c.bgElevated : c.bgCard,
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: selected ? withAlpha(c.bgElevated, 0.55) : c.bgCard,
                   borderColor: selected ? c.accent : c.border,
                   borderWidth: selected ? 1.5 : 1,
                 },
               ]}
             >
               <View style={styles.cardLeft}>
-                {/* Mini Visual Grid Preview */}
-                <View
-                  style={[
-                    styles.gridPreviewBox,
-                    {
-                      width: isTall ? 46 : 42,
-                      height: isTall ? 46 : 42,
-                      borderRadius: isTall ? 10 : 8,
-                      borderColor: c.border,
-                      backgroundColor: c.bgPrimary,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.miniGrid,
-                      {
-                        width: '100%',
-                        height: '100%',
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        gap: 2,
-                        padding: 3,
-                      },
-                    ]}
-                  >
-                    {Array.from({ length: b.size * b.size }).map((_, i) => (
-                      <View
-                        key={i}
-                        style={{
-                          width: `${100 / b.size - 4}%`,
-                          aspectRatio: 1,
-                          borderRadius: 2,
-                          backgroundColor: selected ? withAlpha(c.accent, 0.35) : '#E4E4DF',
-                        }}
-                      />
-                    ))}
-                  </View>
+                {/* Mini Visual Grid Preview: 44px box, 6px padding, 2px gaps */}
+                <View style={[styles.gridPreviewBox, { borderColor: c.border, backgroundColor: c.bgCard }]}>
+                  {Array.from({ length: b.size }).map((_, r) => (
+                    <View key={r} style={styles.previewRow}>
+                      {Array.from({ length: b.size }).map((__, col) => (
+                        <View
+                          key={col}
+                          style={[styles.previewCell, { backgroundColor: selected ? withAlpha(c.accent, 0.25) : c.border }]}
+                        />
+                      ))}
+                    </View>
+                  ))}
                 </View>
 
                 {/* Text Info */}
                 <View style={styles.textCol}>
-                  <Text style={[styles.boardTitle, { color: c.text, fontSize: isTall ? 14.5 : 13.5 }]}>
+                  <Text style={[styles.boardTitle, { color: c.text }]}>
                     {b.title}
                   </Text>
                   <Text
-                    style={[styles.boardDesc, { color: c.textSecondary, fontSize: isTall ? 11.5 : 10.5 }]}
+                    style={[styles.boardDesc, { color: c.textSecondary }]}
                   >
                     {b.desc}
                   </Text>
@@ -139,17 +109,12 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
               <View
                 style={[
                   styles.checkCircle,
-                  {
-                    width: isTall ? 22 : 20,
-                    height: isTall ? 22 : 20,
-                    borderRadius: isTall ? 11 : 10,
-                    backgroundColor: selected ? c.accent : 'transparent',
-                    borderColor: selected ? c.accent : '#CFCFC8',
-                    borderWidth: selected ? 0 : 1.2,
-                  },
+                  selected
+                    ? { backgroundColor: c.accent }
+                    : { borderColor: '#CFCFC8', borderWidth: 1 },
                 ]}
               >
-                {selected ? <Check size={isTall ? 13 : 11} color="#FFFFFF" strokeWidth={2.6} /> : null}
+                {selected ? <Check size={12} color="#FFFFFF" strokeWidth={2.6} /> : null}
               </View>
             </Pressy>
           );
@@ -161,7 +126,8 @@ export const BoardSelectionScreen: React.FC<RootScreenProps<'board_selection'>> 
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 4,
+    paddingTop: 0,
+    gap: 12,
   },
   boardCard: {
     flexDirection: 'row',
@@ -175,26 +141,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gridPreviewBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    padding: 6,
+    gap: 2,
   },
-  miniGrid: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  previewRow: { flex: 1, flexDirection: 'row', gap: 2 },
+  previewCell: { flex: 1, borderRadius: 2 },
   textCol: {
     flex: 1,
     gap: 2,
   },
   boardTitle: {
     fontFamily: fonts.body.semibold,
+    fontSize: 13,
   },
   boardDesc: {
     fontFamily: fonts.body.regular,
+    fontSize: 11,
   },
   checkCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,

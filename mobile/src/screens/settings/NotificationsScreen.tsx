@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react-native';
-import { AppCard } from '../../components/common/AppCard';
+import { Bell, Trash2 } from 'lucide-react-native';
 import { AppIconButton } from '../../components/common/AppIconButton';
+import { Group, SectionLabel } from '../../components/profile/ProtoUi';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
-import { type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useNotifications } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
@@ -91,16 +91,44 @@ export const NotificationsScreen: React.FC<RootScreenProps<'notifications'>> = (
   const err = q.error && !q.data ? toApiError(q.error) : null;
   const unread = q.data?.unread ?? 0;
 
+  const items = q.data?.items ?? [];
+  const unreadItems = items.filter((i) => !i.readAt);
+  const earlier = items.filter((i) => !!i.readAt);
+
+  const renderRow = (n: NotificationItem) => (
+    <View key={n.id} testID={`notification-${n.id}`} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
+      <Pressy
+        testID={`notification-open-${n.id}`}
+        accessibilityLabel={`${n.title}. ${n.body}${n.readAt ? '' : '. Unread'}`}
+        onPress={() => open(n)}
+        onLongPress={() => void remove(n)}
+        scaleTo={0.995}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 10, paddingLeft: 13 }}
+      >
+        <View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: n.readAt ? 'transparent' : c.accent }} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 12, fontFamily: n.readAt ? fonts.body.medium : fonts.body.semibold, color: n.readAt ? c.textSecondary : c.text }}>{n.title}</Text>
+          <Text style={{ fontSize: 10, fontFamily: fonts.mono.regular, color: '#8E939E' }}>
+            {timeAgo(n.createdAt)}
+            {n.body ? ` • ${n.body}` : ''}
+          </Text>
+        </View>
+      </Pressy>
+      <AppIconButton testID={`notification-delete-${n.id}`} label="Delete notification" icon={<Trash2 size={14} color="#8E939E" />} onPress={() => void remove(n)} />
+    </View>
+  );
+
   return (
     <Screen
       title="Notifications"
-      subtitle={q.data ? (unread > 0 ? `${unread} unread` : 'All caught up') : undefined}
       onBack={back}
       scroll={false}
       padded={false}
       rightAction={
-        unread > 0 ? (
-          <AppIconButton testID="mark-all-read" label="Mark all read" icon={<CheckCheck size={18} color={c.accent} />} onPress={() => void markAll()} />
+        q.data ? (
+          <Pressy testID="mark-all-read" accessibilityLabel="Mark all read" disabled={unread === 0} onPress={() => void markAll()} style={{ opacity: unread > 0 ? 1 : 0.4 }}>
+            <Text style={{ fontSize: 10.5, fontFamily: fonts.body.semibold, color: c.accent }}>Mark all read</Text>
+          </Pressy>
         ) : undefined
       }
     >
@@ -110,36 +138,27 @@ export const NotificationsScreen: React.FC<RootScreenProps<'notifications'>> = (
         </View>
       ) : q.isLoading ? (
         <AppLoader label="Loading notifications..." />
+      ) : items.length === 0 ? (
+        <EmptyState icon={<Bell size={24} color={c.accent} />} title="No notifications" description="Friend requests, invites and rewards will show up here." />
       ) : (
-        <FlatList
+        <ScrollView
           testID="notification-list"
-          data={q.data?.items ?? []}
-          keyExtractor={(i) => i.id}
-          ListEmptyComponent={<EmptyState icon={<Bell size={24} color={c.accent} />} title="No notifications" description="Friend requests, invites and rewards will show up here." />}
-          contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 14 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={c.accent} />}
-          renderItem={({ item: n }) => (
-            <AppCard padding="sm" selected={!n.readAt} testID={`notification-${n.id}`}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Pressy
-                  testID={`notification-open-${n.id}`}
-                  accessibilityLabel={`${n.title}. ${n.body}${n.readAt ? '' : '. Unread'}`}
-                  onPress={() => open(n)}
-                  onLongPress={() => void remove(n)}
-                  style={{ flex: 1, flexDirection: 'row', gap: 10, minHeight: 44, alignItems: 'center' }}
-                >
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: n.readAt ? 'transparent' : c.accent }} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[type.bodyStrong, { color: c.text }]}>{n.title}</Text>
-                    <Text style={[type.small, { color: c.textSecondary }]}>{n.body}</Text>
-                    <Text style={[type.caption, { color: c.textSecondary, marginTop: 4 }]}>{timeAgo(n.createdAt)}</Text>
-                  </View>
-                </Pressy>
-                <AppIconButton testID={`notification-delete-${n.id}`} label="Delete notification" icon={<Trash2 size={16} color={c.textSecondary} />} onPress={() => void remove(n)} />
-              </View>
-            </AppCard>
-          )}
-        />
+        >
+          {unreadItems.length > 0 ? (
+            <View>
+              <SectionLabel>Unread</SectionLabel>
+              <Group>{unreadItems.map(renderRow)}</Group>
+            </View>
+          ) : null}
+          {earlier.length > 0 ? (
+            <View>
+              <SectionLabel>Earlier</SectionLabel>
+              <Group>{earlier.map(renderRow)}</Group>
+            </View>
+          ) : null}
+        </ScrollView>
       )}
     </Screen>
   );

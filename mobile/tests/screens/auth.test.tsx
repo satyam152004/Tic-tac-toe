@@ -140,24 +140,20 @@ describe('RegistrationScreen', () => {
   const upgradeGuest = jest.fn();
   beforeEach(() => useAuthStore.setState({ register, upgradeGuest }));
 
-  const fill = async (over: Partial<Record<'user' | 'email' | 'pass' | 'confirm', string>> = {}) => {
+  const fill = async (over: Partial<Record<'user' | 'email' | 'pass', string>> = {}) => {
     await type('register-username', over.user ?? 'tactical_alex');
     await type('register-email', over.email ?? 'alex@example.com');
     await type('register-password', over.pass ?? 'Passw0rd1');
-    await type('register-confirm', over.confirm ?? over.pass ?? 'Passw0rd1');
-    await press('register-terms');
   };
 
   it('shows live password rules and validates fields', async () => {
     await render(<RegistrationScreen {...(props() as any)} />);
-    expect(screen.getByLabelText('Contains a number: not met')).toBeTruthy();
+    expect(screen.getByLabelText('1 number: not met')).toBeTruthy();
     await type('register-password', 'abcdefgh1');
-    expect(screen.getByLabelText('Contains a number: met')).toBeTruthy();
+    expect(screen.getByLabelText('1 number: met')).toBeTruthy();
     await press('register-submit');
     expect(await screen.findByText('Username must be at least 3 characters')).toBeTruthy();
     expect(screen.getByText('Enter your email address')).toBeTruthy();
-    expect(screen.getByText('Passwords do not match')).toBeTruthy();
-    expect(screen.getByText('Please accept the Terms of Service to continue')).toBeTruthy();
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -270,13 +266,11 @@ describe('OtpVerificationScreen', () => {
     await renderOtp();
     for (let i = 0; i < 60; i++) await act(async () => void jest.advanceTimersByTime(1000));
     await press('otp-resend');
-    expect(await screen.findByText('Resend code in 00:20')).toBeTruthy();
+    expect(await screen.findByText('Resend in')).toBeTruthy();
+    expect(screen.getByTestId('otp-countdown').props.children).toMatch(/^00:(19|20)$/);
   });
 
-  it('skip goes to Main; reset purpose redirects to forgot_password', async () => {
-    await renderOtp();
-    await press('otp-skip');
-    expect(mockResetTo).toHaveBeenCalledWith('Main');
+  it('reset purpose redirects to forgot_password', async () => {
     await render(<OtpVerificationScreen {...(props({ email: 'a@b.co', purpose: 'reset' }) as any)} />);
     expect(mockNav.replace).toHaveBeenCalledWith('forgot_password');
   });
@@ -303,7 +297,6 @@ describe('ForgotPasswordScreen', () => {
     await screen.findByTestId('reset-otp-0');
     await fireEvent.changeText(screen.getByTestId('reset-otp-0'), '654321');
     await type('reset-password', 'N3wPassword');
-    await type('reset-confirm', 'N3wPassword');
     await press('reset-submit');
     await waitFor(() => expect(api.resetPassword).toHaveBeenCalledWith({ email: 'me@example.com', code: '654321', newPassword: 'N3wPassword' }));
     expect(mockResetTo).toHaveBeenCalledWith('login');
@@ -321,7 +314,6 @@ describe('ForgotPasswordScreen', () => {
     expect(screen.getByText('Password does not meet the requirements below')).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('reset-otp-0'), '000000');
     await type('reset-password', 'N3wPassword');
-    await type('reset-confirm', 'N3wPassword');
     await press('reset-submit');
     expect(await screen.findByText('Wrong code. 2 attempts left.')).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('reset-otp-0'), '111111');
@@ -377,18 +369,15 @@ describe('EditProfileScreen', () => {
 });
 
 describe('UserProfileScreen', () => {
-  it('renders real stats, xp progress, coins and recent form', async () => {
+  it('renders identity, elo, played / win % / streak stats', async () => {
     useAuthStore.setState({ status: 'signedIn', user: makeMe() });
     await render(withClient(<UserProfileScreen />));
     expect(screen.getByText('Aiden Vance')).toBeTruthy();
-    expect(screen.getByText('@aiden')).toBeTruthy();
-    expect(screen.getByText('Level 4 · 1337 Rating')).toBeTruthy();
-    expect(screen.getByText('150 / 200 XP')).toBeTruthy();
-    expect(screen.getByTestId('profile-coins').props.children).toBe(420);
-    expect(screen.getByLabelText('Wins: 12')).toBeTruthy();
-    expect(screen.getByLabelText('Win Percentage: 60%')).toBeTruthy();
-    expect(screen.getByLabelText('Level progress 50 percent')).toBeTruthy();
-    expect(await screen.findByTestId('recent-form')).toBeTruthy();
+    expect(screen.getByText('@aiden • 1,337 ELO')).toBeTruthy();
+    expect(screen.getByText('20')).toBeTruthy();
+    expect(screen.getByText('Played')).toBeTruthy();
+    expect(screen.getByText('60%')).toBeTruthy();
+    expect(screen.getByText('3d')).toBeTruthy();
     expect(screen.queryByTestId('guest-banner')).toBeNull();
   });
 
@@ -403,7 +392,7 @@ describe('UserProfileScreen', () => {
   it('verified email shows a badge instead of the action', async () => {
     useAuthStore.setState({ status: 'signedIn', user: makeMe({ emailVerified: true }) });
     await render(withClient(<UserProfileScreen />));
-    expect(screen.getByText('Email verified')).toBeTruthy();
+    expect(screen.getByText('Email verified (aiden@example.com)')).toBeTruthy();
     expect(screen.queryByTestId('verify-email')).toBeNull();
   });
 

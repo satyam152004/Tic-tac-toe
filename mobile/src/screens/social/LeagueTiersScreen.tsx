@@ -2,7 +2,9 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/common/Screen';
 import { fonts, type } from '../../design-system/typography';
-import { useMe } from '../../hooks/queries';
+import { AppLoader } from '../../components/feedback/AppLoader';
+import { ErrorState } from '../../components/feedback/StateViews';
+import { useHistory, useLeaderboard, useMe } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
@@ -16,11 +18,11 @@ export interface DivisionInfo {
 }
 
 export const LEAGUE_DIVISIONS: DivisionInfo[] = [
-  { name: 'Platinum', min: 1700, max: 3000, range: '1,700+ ELO', reward: '+350 Coins' },
-  { name: 'Gold I', min: 1500, max: 1699, range: '1,500 – 1,699 ELO', reward: '+250 Coins' },
-  { name: 'Gold II', min: 1400, max: 1499, range: '1,400 – 1,499 ELO', reward: 'Current Division' },
-  { name: 'Silver', min: 1200, max: 1399, range: '1,200 – 1,399 ELO', reward: 'Completed' },
-  { name: 'Bronze', min: 0, max: 1199, range: 'Below 1,200 ELO', reward: 'Completed' },
+  { name: 'Platinum', min: 1700, max: 3000, range: '1,700+ ELO', reward: '' },
+  { name: 'Gold I', min: 1500, max: 1699, range: '1,500 – 1,699 ELO', reward: '' },
+  { name: 'Gold II', min: 1400, max: 1499, range: '1,400 – 1,499 ELO', reward: '' },
+  { name: 'Silver', min: 1200, max: 1399, range: '1,200 – 1,399 ELO', reward: '' },
+  { name: 'Bronze', min: 0, max: 1199, range: 'Below 1,200 ELO', reward: '' },
 ];
 
 export function divisionForPoints(points: number): DivisionInfo {
@@ -31,80 +33,74 @@ export const LeagueTiersScreen: React.FC<RootScreenProps<'league_tiers'>> = () =
   const c = useTheme();
   const { back } = useAppNav();
   const me = useMe();
-  const points = me.data?.stats.points ?? 1498;
+  const board = useLeaderboard('global', 'points');
+  const history = useHistory({});
+
+  if (!me.data) {
+    return (
+      <Screen title="Ranked Leagues" onBack={back} testID="league-tiers-screen">
+        {me.isError ? <ErrorState message="Could not load your ranking." onRetry={() => void me.refetch()} /> : <AppLoader label="Loading league..." />}
+      </Screen>
+    );
+  }
+
+  const points = me.data.stats.points ?? 0;
+  const current = divisionForPoints(points);
+  const curIdx = LEAGUE_DIVISIONS.findIndex((d) => d.name === current.name);
+  const next = curIdx > 0 ? LEAGUE_DIVISIONS[curIdx - 1] : null;
+  const progress = next ? Math.min(1, Math.max(0, (points - current.min) / (next.min - current.min))) : 1;
+  const rank = board.data?.me?.rank ?? null;
+  const last20 = (history.data?.items ?? []).filter((g) => g.result).slice(0, 20);
+  const last20Pct = last20.length > 0 ? Math.round((last20.filter((g) => g.result === 'WIN').length / last20.length) * 100) : null;
+
+  const rewardFor = (i: number) => (i === curIdx ? 'Current Division' : i > curIdx ? 'Completed' : 'Locked');
 
   return (
-    <Screen
-      title="Ranked Leagues"
-      onBack={back}
-      testID="league-tiers-screen"
-      rightAction={
-        <Text style={[styles.headerSeason, { color: c.textSecondary }]}>Season 4</Text>
-      }
-    >
-      <View style={{ gap: 14 }}>
-        {/* Division Progress Hero Card */}
-        <View style={[styles.heroCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={[styles.tierTag, { color: c.accent }]}>GOLD II • RANK #14</Text>
-              <Text style={[styles.eloText, { color: c.text }]}>
-                {points.toLocaleString()} ELO{' '}
-                <Text style={[styles.eloSub, { color: c.textSecondary }]}>
-                  (2 to Gold I)
-                </Text>
-              </Text>
-            </View>
+    <Screen title="Ranked Leagues" onBack={back} testID="league-tiers-screen" gap={12}>
+      {/* Division Progress Card */}
+      <View style={[styles.heroCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={[styles.tierTag, { color: c.accent }]}>
+              {current.name.toUpperCase()}
+              {rank != null ? ` • RANK #${rank}` : ''}
+            </Text>
+            <Text style={[styles.eloText, { color: c.text }]}>
+              {points.toLocaleString()} ELO
+              {next ? (
+                <Text style={[styles.eloSub, { color: c.textSecondary }]}>{`  (${(next.min - points).toLocaleString()} to ${next.name})`}</Text>
+              ) : null}
+            </Text>
+          </View>
+          {last20Pct != null ? (
             <View style={styles.ratePill}>
-              <Text style={styles.ratePillText}>82% Last 20</Text>
+              <Text style={styles.ratePillText}>{last20Pct}% Last 20</Text>
             </View>
-          </View>
-
-          <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
-            <View style={[styles.fill, { width: '98%', backgroundColor: c.accent }]} />
-          </View>
+          ) : null}
         </View>
 
-        {/* Divisions List */}
-        <View style={[styles.divisionsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          {LEAGUE_DIVISIONS.map((div, i) => {
-            const isCurrent = div.name === 'Gold II';
-            return (
-              <View
-                key={div.name}
-                style={[
-                  styles.divRow,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
-                  isCurrent && { backgroundColor: '#EFF4FF' },
-                ]}
-              >
-                <View>
-                  <Text
-                    style={[
-                      styles.divName,
-                      { color: isCurrent ? c.accent : c.text },
-                    ]}
-                  >
-                    {div.name}
-                  </Text>
-                  <Text style={[styles.divRange, { color: c.textSecondary }]}>{div.range}</Text>
-                </View>
+        <View style={[styles.track, { backgroundColor: c.bgSecondary }]}>
+          <View style={[styles.fill, { width: `${Math.round(progress * 100)}%`, backgroundColor: c.accent }]} />
+        </View>
+      </View>
 
-                <Text
-                  style={[
-                    styles.divReward,
-                    {
-                      color: isCurrent ? c.accent : c.textSecondary,
-                      fontFamily: isCurrent ? fonts.body.semibold : fonts.body.medium,
-                    },
-                  ]}
-                >
-                  {div.reward}
-                </Text>
+      {/* Divisions List */}
+      <View style={[styles.divisionsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+        {LEAGUE_DIVISIONS.map((div, i) => {
+          const isCurrent = i === curIdx;
+          return (
+            <View
+              key={div.name}
+              style={[styles.divRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.border }, isCurrent && { backgroundColor: '#EFF4FFA6' }]}
+            >
+              <View>
+                <Text style={[styles.divName, { color: isCurrent ? c.accent : c.text }]}>{div.name}</Text>
+                <Text style={[styles.divRange, { color: c.textSecondary }]}>{div.range}</Text>
               </View>
-            );
-          })}
-        </View>
+              <Text style={[styles.divReward, { color: isCurrent ? c.accent : '#8E939E' }]}>{rewardFor(i)}</Text>
+            </View>
+          );
+        })}
       </View>
     </Screen>
   );
@@ -116,10 +112,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body.semibold,
   },
   heroCard: {
-    padding: 14,
+    padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    gap: 10,
+    gap: 8,
   },
   heroTop: {
     flexDirection: 'row',
@@ -132,7 +128,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   eloText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: fonts.mono.semibold,
     marginTop: 2,
   },
@@ -169,19 +165,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    minHeight: 34,
   },
   divName: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: fonts.body.semibold,
   },
   divRange: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontFamily: fonts.mono.medium,
-    marginTop: 2,
+    marginTop: 0,
   },
   divReward: {
-    fontSize: 11.5,
+    fontSize: 10.5,
+    fontFamily: fonts.mono.semibold,
   },
 });

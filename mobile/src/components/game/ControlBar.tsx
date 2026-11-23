@@ -16,7 +16,9 @@ export const ControlTile: React.FC<{
   disabled?: boolean;
   /** Full-width row (icon left of label), used when large system fonts make equal-width columns too narrow. */
   row?: boolean;
-}> = ({ testID, label, icon, onPress, disabled, row }) => {
+  /** Slim 36dp tile with the icon beside the label (the board screens' control strip). */
+  inline?: boolean;
+}> = ({ testID, label, icon, onPress, disabled, row, inline }) => {
   const c = useTheme();
   return (
     <Pressy
@@ -27,13 +29,14 @@ export const ControlTile: React.FC<{
       onPress={disabled ? undefined : onPress}
       style={[
         styles.tile,
-        row ? styles.row : styles.column,
-        { minHeight: row ? CHROME.controlRow : CHROME.control, backgroundColor: c.bgCard, borderColor: c.border, opacity: disabled ? 0.45 : 1 },
+        row || inline ? styles.row : styles.column,
+        inline && !row && styles.inline,
+        { minHeight: row ? CHROME.controlRow : inline ? 36 : CHROME.control, backgroundColor: c.bgCard, borderColor: c.border, opacity: disabled ? 0.45 : 1 },
       ]}
     >
       {icon}
       {/* No numberOfLines={1}: at large font scales the label wraps instead of being cut off. */}
-      <Text style={[type.caption, { color: c.text }, !row && styles.centered]}>{label}</Text>
+      <Text style={[type.caption, { color: c.text }, inline && styles.inlineLabel, !row && styles.centered]}>{label}</Text>
     </Pressy>
   );
 };
@@ -57,4 +60,6 @@ const styles = StyleSheet.create({
   column: { flex: 1, flexDirection: 'column' },
   row: { flexDirection: 'row', gap: space.sm, alignSelf: 'stretch' },
   centered: { textAlign: 'center' },
+  inline: { flex: 1, borderRadius: 10, paddingVertical: 0, gap: 4 },
+  inlineLabel: { fontSize: 11.5, lineHeight: 16 },
 });

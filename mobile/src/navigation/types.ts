@@ -47,8 +47,8 @@ export type RootStackParamList = {
   room_details: { roomId: string };
   online_result: { gameId: string };
   reconnection: { gameId?: string } | undefined;
+  spectate_match: { gameId: string; friendName?: string };
   match_invitation: { gameId?: string; roomCode?: string; fromName?: string } | undefined;
-  spectate_match: { friendId: string; friendName: string; friendAvatar?: string | null };
 
   // Profile / social / progression / settings
   edit_profile: undefined;

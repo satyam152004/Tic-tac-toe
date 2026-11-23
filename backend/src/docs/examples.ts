@@ -40,7 +40,7 @@ const game = {
 const room = {
   id: '665f1c2e8b3a4c0012340001', code: 'K7M3QX', status: 'WAITING',
   host: { id: '665f1c2e8b3a4c0012345678', username: 'player_one', displayName: 'Player One', avatar: 'avatar_default', level: 3, online: true },
-  guest: null, hostId: '665f1c2e8b3a4c0012345678', guestId: null, boardSize: 3, winLength: 3, guestReady: false, gameId: null,
+  guest: null, hostId: '665f1c2e8b3a4c0012345678', guestId: null, boardSize: 3, winLength: 3, guestReady: false, isPublic: false, turnTimeoutSec: 60, gameId: null,
   expiresAt: '2026-11-17T10:30:00.000Z', createdAt: '2026-11-17T10:00:00.000Z',
 };
 const card = { id: '665f1c2e8b3a4c0012345679', username: 'friend_two', displayName: 'Friend Two', avatar: 'avatar_default', level: 2, online: true };
@@ -63,6 +63,7 @@ export const EXAMPLES: Record<string, unknown> = {
   'POST /matchmaking/join': { status: 'QUEUED', alreadyQueued: false, ticket: { id: '665f1c2e8b3a4c0012340abc', userId: user.id, boardSize: 3, winLength: 3, status: 'QUEUED', queueExpiresAt: '2026-11-17T10:02:00.000Z' } },
   'GET /matchmaking/status': { queued: true, ticket: { id: '665f1c2e8b3a4c0012340abc', status: 'QUEUED' }, queuedForSec: 8, activeGameId: null },
   'POST /rooms': room,
+  'GET /rooms/open': { items: [{ id: room.id, code: room.code, host: room.host, hostPoints: 215, boardSize: 3, winLength: 3, turnTimeoutSec: 60, expiresAt: room.expiresAt, createdAt: room.createdAt }] },
   'POST /rooms/join': { ...room, status: 'FULL', guest: card, guestId: card.id },
   'POST /friends/request': { id: '665f1c2e8b3a4c0012340def', status: 'PENDING', recipientId: card.id },
   'GET /friends': [{ friendshipId: '665f1c2e8b3a4c0012340def', status: 'ACCEPTED', since: '2026-11-17T10:00:00.000Z', requestedAt: '2026-11-16T10:00:00.000Z', user: { ...card, lastActiveAt: '2026-11-17T10:00:00.000Z' } }],

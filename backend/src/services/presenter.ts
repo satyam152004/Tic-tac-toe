@@ -57,6 +57,7 @@ export function toSelf(u: UserLike) {
     sound: u.sound,
     language: u.language,
     notificationPrefs: u.notificationPrefs,
+    privacy: { allowSpectating: u.privacy?.allowSpectating ?? true },
     online: u.online ?? false,
     lastActiveAt: u.lastActiveAt,
     createdAt: (u as { createdAt?: Date }).createdAt,

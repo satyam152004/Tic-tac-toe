@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { BlockedUserModel, FriendshipDoc, FriendshipModel, makePairKey, UserModel } from '../models/index.js';
+import { BlockedUserModel, FriendshipDoc, FriendshipModel, GameModel, makePairKey, UserModel } from '../models/index.js';
 import { Errors } from '../utils/errors.js';
 import { paged, skipOf } from '../utils/pagination.js';
 import { audit } from './audit.service.js';
@@ -96,11 +96,21 @@ export async function list(userId: string, q: { page: number; limit: number; sta
   const otherIds = rows.map((r) => (String(r.requesterId) === userId ? r.recipientId : r.requesterId));
   const users = await UserModel.find({ _id: { $in: otherIds }, deletedAt: { $exists: false } }).select(CARD_FIELDS).lean();
   const byId = new Map(users.map((u) => [String(u._id), u]));
+  // Friends currently in a live online game that may be watched (drives the "Spectate" action).
+  const live = new Map<string, string>();
+  if (q.status === 'accepted' && otherIds.length) {
+    const [games, privacy] = await Promise.all([
+      GameModel.find({ playerIds: { $in: otherIds }, type: { $in: ['ONLINE_RANDOM', 'PRIVATE_ROOM', 'FRIEND'] }, status: 'IN_PROGRESS' }).select('_id playerIds').lean(),
+      UserModel.find({ _id: { $in: otherIds }, 'privacy.allowSpectating': false }).select('_id').lean(),
+    ]);
+    const hidden = new Set(privacy.map((u) => String(u._id)));
+    for (const g of games) for (const pid of g.playerIds) if (!hidden.has(String(pid)) && otherIds.some((o) => String(o) === String(pid))) live.set(String(pid), String(g._id));
+  }
   const items = rows
     .map((r) => {
       const otherId = String(String(r.requesterId) === userId ? r.recipientId : r.requesterId);
       const u = byId.get(otherId);
-      return u ? { friendshipId: String(r._id), status: r.status, since: r.respondedAt ?? null, requestedAt: (r as { createdAt?: Date }).createdAt, user: { ...toCard(u), lastActiveAt: u.lastActiveAt } } : null;
+      return u ? { friendshipId: String(r._id), status: r.status, since: r.respondedAt ?? null, requestedAt: (r as { createdAt?: Date }).createdAt, user: { ...toCard(u), lastActiveAt: u.lastActiveAt }, ...(q.status === 'accepted' ? { activeGameId: live.get(otherId) ?? null } : {}) } : null;
     })
     .filter(Boolean);
   return paged(items, total, q);

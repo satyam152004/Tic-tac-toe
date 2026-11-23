@@ -11,6 +11,10 @@ const roomSchema = new Schema(
     boardSize: { type: Number, enum: BOARD_SIZES, required: true },
     winLength: { type: Number, required: true, min: 3, max: 5 },
     guestReady: { type: Boolean, default: false },
+    /** Listed in GET /rooms/open while it is waiting for a guest. Rooms are private (code-only) unless the host opts in. */
+    isPublic: { type: Boolean, default: false },
+    /** Per-turn clock for the game started from this room; 0 = no clock. */
+    turnTimeoutSec: { type: Number, default: 60, min: 0, max: 600 },
     invitedUserIds: { type: [Schema.Types.ObjectId], default: [] },
     gameId: { type: Schema.Types.ObjectId, ref: 'Game', default: null },
     expiresAt: { type: Date, required: true },
@@ -23,6 +27,7 @@ roomSchema.index({ code: 1 }, { unique: true });
 roomSchema.index({ hostId: 1, status: 1 });
 roomSchema.index({ guestId: 1, status: 1 });
 roomSchema.index({ status: 1, expiresAt: 1 });
+roomSchema.index({ isPublic: 1, status: 1, expiresAt: 1 });
 roomSchema.index({ purgeAt: 1 }, { expireAfterSeconds: 0 });
 cleanJson(roomSchema, ['purgeAt']);
 

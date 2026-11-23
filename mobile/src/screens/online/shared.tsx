@@ -8,6 +8,7 @@ import { AppModal } from '../../components/common/AppModal';
 import * as Clipboard from 'expo-clipboard';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
 import { useFriends } from '../../hooks/queries';
+import { api, unwrap } from '../../services/api/apiClient';
 import { roomApi } from '../../services/api/roomApi';
 import type { PlayerCard, Room } from '../../services/api/types';
 import { friendlyMessage } from '../../services/api/errors';
@@ -19,6 +20,35 @@ import { useTheme } from '../../hooks/useTheme';
 import type { BoardSize } from '../../services/api/types';
 import { toApiError } from '../../services/api/errors';
 import { socketClient, type SocketStatus } from '../../services/socket/socketClient';
+
+/** One public room from GET /rooms/open (host opted in; still waiting for a guest). */
+export interface OpenRoom {
+  id: string;
+  code: string;
+  host: PlayerCard;
+  hostPoints: number;
+  boardSize: BoardSize;
+  winLength: number;
+  turnTimeoutSec: number;
+  expiresAt: string;
+}
+
+export const fetchOpenRooms = (limit = 20) => unwrap<{ items: OpenRoom[] }>(api.get('/rooms/open', { params: { limit } })).then((r) => r.items);
+
+/** React-query key shared by the lobby and the join screen. */
+export const OPEN_ROOMS_KEY = ['rooms', 'open'] as const;
+
+export type TurnTimer = 0 | 15 | 30 | 60;
+
+/** Creates a room with the grid size, turn clock and visibility chosen on the Create Room screen. */
+export async function createRoomWithOptions(boardSize: BoardSize, opts: { isPublic: boolean; turnTimeoutSec: TurnTimer }): Promise<Room> {
+  const room = await unwrap<Room>(api.post('/rooms', { boardSize, ...opts }));
+  useOnlineStore.getState().setRoom(room);
+  return room;
+}
+
+/** "30s" / "Off" label for a turn clock. */
+export const timerLabel = (sec: number): string => (sec > 0 ? `${sec}s` : 'Off');
 
 export const ONLINE_SIZES: BoardSize[] = [3, 4, 5];
 

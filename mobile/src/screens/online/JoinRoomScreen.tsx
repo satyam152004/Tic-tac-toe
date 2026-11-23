@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
+import { useQuery } from '@tanstack/react-query';
+import { ActivityIndicator } from 'react-native';
+import { ActionButton } from '../../components/game/ActionButton';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { fonts, type } from '../../design-system/typography';
@@ -12,14 +13,10 @@ import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage, toApiError } from '../../services/api/errors';
 import { joinRoomByCode } from '../../services/onlineActions';
 import { toast } from '../../store/toastStore';
+import { OPEN_ROOMS_KEY, fetchOpenRooms, timerLabel } from './shared';
 
 const CODE_LENGTH = 6;
 const clean = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH);
-
-const RECENT_ROOMS = [
-  { code: 'TTT842', display: 'TTT-842', desc: 'Rohan • 3×3 • 30s' },
-  { code: 'TTT419', display: 'TTT-419', desc: 'Meera • 4×4 • 15s' },
-];
 
 const JOIN_ERRORS: Record<string, string> = {
   ROOM_NOT_FOUND: 'Room code not found. Check the code and try again.',
@@ -38,6 +35,8 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
   const [code, setCode] = useState(() => clean(route.params?.code ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const open = useQuery({ queryKey: OPEN_ROOMS_KEY, queryFn: () => fetchOpenRooms(10), staleTime: 5000 });
 
   const paste = async () => {
     try {
@@ -74,7 +73,7 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
       title="Join Room"
       onBack={back}
       footer={
-        <AppButton
+        <ActionButton
           testID="join-room-submit"
           title="Join Match"
           fullWidth
@@ -89,7 +88,7 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
         <View style={{ gap: 8 }}>
           <View style={styles.headerRow}>
             <Text style={[styles.codeLabel, { color: c.textSecondary }]}>
-              Room Code {code ? `(${formattedCode})` : ''}
+              Room Code{code ? ` (${formattedCode})` : ''}
             </Text>
             <Pressy testID="paste-code" onPress={paste}>
               <Text style={[styles.pasteText, { color: c.accent }]}>Paste Code</Text>
@@ -141,101 +140,66 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
           <Text style={[type.small, { color: c.danger }]}>{error}</Text>
         ) : null}
 
-        {/* Recent Public Rooms */}
-        <View style={{ gap: 8 }}>
-          <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>RECENT PUBLIC ROOMS</Text>
-          <View style={[styles.roomsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-            {RECENT_ROOMS.map((r, i) => (
-              <Pressy
-                key={r.code}
-                onPress={() => {
-                  setCode(r.code);
-                  setError(null);
-                }}
-                style={[
-                  styles.roomRow,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
-                ]}
-              >
-                <View>
-                  <Text style={[styles.roomCode, { color: c.text }]}>{r.display}</Text>
-                  <Text style={[styles.roomDesc, { color: c.textSecondary }]}>{r.desc}</Text>
-                </View>
-                <Text style={[styles.selectArrow, { color: c.accent }]}>Select →</Text>
+        {/* Recent public rooms: real open rooms from GET /rooms/open; tapping one fills the code boxes */}
+        <View>
+          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>RECENT PUBLIC ROOMS</Text>
+          <View testID="public-rooms" style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+            {open.isLoading ? (
+              <View style={styles.pubRow}>
+                <ActivityIndicator color={c.accent} />
+              </View>
+            ) : open.isError ? (
+              <Pressy testID="public-rooms-retry" accessibilityLabel="Retry loading public rooms" onPress={() => void open.refetch()} style={styles.pubRow}>
+                <Text style={[styles.pubSub, { color: c.textSecondary, flex: 1 }]}>{friendlyMessage(open.error)}</Text>
+                <Text style={[styles.pubAction, { color: c.accent }]}>Retry</Text>
               </Pressy>
-            ))}
+            ) : (open.data ?? []).length === 0 ? (
+              <View style={styles.pubRow}>
+                <Text testID="public-rooms-empty" style={[styles.pubSub, { color: c.textSecondary }]}>No public rooms right now.</Text>
+              </View>
+            ) : (
+              (open.data ?? []).map((r, i) => (
+                <Pressy
+                  key={r.id}
+                  testID={`public-room-${r.id}`}
+                  accessibilityLabel={`Select room ${r.code} hosted by ${r.host.displayName}`}
+                  onPress={() => {
+                    setCode(clean(r.code));
+                    setError(null);
+                  }}
+                  scaleTo={0.995}
+                  style={[styles.pubRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.border }]}
+                >
+                  <View>
+                    <Text style={[styles.pubCode, { color: c.text }]}>{r.code}</Text>
+                    <Text style={[styles.pubSub, { color: c.textSecondary }]}>
+                      {r.host.displayName} • {r.boardSize}×{r.boardSize} • {timerLabel(r.turnTimeoutSec)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.pubAction, { color: c.accent }]}>Select →</Text>
+                </Pressy>
+              ))
+            )}
           </View>
         </View>
+
       </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  codeLabel: {
-    fontSize: 12,
-    fontFamily: fonts.body.semibold,
-  },
-  pasteText: {
-    fontSize: 12,
-    fontFamily: fonts.body.semibold,
-  },
-  codeBoxes: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 2,
-  },
-  box: {
-    flex: 1,
-    height: 48,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  boxChar: {
-    fontSize: 18,
-    fontFamily: fonts.mono.semibold,
-  },
-  hiddenInput: {
-    position: 'absolute',
-    top: 24,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.01,
-  },
-  sectionLabel: {
-    fontSize: 10.5,
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
-  },
-  roomsGroup: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  roomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  roomCode: {
-    fontSize: 13,
-    fontFamily: fonts.mono.semibold,
-  },
-  roomDesc: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  selectArrow: {
-    fontSize: 12,
-    fontFamily: fonts.body.semibold,
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  codeLabel: { fontSize: 11.5, fontFamily: fonts.body.semibold },
+  pasteText: { fontSize: 11.5, fontFamily: fonts.body.semibold },
+  codeBoxes: { flexDirection: 'row', gap: 6 },
+  box: { flex: 1, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  boxChar: { fontSize: 16, fontFamily: fonts.mono.semibold },
+  hiddenInput: { position: 'absolute', top: 24, left: 0, right: 0, bottom: 0, opacity: 0.01 },
+  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5 },
+  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  pubRow: { minHeight: 38, paddingVertical: 10, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  pubCode: { fontSize: 12, fontFamily: fonts.mono.semibold },
+  pubSub: { fontSize: 10.5, fontFamily: fonts.body.regular },
+  pubAction: { fontSize: 11.5, fontFamily: fonts.body.semibold },
 });

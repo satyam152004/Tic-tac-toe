@@ -26,6 +26,7 @@ export const updateMeBody = z
     language: z.string().regex(/^[a-z]{2}(-[A-Za-z]{2,4})?$/).optional(),
     sound: z.object({ effects: z.boolean().optional(), music: z.boolean().optional(), volume: z.number().min(0).max(1).optional() }).strict().optional(),
     notificationPrefs: z.object({ social: z.boolean().optional(), game: z.boolean().optional(), achievements: z.boolean().optional() }).strict().optional(),
+    privacy: z.object({ allowSpectating: z.boolean().optional() }).strict().optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, 'At least one field is required');
@@ -35,7 +36,7 @@ export const deleteMeBody = z.object({ password: z.string().max(128).optional() 
 export const searchQuery = paginationQuery.extend({ q: z.string().trim().min(2).max(20) });
 
 export const reportBody = z.object({
-  reason: z.enum(['CHEATING', 'ABUSE', 'SPAM', 'INAPPROPRIATE_NAME', 'OTHER']),
+  reason: z.enum(['CHEATING', 'ABUSE', 'STALLING', 'SPAM', 'INAPPROPRIATE_NAME', 'OTHER']),
   details: z.string().trim().max(1000).optional(),
   gameId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
 });

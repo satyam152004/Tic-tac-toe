@@ -58,13 +58,14 @@ describe('GameStatisticsScreen', () => {
 
   it('renders real stats, recent form and history items', async () => {
     await wrap(<GameStatisticsScreen {...props} />);
-    expect(await screen.findByLabelText('Total Games: 42')).toBeTruthy();
-    expect(screen.getByLabelText('Win Percentage: 60%')).toBeTruthy();
-    expect(screen.getByLabelText('Wins: 25')).toBeTruthy();
-    expect(screen.getByLabelText('Losses / Draws: 10 / 7')).toBeTruthy();
-    expect(screen.getByLabelText('Points: 1337')).toBeTruthy();
-    expect(screen.getByLabelText('Play Time: 2h 05m')).toBeTruthy();
-    expect(screen.getByText('20 games · 12 wins')).toBeTruthy();
+    expect(await screen.findByText('Matches')).toBeTruthy();
+    expect(screen.getByText('42')).toBeTruthy();
+    expect(screen.getByText('59.5%')).toBeTruthy();
+    expect(screen.getByText('Best Streak')).toBeTruthy();
+    expect(screen.getByText('1:15')).toBeTruthy();
+    expect(screen.getByText('25 Wins')).toBeTruthy();
+    expect(screen.getByText('7 Draws')).toBeTruthy();
+    expect(screen.getByText('10 Losses')).toBeTruthy();
     expect(await screen.findByTestId('recent-form')).toBeTruthy();
     expect(await screen.findByText('AI · Hard')).toBeTruthy();
     expect(screen.getByText('Bobby')).toBeTruthy();
@@ -75,12 +76,12 @@ describe('GameStatisticsScreen', () => {
     await wrap(<GameStatisticsScreen {...props} />);
     await screen.findByText('AI · Hard');
     expect(statisticsApi.history).toHaveBeenLastCalledWith({});
-    await fireEvent.press(screen.getByTestId('filter-type-ai'));
+    await fireEvent.press(screen.getByTestId('filter-mode-ai'));
     await waitFor(() => expect(statisticsApi.history).toHaveBeenLastCalledWith({ type: 'AI' }));
-    await fireEvent.press(screen.getByTestId('filter-result-win'));
-    await waitFor(() => expect(statisticsApi.history).toHaveBeenLastCalledWith({ type: 'AI', result: 'WIN' }));
-    await fireEvent.press(screen.getByTestId('filter-type-quick'));
-    await waitFor(() => expect(statisticsApi.history).toHaveBeenLastCalledWith({ type: 'ONLINE_RANDOM', result: 'WIN' }));
+    await fireEvent.press(screen.getByTestId('filter-mode-online'));
+    await waitFor(() => expect(statisticsApi.history).toHaveBeenLastCalledWith({ type: 'ONLINE_RANDOM' }));
+    await fireEvent.press(screen.getByTestId('filter-mode-all'));
+    await waitFor(() => expect(statisticsApi.history).toHaveBeenLastCalledWith({}));
   });
 
   it('opens the replay sheet and steps through frames', async () => {
@@ -95,11 +96,13 @@ describe('GameStatisticsScreen', () => {
     await wrap(<GameStatisticsScreen {...props} />);
     await fireEvent.press(await screen.findByTestId('history-g1'));
     expect(gameApi.replay).toHaveBeenCalledWith('g1');
-    expect(await screen.findByText('Move 2 of 2 · O at 5')).toBeTruthy();
+    expect(await screen.findByText('2/2')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('replay-prev'));
-    expect(screen.getByText('Move 1 of 2 · X at 1')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('replay-first'));
-    expect(screen.getByText('Start')).toBeTruthy();
+    expect(screen.getByText('1/2')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('replay-prev'));
+    expect(screen.getByText('0/2')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('replay-next'));
+    expect(screen.getByText('1/2')).toBeTruthy();
   });
 
   it('shows the empty state and links to local history', async () => {
@@ -120,16 +123,18 @@ describe('GameStatisticsScreen', () => {
 describe('AchievementsScreen', () => {
   const mk = (key: string, category: string, unlocked: boolean) => ({ key, name: `Name ${key}`, description: `Desc ${key}`, category, target: 10, reward: { xp: 50, points: 5 }, progress: unlocked ? 10 : 3, unlocked, unlockedAt: null });
 
-  it('derives category chips from data, filters, and shows XP rewards and unlocked count', async () => {
+  it('derives category chips from data, filters, and shows unlocked count and per-row status', async () => {
     const items = [mk('a', 'WINS', true), mk('b', 'STREAKS', false), mk('c', 'WINS', false)];
     m(achievementApi.mine).mockResolvedValue({ items, unlockedCount: 1, total: 3, history: [] });
     await wrap(<AchievementsScreen {...props} />);
-    expect(await screen.findByText('1 of 3 unlocked')).toBeTruthy();
+    expect(await screen.findByText('1 / 3')).toBeTruthy();
     expect(screen.getByTestId('ach-filter-All')).toBeTruthy();
     expect(screen.getByTestId('ach-filter-WINS')).toBeTruthy();
     expect(screen.getByTestId('ach-filter-STREAKS')).toBeTruthy();
     expect(screen.queryByText('Strategy')).toBeNull();
-    expect(screen.getAllByText('+50 XP')).toHaveLength(3);
+    expect(screen.getByLabelText('Name a, unlocked')).toBeTruthy();
+    expect(screen.getByLabelText('Name b, 30% completed')).toBeTruthy();
+    expect(screen.getByText('33%')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('ach-filter-STREAKS'));
     expect(screen.getByText('Name b')).toBeTruthy();
     expect(screen.queryByText('Name a')).toBeNull();
@@ -156,14 +161,15 @@ describe('DailyRewardsScreen', () => {
     const after = { ...claimable, canClaim: false, claimedToday: true, coins: 150, streak: 3, nextClaimAt: nextAt(), cycle: cycle(4) };
     m(rewardApi.claim).mockResolvedValue({ claimed: { day: 3, coins: 30 }, wallet: { coins: 150 }, status: after });
     await wrap(<DailyRewardsScreen {...props} />);
-    expect(await screen.findByText('Claim Day 3 (+30 Coins)')).toBeTruthy();
-    expect(screen.getAllByText('120').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Claim Day 3 Reward')).toBeTruthy();
+    expect(screen.getByLabelText('120 coins')).toBeTruthy();
+    expect(screen.getByText('120 Coins')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('claim-reward'));
     await waitFor(() => expect(rewardApi.claim).toHaveBeenCalledTimes(1));
     expect(await screen.findByTestId('claim-celebration')).toBeTruthy();
     expect(screen.getByText('+30 coins')).toBeTruthy();
     expect(await screen.findByText(/Next reward in 05:1[12]:\d\d/)).toBeTruthy();
-    expect(screen.getAllByText('150').length).toBeGreaterThan(0);
+    expect(screen.getByText('150 Coins')).toBeTruthy();
   });
 
   it('shows the countdown and a disabled button when already claimed', async () => {

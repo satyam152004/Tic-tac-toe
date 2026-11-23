@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
-import { Screen } from '../../components/common/Screen';
+import { StyleSheet, Text, View } from 'react-native';
 import { fonts } from '../../design-system/typography';
+import { defaultWinLength } from '../../game-engine';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
+import { ACCENT_SOFT, ProtoButton, ProtoHeader, ProtoScreen, SUBTLE } from '../auth/protoUi';
 
 interface RuleItem {
   key: string;
@@ -16,43 +16,47 @@ interface RuleItem {
   isBlue?: boolean;
 }
 
+// Win lengths come from the engine so the copy can never drift from the real rules.
+const WIN_3 = defaultWinLength(3);
+const WIN_4 = defaultWinLength(4);
+const WIN_5 = defaultWinLength(5);
+
+// Values below mirror the server: turn clocks of 15s / 30s / 60s (default 60s), +25 points per ranked win
+// (x1.5 on 4x4, x2 on 5x5) - backend/src/constants/index.ts and the room options.
 const RULES: RuleItem[] = [
   {
     key: '3',
     testID: 'rule-3',
     badge: '3×3',
-    title: '3-in-a-row Classic',
-    desc: 'Align 3 marks horizontally, vertically, or diagonally (align 3 in a row) to win.',
+    title: `${WIN_3}-in-a-row Classic`,
+    desc: `Align ${WIN_3} marks horizontally, vertically, or diagonally.`,
     isBlue: true,
   },
   {
     key: '4',
     testID: 'rule-4',
     badge: '4×4',
-    title: '4-in-a-row Extended',
-    desc: 'Connect 4 marks (align 4 in a row) on 4×4 grids for deeper tactics.',
-    isBlue: false,
+    title: `${WIN_4}-in-a-row Extended`,
+    desc: `Connect ${WIN_4} marks on 4×4 grids for deeper tactics.`,
   },
   {
     key: '5',
     testID: 'rule-5',
     badge: '5×5',
-    title: '4-in-a-row Tactical',
-    desc: 'Connect 4 marks (align 4 in a row) on 5×5 tactical boards with multi-fork lines.',
-    isBlue: false,
+    title: `${WIN_5}-in-a-row Tactical`,
+    desc: `Connect ${WIN_5} marks on 5×5 boards with multi-fork lines.`,
   },
   {
-    key: '30s',
-    badge: '30s',
+    key: 'timer',
+    badge: '60s',
     title: 'Online Turn Timers',
-    desc: 'Each turn has a 15s–30s clock; timeout forfeits the match.',
-    isBlue: false,
+    desc: 'Each turn has a 15s–60s clock; timeout forfeits.',
   },
   {
-    key: 'elo',
-    badge: 'ELO',
-    title: 'Ranked ELO Scoring',
-    desc: 'Earn +12 to +24 ELO per ranked victory to advance through divisions.',
+    key: 'points',
+    badge: 'PTS',
+    title: 'Ranked Scoring',
+    desc: 'Earn +25 points per ranked victory, up to ×2 on bigger boards.',
     isBlue: true,
   },
 ];
@@ -60,106 +64,43 @@ const RULES: RuleItem[] = [
 export const GameRulesScreen: React.FC<RootScreenProps<'game_rules'>> = () => {
   const c = useTheme();
   const { back } = useAppNav();
-  const { height: screenH } = useWindowDimensions();
-  const isTall = screenH >= 780;
 
   return (
-    <Screen
-      title="How to Play"
-      onBack={back}
-      testID="game-rules-screen"
-      footer={<AppButton title="Got It" size={isTall ? 'lg' : 'md'} fullWidth onPress={back} />}
-    >
-      <View style={[styles.groupCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-        {RULES.map((r, index) => {
-          const isLast = index === RULES.length - 1;
-          return (
-            <React.Fragment key={r.key}>
-              <View style={[styles.ruleRow, { paddingVertical: isTall ? 14 : 11 }]}>
-                <View
-                  style={[
-                    styles.badgeSquircle,
-                    {
-                      backgroundColor: r.isBlue ? '#EFF4FF' : '#F1F1EE',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      { color: r.isBlue ? '#1D4ED8' : '#141518' },
-                    ]}
-                  >
-                    {r.badge}
-                  </Text>
-                </View>
-
-                <View style={styles.textCol}>
-                  <Text style={[styles.ruleTitle, { color: c.text, fontSize: isTall ? 13.5 : 12.5 }]}>
-                    {r.title}
-                  </Text>
-                  <Text
-                    testID={r.testID}
-                    style={[styles.ruleDesc, { color: c.textSecondary, fontSize: isTall ? 11.5 : 10.5 }]}
-                  >
-                    {r.desc}
-                  </Text>
-                </View>
+    <ProtoScreen testID="game-rules-screen">
+      <ProtoHeader title="How to Play" onBack={back} />
+      <View style={styles.body}>
+        <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          {RULES.map((r, i) => (
+            <View key={r.key} style={[styles.row, i > 0 ? { borderTopWidth: 1, borderTopColor: c.border } : null]}>
+              <View style={[styles.badge, { backgroundColor: r.isBlue ? ACCENT_SOFT : SUBTLE }]}>
+                <Text style={[styles.badgeText, { color: r.isBlue ? c.accent : c.text }]}>{r.badge}</Text>
               </View>
+              <View style={styles.textCol}>
+                <Text style={[styles.ruleTitle, { color: c.text }]}>{r.title}</Text>
+                <Text testID={r.testID} style={[styles.ruleDesc, { color: c.textSecondary }]}>
+                  {r.desc}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
 
-              {!isLast ? (
-                <View style={[styles.divider, { backgroundColor: c.border }]} />
-              ) : null}
-            </React.Fragment>
-          );
-        })}
+        <View style={styles.footer}>
+          <ProtoButton testID="rules-got-it" title="Got It" onPress={back} />
+        </View>
       </View>
-    </Screen>
+    </ProtoScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  groupCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  ruleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 14,
-    gap: 12,
-  },
-  badgeSquircle: {
-    width: 32,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontFamily: fonts.mono.semibold,
-  },
-  textCol: {
-    flex: 1,
-    gap: 3,
-  },
-  ruleTitle: {
-    fontFamily: fonts.body.semibold,
-  },
-  ruleDesc: {
-    fontFamily: fonts.body.regular,
-    lineHeight: 16,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 58,
-  },
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 16, gap: 12 },
+  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: 36, paddingHorizontal: 13, paddingVertical: 8, flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  badge: { width: 28, height: 24, borderRadius: 7, marginTop: 2, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: fonts.body.semibold, fontSize: 10 },
+  textCol: { flex: 1 },
+  ruleTitle: { fontFamily: fonts.body.semibold, fontSize: 12, lineHeight: 16 },
+  ruleDesc: { fontFamily: fonts.body.regular, fontSize: 10.5, lineHeight: 14 },
+  footer: { marginTop: 'auto', paddingTop: 8 },
 });

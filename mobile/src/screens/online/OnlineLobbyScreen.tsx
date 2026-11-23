@@ -1,40 +1,38 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { KeyRound, PlusSquare, Wifi, WifiOff } from 'lucide-react-native';
-import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { ErrorState } from '../../components/feedback/StateViews';
+import { ActionButton } from '../../components/game/ActionButton';
 import { fonts, type } from '../../design-system/typography';
 import { useMe } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
+import { friendlyMessage } from '../../services/api/errors';
 import { gameApi } from '../../services/api/gameApi';
-import type { BoardSize } from '../../services/api/types';
+import { joinRoomByCode } from '../../services/onlineActions';
 import { useAuthStore } from '../../store/authStore';
-import { BoardSizePicker, useSocketStatus } from './shared';
+import { toast } from '../../store/toastStore';
+import { joinErrorMessage } from './JoinRoomScreen';
+import { OPEN_ROOMS_KEY, fetchOpenRooms, useSocketStatus, type OpenRoom } from './shared';
 
-const MOCK_OPEN_ROOMS = [
-  { id: 'TTT-419', host: 'Meera', size: '3×3 Classic', elo: 1490 },
-  { id: 'TTT-842', host: 'Rohan', size: '4×4 Extended', elo: 1540 },
-];
+const gridName = (n: number) => `${n}×${n} ${n === 3 ? 'Classic' : n === 4 ? 'Extended' : 'Tactical'}`;
 
 export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () => {
   const c = useTheme();
-  const { height } = useWindowDimensions();
-  const isTall = height >= 780;
   const { nav, goTab, back } = useAppNav();
   const me = useMe().data;
   const authOffline = useAuthStore((s) => s.offline);
   const status = useSocketStatus();
-  const [size, setSize] = useState<BoardSize>(3);
+  const [joining, setJoining] = useState<string | null>(null);
   const active = useQuery({ queryKey: ['games', 'active'], queryFn: gameApi.active, enabled: !authOffline, staleTime: 5000 });
 
   const offline = authOffline || status === 'closed';
-  const elo = me?.stats?.points ?? 1498;
+  const open = useQuery({ queryKey: OPEN_ROOMS_KEY, queryFn: () => fetchOpenRooms(10), enabled: !offline, staleTime: 5000, refetchInterval: 15000 });
+  const elo = me?.stats?.points ?? 0;
   const unfinished = (active.data ?? []).find((g) => g.status === 'IN_PROGRESS' || g.status === 'READY' || g.status === 'WAITING');
 
   const resume = () => {
@@ -43,15 +41,29 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
     else nav.navigate('online_board', { gameId: unfinished.id });
   };
 
+  const joinOpen = async (r: OpenRoom) => {
+    if (joining) return;
+    setJoining(r.id);
+    try {
+      const room = await joinRoomByCode(r.code);
+      nav.replace('waiting_room', { roomId: room.id });
+    } catch (e) {
+      toast.error('Could not join', joinErrorMessage(e));
+      void open.refetch();
+    } finally {
+      setJoining(null);
+    }
+  };
+
   return (
     <Screen
       title="Online Arena"
-      subtitle={offline ? 'Offline' : status === 'ready' ? 'Connected' : 'Connecting...'}
       onBack={back}
       scroll={false}
       padded={false}
+      testID="online-lobby"
       rightAction={
-        <View style={styles.eloBadge}>
+        <View style={[styles.eloBadge, { backgroundColor: c.bgElevated, borderColor: '#BFDBFE' }]}>
           <Text style={[styles.eloBadgeText, { color: c.accent }]}>{elo.toLocaleString()} ELO</Text>
         </View>
       }
@@ -61,13 +73,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
           <ErrorState offline message="Online play needs an internet connection. You can still play offline." retryLabel="Play Offline" onRetry={() => goTab('PlayTab')} />
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { gap: isTall ? 14 : 10, paddingBottom: 28 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {unfinished ? (
             <AppCard selected onPress={resume} testID="resume-game" accessibilityLabel="Resume your unfinished game">
               <Text style={[type.subheading, { color: c.text }]}>You have a game in progress</Text>
@@ -77,74 +83,65 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
             </AppCard>
           ) : null}
 
-          {/* 1v1 Ranked Ladder Card */}
-          <AppCard padding="md" style={styles.rankedCard}>
+          {/* 1v1 Ranked Ladder */}
+          <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
             <View style={styles.rankedHeader}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.rankedTitle, { color: c.text }]}>1v1 Ranked Ladder</Text>
                 <Text style={[styles.rankedSub, { color: c.textSecondary }]}>Matched by ELO • 30s turn clock</Text>
               </View>
-              <View style={styles.onlineDot} />
+              <View style={[styles.onlineDot, { backgroundColor: c.success }]} />
             </View>
-
-            <View style={{ marginTop: 6, gap: 8 }}>
-              <BoardSizePicker value={size} onChange={setSize} />
-              <AppButton
-                testID="quick-match"
-                title="Quick Ranked Match"
-                fullWidth
-                onPress={() => nav.navigate('matchmaking', { boardSize: size })}
-              />
-            </View>
-          </AppCard>
-
-          {/* 2-col Create & Join Room buttons */}
-          <View style={styles.roomActions}>
-            <Pressy
-              testID="create-room"
-              accessibilityLabel="Create Room"
-              onPress={() => nav.navigate('create_room')}
-              style={[styles.actionBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}
-            >
-              <PlusSquare size={16} color={c.accent} />
-              <Text style={[styles.actionBtnText, { color: c.text }]}>Create Room</Text>
-            </Pressy>
-
-            <Pressy
-              testID="join-room"
-              accessibilityLabel="Join Room"
-              onPress={() => nav.navigate('join_room')}
-              style={[styles.actionBtn, { backgroundColor: c.bgCard, borderColor: c.border }]}
-            >
-              <KeyRound size={16} color={c.accent} />
-              <Text style={[styles.actionBtnText, { color: c.text }]}>Join Room</Text>
-            </Pressy>
+            <ActionButton tall fullWidth testID="quick-match" title="Quick Ranked Match" onPress={() => nav.navigate('matchmaking', { boardSize: 3 })} />
           </View>
 
-          {/* Open Rooms List */}
-          <View style={{ gap: 8 }}>
-            <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>OPEN ROOMS</Text>
-            <View style={[styles.roomsGroup, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-              {MOCK_OPEN_ROOMS.map((r, i) => (
-                <View
-                  key={r.id}
-                  style={[
-                    styles.roomRow,
-                    i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
-                  ]}
-                >
-                  <View>
-                    <Text style={[styles.roomHost, { color: c.text }]}>{r.host} • {r.size}</Text>
-                    <Text style={[styles.roomMeta, { color: c.textSecondary }]}>{r.elo} ELO • #{r.id}</Text>
-                  </View>
-                  <Pressy
-                    onPress={() => nav.navigate('join_room', { code: r.id })}
-                    style={styles.joinPill}
-                  >
-                    <Text style={styles.joinPillText}>Join</Text>
-                  </Pressy>
+          <View style={styles.roomActions}>
+            <ActionButton tall variant="secondary" testID="create-room" title="Create Room" onPress={() => nav.navigate('create_room')} style={styles.flex} />
+            <ActionButton tall variant="secondary" testID="join-room" title="Join Room" onPress={() => nav.navigate('join_room')} style={styles.flex} />
+          </View>
+
+          {/* Open Rooms: real public rooms from GET /rooms/open */}
+          <View>
+            <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>OPEN ROOMS</Text>
+            <View testID="open-rooms" style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+              {open.isLoading ? (
+                <View style={styles.row}>
+                  <ActivityIndicator color={c.accent} />
                 </View>
-              ))}
+              ) : open.isError ? (
+                <Pressy testID="open-rooms-retry" accessibilityLabel="Retry loading open rooms" onPress={() => void open.refetch()} style={styles.row}>
+                  <Text style={[styles.rowSub, { color: c.textSecondary, flex: 1 }]}>{friendlyMessage(open.error)}</Text>
+                  <Text style={[styles.joinText, { color: c.accent }]}>Retry</Text>
+                </Pressy>
+              ) : (open.data ?? []).length === 0 ? (
+                <View style={styles.row}>
+                  <Text testID="open-rooms-empty" style={[styles.rowSub, { color: c.textSecondary }]}>
+                    No open rooms right now. Create one and share the code.
+                  </Text>
+                </View>
+              ) : (
+                (open.data ?? []).map((r, i) => (
+                  <View key={r.id} testID={`open-room-${r.id}`} style={[styles.row, i > 0 && { borderTopWidth: 1, borderTopColor: c.border }]}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={[styles.rowTitle, { color: c.text }]}>
+                        {r.host.displayName} • {gridName(r.boardSize)}
+                      </Text>
+                      <Text numberOfLines={1} style={[styles.rowSub, { color: c.textSecondary }]}>
+                        {r.hostPoints.toLocaleString()} ELO • #{r.code}
+                      </Text>
+                    </View>
+                    <Pressy
+                      testID={`open-room-join-${r.id}`}
+                      accessibilityLabel={`Join ${r.host.displayName}'s room`}
+                      disabled={!!joining}
+                      onPress={() => void joinOpen(r)}
+                      style={[styles.joinBtn, { backgroundColor: c.bgElevated, opacity: joining && joining !== r.id ? 0.5 : 1 }]}
+                    >
+                      {joining === r.id ? <ActivityIndicator size="small" color={c.accent} /> : <Text style={[styles.joinText, { color: c.accent }]}>Join</Text>}
+                    </Pressy>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         </ScrollView>
@@ -154,97 +151,21 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
 };
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  eloBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: '#EFF4FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-  },
-  eloBadgeText: {
-    fontSize: 11,
-    fontFamily: fonts.mono.semibold,
-  },
-  rankedCard: {
-    gap: 8,
-  },
-  rankedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  rankedTitle: {
-    fontSize: 14,
-    fontFamily: fonts.body.semibold,
-  },
-  rankedSub: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#15803D',
-  },
-  roomActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  actionBtnText: {
-    fontSize: 12.5,
-    fontFamily: fonts.body.semibold,
-  },
-  sectionLabel: {
-    fontSize: 10.5,
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
-  },
-  roomsGroup: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  roomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  roomHost: {
-    fontSize: 12.5,
-    fontFamily: fonts.body.semibold,
-  },
-  roomMeta: {
-    fontSize: 10.5,
-    fontFamily: fonts.mono.medium,
-    marginTop: 2,
-  },
-  joinPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#EFF4FF',
-  },
-  joinPillText: {
-    fontSize: 11.5,
-    fontFamily: fonts.body.semibold,
-    color: '#1D4ED8',
-  },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 14 },
+  flex: { flex: 1 },
+  eloBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  eloBadgeText: { fontSize: 11, fontFamily: fonts.mono.semibold },
+  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  rankedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rankedTitle: { fontSize: 13.5, fontFamily: fonts.body.semibold },
+  rankedSub: { fontSize: 11, fontFamily: fonts.body.regular },
+  onlineDot: { width: 8, height: 8, borderRadius: 4 },
+  roomActions: { flexDirection: 'row', gap: 10 },
+  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5 },
+  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: 38, paddingVertical: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  rowTitle: { fontSize: 12, fontFamily: fonts.body.semibold },
+  rowSub: { fontSize: 10, fontFamily: fonts.body.regular },
+  joinBtn: { minWidth: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  joinText: { fontSize: 11, fontFamily: fonts.body.semibold },
 });

@@ -28,6 +28,9 @@ let mockMe: { data?: Me; isError: boolean; error: unknown; refetch: jest.Mock };
 jest.mock('../../src/hooks/queries', () => ({
   useMe: () => mockMe,
   useNotifications: () => ({ data: { items: [], unread: 3, total: 3 }, refetch: jest.fn() }),
+  useStreaks: () => ({ data: { currentStreak: 2, bestStreak: 5, recentForm: ['WIN', 'WIN', 'LOSS', 'DRAW'] }, refetch: jest.fn() }),
+  useLeaderboard: () => ({ data: { rows: [], total: 40, me: { rank: 14, points: 1200, wins: 17 } }, refetch: jest.fn() }),
+  useDailyReward: () => ({ data: { canClaim: true }, refetch: jest.fn() }),
 }));
 
 const mockLoadActive = jest.fn();
@@ -162,10 +165,9 @@ describe('PlayerSetupScreen', () => {
   it('defaults player 1 to the signed-in display name and starts a game', async () => {
     await render(<PlayerSetupScreen {...props('player_setup', { mode: 'LOCAL_2P' })} />);
     expect(screen.getByTestId('p1-name').props.value).toBe('Aiden');
-    await fireEvent.press(screen.getByTestId('size-4'));
     await fireEvent.press(screen.getByTestId('setup-start'));
     const st = useLocalGameStore.getState();
-    expect(st.setup).toMatchObject({ mode: 'LOCAL_2P', size: 4, p1Name: 'Aiden' });
+    expect(st.setup).toMatchObject({ mode: 'LOCAL_2P', size: 3, p1Name: 'Aiden' });
     expect(st.game).not.toBeNull();
     expect(mockNav.navigate).toHaveBeenCalledWith('offline_board');
   });
@@ -194,19 +196,21 @@ describe('GameModeScreen', () => {
   it('navigates to each mode', async () => {
     await render(<GameModeScreen />);
     await fireEvent.press(screen.getByTestId('mode-local'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('player_setup', { mode: 'LOCAL_2P' });
+    await fireEvent.press(screen.getByTestId('mode-continue'));
+    expect(mockNav.navigate).toHaveBeenCalledWith('board_selection', { mode: 'LOCAL_2P' });
     await fireEvent.press(screen.getByTestId('mode-ai'));
+    await fireEvent.press(screen.getByTestId('mode-continue'));
     expect(mockNav.navigate).toHaveBeenCalledWith('ai_difficulty');
     await fireEvent.press(screen.getByTestId('mode-online'));
+    await fireEvent.press(screen.getByTestId('mode-continue'));
     expect(mockNav.navigate).toHaveBeenCalledWith('online_lobby');
-    await fireEvent.press(screen.getByTestId('mode-friends'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('create_room');
   });
 
   it('shows an offline message instead of opening online modes', async () => {
     useAuthStore.setState({ offline: true } as never);
     await render(<GameModeScreen />);
     await fireEvent.press(screen.getByTestId('mode-online'));
+    await fireEvent.press(screen.getByTestId('mode-continue'));
     expect(mockNav.navigate).not.toHaveBeenCalledWith('online_lobby');
     expect(useToastStore.getState().toast).not.toBeNull();
   });
@@ -216,20 +220,22 @@ describe('HomeScreen', () => {
   it('renders level, coins and real stats', async () => {
     await render(<HomeScreen />);
     expect(screen.getByText('Aiden')).toBeTruthy();
-    expect(screen.getByText('Level 4 · 1200 pts')).toBeTruthy();
     expect(screen.getByText('420')).toBeTruthy();
-    expect(screen.getByText('17')).toBeTruthy();
-    expect(screen.getByText('30')).toBeTruthy();
+    expect(screen.getByText('17 Wins')).toBeTruthy();
+    expect(screen.getByText('50% Rate')).toBeTruthy();
+    expect(screen.getByText('Last 4')).toBeTruthy();
+    expect(screen.getByText('#14 Rank')).toBeTruthy();
     expect(screen.queryByTestId('upgrade-card')).toBeNull();
     expect(screen.getByLabelText('Notifications, 3 unread')).toBeTruthy();
   });
 
-  it('shows the upgrade card for guests and the offline banner', async () => {
-    useAuthStore.setState({ user: makeMe({ accountType: 'GUEST' }), offline: true } as never);
+  it('prompts guests to upgrade before Online Arena and shows the offline banner', async () => {
+    useAuthStore.setState({ user: makeMe({ accountType: 'GUEST' }), offline: false } as never);
     mockMe = { ...mockMe, data: makeMe({ accountType: 'GUEST' }) };
     await render(<HomeScreen />);
-    expect(screen.getByTestId('offline-banner')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('upgrade-account'));
+    await fireEvent.press(screen.getByLabelText('Online Arena'));
+    expect(mockNav.navigate).not.toHaveBeenCalledWith('online_lobby');
+    await fireEvent.press(screen.getByTestId('guest-upgrade-submit'));
     expect(mockNav.navigate).toHaveBeenCalledWith('registration');
   });
 
@@ -258,8 +264,8 @@ describe('HomeScreen', () => {
 describe('GameRulesScreen', () => {
   it('lists the real win lengths', async () => {
     await render(<GameRulesScreen {...props('game_rules')} />);
-    expect(screen.getByTestId('rule-3').props.children).toContain('align 3 in a row');
-    expect(screen.getByTestId('rule-4').props.children).toContain('align 4 in a row');
-    expect(screen.getByTestId('rule-5').props.children).toContain('align 4 in a row');
+    expect(screen.getByTestId('rule-3').props.children).toContain('Align 3 marks');
+    expect(screen.getByTestId('rule-4').props.children).toContain('Connect 4 marks');
+    expect(screen.getByTestId('rule-5').props.children).toContain('Connect 4 marks');
   });
 });

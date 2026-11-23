@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-import { Award, ChevronRight, Coins, Flame, Gift, PartyPopper } from 'lucide-react-native';
+import { ChevronRight, PartyPopper } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
@@ -123,21 +123,14 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
   const label = !status
     ? 'Claim'
     : status.canClaim && claimable
-      ? `Claim Day ${claimable.day} (+${claimable.coins} Coins)`
+      ? `Claim Day ${claimable.day} Reward`
       : remaining != null
         ? `Next reward in ${formatCountdown(remaining)}`
         : 'Today Reward Claimed';
 
-  const days1to6 = status?.cycle.slice(0, 6) ?? [
-    { day: 1, coins: 50, status: 'claimed' },
-    { day: 2, coins: 75, status: 'claimed' },
-    { day: 3, coins: 100, status: 'claimed' },
-    { day: 4, coins: 125, status: 'claimed' },
-    { day: 5, coins: 150, status: 'claimable' },
-    { day: 6, coins: 200, status: 'locked' },
-  ];
+  const days1to6 = status?.cycle.slice(0, 6) ?? [];
 
-  const day7 = status?.cycle[6] ?? { day: 7, coins: 300, status: 'locked' };
+  const day7 = status?.cycle[6] ?? null;
 
   return (
     <Screen
@@ -152,7 +145,6 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
             accessibilityLabel={`${status.coins} coins`}
             style={styles.coinPill}
           >
-            <Coins size={14} color="#B45309" />
             <Text style={styles.coinPillText}>{status.coins.toLocaleString()} Coins</Text>
           </View>
         ) : undefined
@@ -218,7 +210,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
                     Day {item.day}
                   </Text>
                   <Text style={[styles.dayValue, { color: c.text }]}>
-                    +{item.coins}
+                    +{item.coins}{isToday ? ' Coins' : ''}
                   </Text>
                   <Text style={[styles.dayStatus, { color: statusCol }]}>
                     {statusTxt}
@@ -229,6 +221,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
           </View>
 
           {/* Day 7 Grand Chest Banner */}
+          {day7 ? (
           <Pressy
             testID="reward-day-7"
             onPress={day7.status === 'claimable' ? () => void doClaim() : undefined}
@@ -242,12 +235,9 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
             ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={styles.chestIcon}>
-                <Gift size={22} color={day7.status === 'claimed' ? '#15803D' : '#1D4ED8'} />
-              </View>
               <View>
                 <Text style={[styles.chestTitle, { color: c.text }]}>Day 7 • Grand Chest</Text>
-                <Text style={[styles.chestSub, { color: c.textSecondary }]}>+300 Coins & Cobalt Emblem</Text>
+                <Text style={[styles.chestSub, { color: c.textSecondary }]}>+{day7.coins} Coins & Cobalt Emblem</Text>
               </View>
             </View>
             <View
@@ -272,36 +262,18 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
               </Text>
             </View>
           </Pressy>
+          ) : null}
 
-          {/* Streak & Coin Shop Row */}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={[styles.miniInfo, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-              <Flame size={16} color="#B45309" />
-              <View>
-                <Text testID="reward-streak" style={[type.num, { fontSize: 13, color: c.text }]}>
-                  {status.streak} {status.streak === 1 ? 'day' : 'days'}
-                </Text>
-                <Text style={[type.caption, { color: c.textSecondary }]}>Streak</Text>
-              </View>
-            </View>
-
-            <Pressy
-              testID="open-coin-shop"
-              onPress={() => nav.navigate('coin_shop')}
-              style={[styles.miniInfo, { flex: 1.4, backgroundColor: c.bgCard, borderColor: c.border }]}
-            >
-              <Award size={16} color={c.accent} />
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={[type.bodyStrong, { fontSize: 12.5, color: c.text }]}>
-                  Emblems & Shop
-                </Text>
-                <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary }]}>
-                  Equip Cobalt Emblem
-                </Text>
-              </View>
-              <ChevronRight size={14} color={c.textSecondary} />
-            </Pressy>
-          </View>
+          {/* Coin shop entry */}
+          <Pressy
+            testID="open-coin-shop"
+            accessibilityLabel="Emblems & Shop"
+            onPress={() => nav.navigate('coin_shop')}
+            style={[styles.miniInfo, { backgroundColor: c.bgCard, borderColor: c.border, justifyContent: 'space-between' }]}
+          >
+            <Text style={[styles.chestTitle, { color: c.text }]}>Emblems & Shop</Text>
+            <ChevronRight size={14} color="#8E939E" />
+          </Pressy>
         </ScrollView>
       )}
     </Screen>
@@ -316,13 +288,6 @@ const styles = StyleSheet.create({
   coinPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
   },
   coinPillText: {
     fontSize: 11,
@@ -337,18 +302,18 @@ const styles = StyleSheet.create({
   dayCard: {
     width: '31.5%',
     flexGrow: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 6,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontFamily: fonts.body.semibold,
   },
   dayValue: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontFamily: fonts.mono.semibold,
     marginTop: 2,
   },
@@ -373,17 +338,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chestTitle: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontFamily: fonts.body.semibold,
   },
   chestSub: {
-    fontSize: 11,
+    fontSize: 10.5,
     marginTop: 1,
   },
   badge: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   badgeText: {
     fontSize: 10,

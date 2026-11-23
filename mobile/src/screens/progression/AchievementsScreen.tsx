@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Award, Check, Trophy } from 'lucide-react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Check, Trophy } from 'lucide-react-native';
 import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
@@ -16,7 +16,7 @@ import type { AchievementItem } from '../../services/api/types';
 
 const titleCase = (s: string) => s.toLowerCase().replace(/(^|[_\s])(\w)/g, (_m, sep: string, ch: string) => (sep ? ' ' : '') + ch.toUpperCase());
 
-const AchievementRow: React.FC<{ item: AchievementItem }> = ({ item: a }) => {
+const AchievementRow: React.FC<{ item: AchievementItem; first?: boolean }> = ({ item: a, first }) => {
   const c = useTheme();
   const pct = Math.min(100, Math.round((a.progress / Math.max(1, a.target)) * 100));
   const done = a.unlocked || pct >= 100;
@@ -25,7 +25,7 @@ const AchievementRow: React.FC<{ item: AchievementItem }> = ({ item: a }) => {
     <View
       testID={`achievement-${a.key}`}
       accessibilityLabel={`${a.name}, ${done ? 'unlocked' : `${pct}% completed`}`}
-      style={[styles.row, { borderBottomColor: c.border }]}
+      style={[styles.row, { borderTopColor: c.border, borderTopWidth: first ? 0 : 1 }]}
     >
       <View style={styles.rowTop}>
         <View style={styles.rowLeft}>
@@ -34,11 +34,10 @@ const AchievementRow: React.FC<{ item: AchievementItem }> = ({ item: a }) => {
               styles.iconBox,
               {
                 backgroundColor: done ? '#F0FDF4' : '#EFF4FF',
-                borderColor: done ? '#DCFCE7' : '#DBEAFE',
               },
             ]}
           >
-            {done ? <Check size={16} color="#15803D" strokeWidth={2.5} /> : <Trophy size={16} color="#1D4ED8" />}
+            {done ? <Check size={12} color="#15803D" strokeWidth={2.5} /> : <Trophy size={12} color="#1D4ED8" />}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text numberOfLines={1} style={[styles.itemTitle, { color: c.text }]}>
@@ -61,7 +60,7 @@ const AchievementRow: React.FC<{ item: AchievementItem }> = ({ item: a }) => {
           style={[
             styles.fill,
             {
-              width: `${Math.max(4, pct)}%`,
+              width: `${pct}%`,
               backgroundColor: done ? '#15803D' : '#1D4ED8',
             },
           ]}
@@ -116,24 +115,20 @@ export const AchievementsScreen: React.FC<RootScreenProps<'achievements'>> = () 
       ) : q.isLoading ? (
         <AppLoader label="Loading achievements..." />
       ) : (
-        <FlatList
+        <ScrollView
           testID="achievement-list"
-          data={shown}
-          keyExtractor={(i) => i.key}
-          renderItem={({ item }) => <AchievementRow item={item} />}
-          ListHeaderComponent={
-            <View style={{ gap: 12, marginBottom: 8 }}>
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 12 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={c.accent} />}
+        >
+          <View style={{ gap: 12, marginBottom: 8 }}>
               {/* Overall Completion Card */}
               <AppCard padding="md" style={styles.overviewCard}>
                 <View style={styles.overviewHeader}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Award size={18} color={c.accent} />
-                    <Text style={[styles.overviewTitle, { color: c.text }]}>Overall Completion</Text>
-                  </View>
+                  <Text style={[styles.overviewTitle, { color: c.text }]}>Overall Completion</Text>
                   <Text style={[styles.overviewPct, { color: c.accent }]}>{overallPct}%</Text>
                 </View>
                 <View style={[styles.overviewTrack, { backgroundColor: c.bgSecondary }]}>
-                  <View style={[styles.overviewFill, { width: `${Math.max(2, overallPct)}%`, backgroundColor: c.accent }]} />
+                  <View style={[styles.overviewFill, { width: `${overallPct}%`, backgroundColor: c.accent }]} />
                 </View>
               </AppCard>
 
@@ -165,11 +160,16 @@ export const AchievementsScreen: React.FC<RootScreenProps<'achievements'>> = () 
                 </ScrollView>
               ) : null}
             </View>
-          }
-          ListEmptyComponent={<EmptyState title="No achievements yet" description="Play games to start unlocking achievements." />}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={c.accent} />}
-        />
+          {shown.length === 0 ? (
+            <EmptyState title="No achievements yet" description="Play games to start unlocking achievements." />
+          ) : (
+            <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+              {shown.map((item, i) => (
+                <AchievementRow key={item.key} item={item} first={i === 0} />
+              ))}
+            </View>
+          )}
+        </ScrollView>
       )}
     </Screen>
   );
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   headerCount: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.mono.semibold,
   },
   overviewCard: {
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   overviewTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: fonts.body.semibold,
   },
   overviewPct: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fonts.mono.semibold,
   },
   overviewTrack: {
@@ -220,10 +220,11 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontFamily: fonts.body.semibold,
   },
+  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
   row: {
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 13,
+    gap: 4,
   },
   rowTop: {
     flexDirection: 'row',
@@ -234,27 +235,26 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     marginRight: 10,
   },
   iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    borderWidth: 1,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemTitle: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontFamily: fonts.body.semibold,
   },
   itemDesc: {
-    fontSize: 10.5,
-    marginTop: 1,
+    fontSize: 10,
+    marginTop: 0,
   },
   itemProg: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: fonts.mono.medium,
   },
   track: {

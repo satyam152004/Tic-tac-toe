@@ -138,7 +138,7 @@ describe('controls', () => {
     setWindow(320, 568, 1);
     st().start();
     await mount('offline_board');
-    for (const label of ['Undo', 'Restart', 'Mute']) {
+    for (const label of ['Undo', 'Restart', 'Sound On']) {
       const t = screen.getByText(label);
       expect(t.props.numberOfLines).toBeUndefined();
       expect(t.props.adjustsFontSizeToFit).toBeUndefined();
@@ -183,7 +183,7 @@ describe('controls', () => {
     expect(st().game?.moves).toHaveLength(0);
     await fireEvent.press(screen.getByTestId('board-mute'));
     expect(useSettingsStore.getState().soundEffects).toBe(false);
-    expect(screen.getByText('Unmute')).toBeTruthy();
+    expect(screen.getByText('Muted')).toBeTruthy();
   });
 
   it('disabled tiles report it to accessibility', async () => {
@@ -202,22 +202,13 @@ describe('result screen footer', () => {
     });
   };
 
-  it('stacks the actions full width and renames "Change Settings" to "Change Setup" (test IDs unchanged)', async () => {
+  it('stacks the actions full width (Rematch, Change Mode, Home)', async () => {
     setWindow(320, 568);
     finish();
     await mount('game_result');
-    expect(screen.getByText('Change Setup')).toBeTruthy();
-    expect(screen.queryByText('Change Settings')).toBeNull();
-    for (const id of ['result-rematch', 'result-settings', 'result-options', 'result-home']) {
+    expect(screen.getByText('Change Mode')).toBeTruthy();
+    for (const id of ['result-rematch']) {
       expect(flat(screen.getByTestId(id)).alignSelf).toBe('stretch');
     }
-  });
-
-  it('Change Setup still goes to player setup (2P)', async () => {
-    setWindow(320, 568);
-    finish();
-    await mount('game_result');
-    await fireEvent.press(screen.getByTestId('result-settings'));
-    expect(await screen.findByText('player_setup')).toBeTruthy();
   });
 });

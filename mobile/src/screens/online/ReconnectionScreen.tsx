@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { WifiOff } from 'lucide-react-native';
-import { AppButton } from '../../components/common/AppButton';
-import { AppCard } from '../../components/common/AppCard';
+import { ActionButton } from '../../components/game/ActionButton';
 import { ConfirmDialog } from '../../components/common/AppModal';
 import { Screen } from '../../components/common/Screen';
-import { fonts, type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
@@ -17,6 +16,8 @@ import { isTerminal, useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
 import { useSocketStatus } from './shared';
 
+const MAX_ATTEMPTS = 5;
+const ATTEMPT_MS = 3000;
 const UNFINISHED = new Set(['IN_PROGRESS', 'READY', 'WAITING']);
 
 export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ route }) => {
@@ -26,13 +27,22 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
   const paramGameId = route.params?.gameId;
   const [restoring, setRestoring] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
-  const [attempt, setAttempt] = useState(2);
+  const [attempt, setAttempt] = useState(1);
+  const room = useOnlineStore((st) => st.room);
+  const gameRoomId = useOnlineStore((st) => st.game?.roomId);
+  const roomCode = room && room.id === gameRoomId ? room.code : null;
   const done = useRef(false);
 
+  // Real retries: every few seconds without a connection the socket is asked to reconnect again (max 5 attempts).
   useEffect(() => {
     const t = setInterval(() => {
-      setAttempt((a) => (a < 5 ? a + 1 : 1));
-    }, 2500);
+      if (socketClient.status === 'ready') return;
+      setAttempt((n) => {
+        if (n >= MAX_ATTEMPTS) return n;
+        socketClient.connect();
+        return n + 1;
+      });
+    }, ATTEMPT_MS);
     return () => clearInterval(t);
   }, []);
 
@@ -67,6 +77,7 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
   }, [status, restore]);
 
   const retry = () => {
+    setAttempt(1);
     socketClient.connect();
     if (socketClient.status === 'ready') void restore();
   };
@@ -91,14 +102,14 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
       padded={false}
       footer={
         <View style={styles.footer}>
-          <AppButton
+          <ActionButton
             testID="reconnect-retry"
             title="Retry Now"
             fullWidth
             loading={restoring}
             onPress={retry}
           />
-          <AppButton
+          <ActionButton
             testID="reconnect-leave"
             title="Leave Match"
             variant="danger"
@@ -109,7 +120,7 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
       }
     >
       <View style={styles.content}>
-        <AppCard padding="lg" style={styles.card}>
+        <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           {/* Connection Lost Pill */}
           <View style={styles.lostPill}>
             <WifiOff size={13} color="#B45309" />
@@ -119,7 +130,7 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Text style={[styles.title, { color: c.text }]}>Reconnecting to Match...</Text>
             <Text style={[styles.sub, { color: c.textSecondary }]}>
-              Attempt {attempt} of 5 • Room TTT-842
+              Attempt {attempt} of {MAX_ATTEMPTS}{roomCode ? ` • Room ${roomCode}` : ''}
             </Text>
           </View>
 
@@ -128,11 +139,11 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
             <View
               style={[
                 styles.fill,
-                { width: `${attempt * 20}%`, backgroundColor: c.accent },
+                { width: `${(attempt / MAX_ATTEMPTS) * 100}%`, backgroundColor: c.accent },
               ]}
             />
           </View>
-        </AppCard>
+        </View>
       </View>
 
       <ConfirmDialog
@@ -157,22 +168,24 @@ const styles = StyleSheet.create({
   },
   card: {
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 24,
+    gap: 12,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   lostPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
     borderColor: '#FDE68A',
   },
   lostPillText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: fonts.body.semibold,
     color: '#B45309',
   },
@@ -182,7 +195,7 @@ const styles = StyleSheet.create({
   },
   sub: {
     fontSize: 12,
-    fontFamily: fonts.mono.medium,
+    fontFamily: fonts.body.regular,
   },
   track: {
     width: '100%',

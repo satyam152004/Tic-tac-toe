@@ -1,32 +1,32 @@
 import React, { useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
+import { StyleSheet, Text, View } from 'react-native';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { ErrorState } from '../../components/feedback/StateViews';
-import { fonts, type } from '../../design-system/typography';
+import { ActionButton } from '../../components/game/ActionButton';
+import { SegmentedControl } from '../../components/game/SegmentedControl';
+import { ToggleSwitch } from '../../components/game/ToggleSwitch';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage, toApiError } from '../../services/api/errors';
 import { gameApi } from '../../services/api/gameApi';
 import type { BoardSize } from '../../services/api/types';
-import { createRoom } from '../../services/onlineActions';
-import { isOfflineError } from './shared';
+import { createRoomWithOptions, isOfflineError, type TurnTimer } from './shared';
 
-const GRID_OPTIONS: { label: string; size: BoardSize }[] = [
-  { label: '3×3', size: 3 },
-  { label: '4×4', size: 4 },
-  { label: '5×5', size: 5 },
+const GRID_OPTIONS = ([3, 4, 5] as BoardSize[]).map((n) => ({ value: n, label: `${n}×${n}`, testID: `create-grid-${n}` }));
+const TIMER_OPTIONS: { value: TurnTimer; label: string; testID: string }[] = [
+  { value: 15, label: '15s', testID: 'create-timer-15' },
+  { value: 30, label: '30s', testID: 'create-timer-30' },
+  { value: 0, label: 'Off', testID: 'create-timer-0' },
 ];
-
-const TIMER_OPTIONS = ['15s', '30s', 'Off'];
 
 export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => {
   const c = useTheme();
   const { nav, back } = useAppNav();
   const [size, setSize] = useState<BoardSize>(3);
-  const [timer, setTimer] = useState('30s');
+  const [timer, setTimer] = useState<TurnTimer>(30);
   const [isPrivate, setIsPrivate] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -36,8 +36,8 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
     setBusy(true);
     setError(null);
     try {
-      const room = await createRoom(size);
-      nav.replace('room_details', { roomId: room.id });
+      const room = await createRoomWithOptions(size, { isPublic: !isPrivate, turnTimeoutSec: timer });
+      nav.replace('waiting_room', { roomId: room.id });
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -60,95 +60,36 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
     <Screen
       title="Create Room"
       onBack={back}
-      footer={
-        <AppButton
-          testID="create-room-submit"
-          title="Generate Room Code"
-          fullWidth
-          loading={busy}
-          onPress={submit}
-        />
-      }
+      footer={<ActionButton testID="create-room-submit" title="Generate Room Code" fullWidth loading={busy} onPress={submit} />}
     >
-      <View style={{ gap: 16 }}>
-        {/* Grid Size Selector */}
-        <View style={{ gap: 6 }}>
-          <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>GRID SIZE</Text>
-          <View style={[styles.segment, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
-            {GRID_OPTIONS.map((g) => {
-              const active = size === g.size;
-              return (
-                <Pressy
-                  key={g.label}
-                  onPress={() => setSize(g.size)}
-                  style={[
-                    styles.segmentBtn,
-                    active && [styles.segmentBtnActive, { backgroundColor: c.bgCard }],
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      {
-                        color: active ? c.accent : c.textSecondary,
-                        fontFamily: active ? fonts.body.semibold : fonts.body.medium,
-                      },
-                    ]}
-                  >
-                    {g.label}
-                  </Text>
-                </Pressy>
-              );
-            })}
-          </View>
+      <View style={{ gap: 14 }}>
+        <View>
+          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>GRID SIZE</Text>
+          <SegmentedControl label="Grid size" options={GRID_OPTIONS} value={size} onChange={setSize} />
         </View>
 
-        {/* Turn Timer Selector */}
-        <View style={{ gap: 6 }}>
-          <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>TURN TIMER</Text>
-          <View style={[styles.segment, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>
-            {TIMER_OPTIONS.map((tm) => {
-              const active = timer === tm;
-              return (
-                <Pressy
-                  key={tm}
-                  onPress={() => setTimer(tm)}
-                  style={[
-                    styles.segmentBtn,
-                    active && [styles.segmentBtnActive, { backgroundColor: c.bgCard }],
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      {
-                        color: active ? c.accent : c.textSecondary,
-                        fontFamily: active ? fonts.body.semibold : fonts.body.medium,
-                      },
-                    ]}
-                  >
-                    {tm}
-                  </Text>
-                </Pressy>
-              );
-            })}
-          </View>
+        <View>
+          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>TURN TIMER</Text>
+          <SegmentedControl label="Turn timer" options={TIMER_OPTIONS} value={timer} onChange={setTimer} />
         </View>
 
-        {/* Private Room Toggle Card */}
-        <View style={[styles.toggleCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[styles.toggleTitle, { color: c.text }]}>Private Room</Text>
-            <Text style={[styles.toggleSub, { color: c.textSecondary }]}>
-              {isPrivate ? 'Invite-only via 6-character code' : 'Listed in public Open Rooms'}
-            </Text>
-          </View>
-          <Switch
-            value={isPrivate}
-            onValueChange={setIsPrivate}
-            trackColor={{ false: '#E4E4DF', true: '#BFDBFE' }}
-            thumbColor={isPrivate ? c.accent : '#F1F1EE'}
-          />
+        <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <Pressy
+            testID="create-private"
+            accessibilityRole="switch"
+            accessibilityLabel="Private Room"
+            accessibilityState={{ checked: isPrivate }}
+            onPress={() => setIsPrivate((v) => !v)}
+            style={styles.row}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowTitle, { color: c.text }]}>Private Room</Text>
+              <Text style={[styles.rowSub, { color: c.textSecondary }]}>
+                {isPrivate ? 'Invite-only via 6-character code' : 'Listed in public Open Rooms'}
+              </Text>
+            </View>
+            <ToggleSwitch value={isPrivate} />
+          </Pressy>
         </View>
 
         {error ? (
@@ -168,47 +109,9 @@ export const CreateRoomScreen: React.FC<RootScreenProps<'create_room'>> = () => 
 };
 
 const styles = StyleSheet.create({
-  sectionLabel: {
-    fontSize: 10.5,
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
-  },
-  segment: {
-    flexDirection: 'row',
-    padding: 3,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentBtnActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  segmentText: {
-    fontSize: 12,
-  },
-  toggleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  toggleTitle: {
-    fontSize: 13,
-    fontFamily: fonts.body.semibold,
-  },
-  toggleSub: {
-    fontSize: 11,
-  },
+  sectionLabel: { fontSize: 10, fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: 5 },
+  group: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: 38, paddingVertical: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  rowTitle: { fontSize: 12.5, fontFamily: fonts.body.semibold },
+  rowSub: { fontSize: 10.5, fontFamily: fonts.body.regular },
 });
