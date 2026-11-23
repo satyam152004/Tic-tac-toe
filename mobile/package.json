@@ -63,7 +63,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "postinstall": "node scripts/fix-worklets.mjs",
+    "postinstall": "node -e \"const fs=require('fs');if(fs.existsSync('scripts/fix-worklets.mjs'))import('./scripts/fix-worklets.mjs')\"",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
