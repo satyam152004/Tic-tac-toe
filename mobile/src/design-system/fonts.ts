@@ -3,6 +3,7 @@ import {
   JetBrainsMono_500Medium,
   JetBrainsMono_600SemiBold,
 } from '@expo-google-fonts/jetbrains-mono';
+
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -10,15 +11,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 
 /**
- * The only fonts the app loads. `App.tsx` passes this map to `useFonts`, and the `fonts` tokens below are the only
- * way screens name a font family, so a style can never reference a font that is not loaded
- * (tests/unit/fonts.test.ts enforces both).
- *
- *  - Plus Jakarta Sans: every piece of text.
- *  - JetBrains Mono:    timers, scores, counters and codes only (tabular digits).
- *
- * Weights stay light on purpose: regular for reading, medium for emphasis, semibold for headings and buttons.
- * There is no bold or extra-bold.
+ * Central font assets.
  */
 export const FONT_ASSETS = {
   PlusJakartaSans_400Regular,
@@ -40,4 +33,7 @@ export const fonts = {
     medium: 'JetBrainsMono_500Medium',
     semibold: 'JetBrainsMono_600SemiBold',
   },
-} as const satisfies Record<string, Record<string, keyof typeof FONT_ASSETS>>;
+} as const satisfies Record<
+  string,
+  Record<string, keyof typeof FONT_ASSETS>
+>;
