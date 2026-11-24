@@ -43,7 +43,6 @@ import { SplashScreen } from '../../src/screens/onboarding/SplashScreen';
 import { Onboarding1Screen, Onboarding3Screen } from '../../src/screens/onboarding/OnboardingScreens';
 import { WelcomeScreen } from '../../src/screens/onboarding/WelcomeScreen';
 import { HomeScreen } from '../../src/screens/home/HomeScreen';
-import { GameModeScreen } from '../../src/screens/home/GameModeScreen';
 import { PlayerSetupScreen } from '../../src/screens/home/PlayerSetupScreen';
 import { GameRulesScreen } from '../../src/screens/home/GameRulesScreen';
 import { useAuthStore } from '../../src/store/authStore';
@@ -192,39 +191,14 @@ describe('PlayerSetupScreen', () => {
   });
 });
 
-describe('GameModeScreen', () => {
-  it('navigates to each mode', async () => {
-    await render(<GameModeScreen />);
-    await fireEvent.press(screen.getByTestId('mode-local'));
-    await fireEvent.press(screen.getByTestId('mode-continue'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('board_selection', { mode: 'LOCAL_2P' });
-    await fireEvent.press(screen.getByTestId('mode-ai'));
-    await fireEvent.press(screen.getByTestId('mode-continue'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('ai_difficulty');
-    await fireEvent.press(screen.getByTestId('mode-online'));
-    await fireEvent.press(screen.getByTestId('mode-continue'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('online_lobby');
-  });
-
-  it('shows an offline message instead of opening online modes', async () => {
-    useAuthStore.setState({ offline: true } as never);
-    await render(<GameModeScreen />);
-    await fireEvent.press(screen.getByTestId('mode-online'));
-    await fireEvent.press(screen.getByTestId('mode-continue'));
-    expect(mockNav.navigate).not.toHaveBeenCalledWith('online_lobby');
-    expect(useToastStore.getState().toast).not.toBeNull();
-  });
-});
 
 describe('HomeScreen', () => {
   it('renders level, coins and real stats', async () => {
     await render(<HomeScreen />);
     expect(screen.getByText('Aiden')).toBeTruthy();
     expect(screen.getByText('420')).toBeTruthy();
-    expect(screen.getByText('17 Wins')).toBeTruthy();
-    expect(screen.getByText('50% Rate')).toBeTruthy();
-    expect(screen.getByText('Last 4')).toBeTruthy();
-    expect(screen.getByText('#14 Rank')).toBeTruthy();
+    expect(screen.queryByText('17 Wins')).toBeNull();
+    expect(screen.queryByTestId('home-stats')).toBeNull();
     expect(screen.queryByTestId('upgrade-card')).toBeNull();
     expect(screen.getByLabelText('Notifications, 3 unread')).toBeTruthy();
   });

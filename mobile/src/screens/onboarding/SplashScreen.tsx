@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.body.semibold,
     fontSize: fs(22),
-    lineHeight: Math.round(fs(22) * 1.3),
+    lineHeight: Math.round(fs(22) * 1.27),
     letterSpacing: -0.44,
     textAlign: 'center',
   },

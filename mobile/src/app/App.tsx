@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppToastHost } from '../components/feedback/AppToast';
 import { NetworkStatus } from '../components/feedback/NetworkStatus';
 import { FONT_ASSETS } from '../design-system/fonts';
+import { MAX_FONT_SIZE_MULTIPLIER } from '../design-system/responsive';
 import { THEME_LIST } from '../design-system/themes';
 import { useTheme } from '../hooks/useTheme';
 import { navigationRef } from '../navigation/navigationRef';
@@ -20,10 +21,14 @@ import { useAppLifecycle } from './useAppLifecycle';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-// Respect the user's system font size, but cap it so large accessibility sizes cannot break fixed-height layouts.
-type WithDefaults = { defaultProps?: { maxFontSizeMultiplier?: number } };
+// Follow the phone's Small / Large text setting (iOS Dynamic Type, Android font scale).
+type WithDefaults = { defaultProps?: { allowFontScaling?: boolean; maxFontSizeMultiplier?: number } };
 for (const C of [Text, TextInput] as unknown as WithDefaults[]) {
-  C.defaultProps = { ...C.defaultProps, maxFontSizeMultiplier: 1.3 };
+  C.defaultProps = {
+    ...C.defaultProps,
+    allowFontScaling: true,
+    maxFontSizeMultiplier: MAX_FONT_SIZE_MULTIPLIER,
+  };
 }
 
 function Shell() {

@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 10, elevation: 10 },
   card: { width: '100%', maxWidth: ms(320), borderRadius: 20, borderWidth: 1, padding: ms(20), gap: ms(14), alignItems: 'center' },
   titles: { alignItems: 'center', gap: 2 },
-  title: { fontSize: fs(18), fontFamily: fonts.body.semibold },
+  title: { fontSize: fs(17), fontFamily: fonts.body.semibold },
   sub: { fontSize: fs(12), fontFamily: fonts.mono.medium },
   note: { fontSize: fs(12), textAlign: 'center', marginTop: 4 },
   actions: { gap: 8, alignSelf: 'stretch' },

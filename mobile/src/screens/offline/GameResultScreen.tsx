@@ -39,7 +39,7 @@ export const GameResultScreen: React.FC<RootScreenProps<'game_result'>> = () => 
   const badgeBorder = isDraw ? '#E4E4DF' : humanLost ? '#FECACA' : '#BBF7D0';
   const badgeColor = isDraw ? '#5C606A' : humanLost ? '#DC2626' : '#15803D';
 
-  const changeMode = () => goTab('PlayTab');
+  const changeMode = () => goTab('HomeTab');
 
   return (
     <Screen
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontFamily: fonts.body.semibold,
-    fontSize: fs(21),
+    fontSize: fs(20),
     letterSpacing: -0.3,
     textAlign: 'center',
   },

@@ -18,7 +18,6 @@ import { useAuthStore, useIsGuest } from '../../store/authStore';
 import { useLocalGameStore } from '../../store/localGameStore';
 import { isTerminal, useOnlineStore } from '../../store/onlineStore';
 import { toast } from '../../store/toastStore';
-import { divisionForPoints } from '../social/LeagueTiersScreen';
 import {
   ACCENT_SOFT,
   BellIcon,
@@ -28,7 +27,6 @@ import {
   FlameIcon,
   GlobeIcon,
   MarkX,
-  MUTED,
   ProtoButton,
   SUBTLE,
   UsersIcon,
@@ -145,14 +143,6 @@ export const HomeScreen: React.FC = () => {
 
   const stats = user.stats;
   const liveGame = onlineGame && !isTerminal(onlineGame) ? onlineGame : null;
-  const division = divisionForPoints(stats.points);
-
-  // Season snapshot: wins are lifetime, the rate covers the recent online/AI games the server reports,
-  // rank is the live global leaderboard position.
-  const form = streaks.data?.recentForm ?? [];
-  const formWins = form.filter((r) => r === 'WIN').length;
-  const rate = form.length ? `${Math.round((formWins / form.length) * 100)}%` : '—';
-  const rank = leaderboard.data?.me?.rank;
 
   const card = [styles.card, { backgroundColor: c.bgCard, borderColor: c.border }];
 
@@ -255,7 +245,7 @@ export const HomeScreen: React.FC = () => {
               </View>
               <View style={styles.cardMark}><MarkX size={ms(20)} stroke={2.4} /></View>
             </View>
-            <ProtoButton testID="home-play" title="Quick Play" height={36} fontSize={fs(12.5)} onPress={() => goTab('PlayTab')} />
+            <ProtoButton testID="home-play" title="Quick Play" height={36} fontSize={fs(12.5)} onPress={() => nav.navigate('ai_difficulty')} />
           </View>
         )}
 
@@ -285,27 +275,6 @@ export const HomeScreen: React.FC = () => {
             onPress={() => nav.navigate('board_selection', { mode: 'LOCAL_2P' })}
           />
         </View>
-
-        {/* Season snapshot */}
-        <Pressy
-          testID="home-stats"
-          accessibilityLabel="Your stats. Opens the ranking."
-          onPress={() => nav.navigate('league_tiers')}
-          style={[styles.snapshot, { backgroundColor: c.bgCard, borderColor: c.border }]}
-        >
-          <View style={styles.snapCol}>
-            <Text style={[styles.snapVal, { color: c.text }]}>{stats.wins} Wins</Text>
-            <Text style={[styles.snapLabel, { color: MUTED }]}>All time</Text>
-          </View>
-          <View style={[styles.snapCol, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border }]}>
-            <Text style={[styles.snapVal, { color: c.accent }]}>{rate} Rate</Text>
-            <Text style={[styles.snapLabel, { color: MUTED }]}>{form.length ? `Last ${form.length}` : 'No games yet'}</Text>
-          </View>
-          <View style={styles.snapCol}>
-            <Text style={[styles.snapVal, { color: c.text }]}>{rank ? `#${rank}` : '—'} Rank</Text>
-            <Text style={[styles.snapLabel, { color: MUTED }]}>{division.name}</Text>
-          </View>
-        </Pressy>
 
         {/* Quick pills */}
         <View style={styles.quickRow}>
@@ -396,10 +365,6 @@ const styles = StyleSheet.create({
   modeIcon: { width: ms(36), height: ms(36), borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   modeTitle: { fontFamily: fonts.body.semibold, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3) },
   modeSub: { fontFamily: fonts.body.regular, fontSize: fs(11), lineHeight: Math.round(fs(11) * 1.3) },
-  snapshot: { borderWidth: 1, borderRadius: 14, paddingVertical: ms(12), paddingHorizontal: 8, flexDirection: 'row', ...SHADOW },
-  snapCol: { flex: 1, alignItems: 'center' },
-  snapVal: { fontFamily: fonts.body.semibold, fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.3), fontVariant: TABULAR },
-  snapLabel: { fontFamily: fonts.body.regular, fontSize: fs(10), lineHeight: Math.round(fs(10) * 1.3) },
   quickRow: { flexDirection: 'row', gap: 10 },
   quick: { flex: 1, paddingHorizontal: ms(12), paddingVertical: 8, minHeight: ch(40), borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   quickText: { fontFamily: fonts.body.semibold, fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3) },

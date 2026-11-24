@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, justifyContent: 'space-between' },
   hero: { alignItems: 'center', marginTop: 12 },
   markCard: { width: ms(60), height: ms(60), borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  title: { fontFamily: fonts.body.semibold, fontSize: fs(21), lineHeight: Math.round(fs(21) * 1.3), letterSpacing: -0.42, textAlign: 'center' },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(22), lineHeight: Math.round(fs(22) * 1.27), letterSpacing: -0.35, textAlign: 'center' },
   subtitle: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 6, maxWidth: ms(300), textAlign: 'center' },
   actions: { paddingTop: 12, gap: 10 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },

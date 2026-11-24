@@ -5,7 +5,7 @@ import { layout } from '../../design-system/spacing';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
-import { ch, ms } from '../../design-system/responsive';
+import { CHROME_FONT_MAX, ch, ms } from '../../design-system/responsive';
 
 export interface AppButtonProps {
   title: string;
@@ -60,7 +60,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
     >
       <View style={styles.row}>
         {loading ? <ActivityIndicator color={palette.text} size="small" /> : icon}
-        <Text style={[type.button, { color: palette.text }]} numberOfLines={1}>{title}</Text>
+        <Text style={[type.button, { color: palette.text }]} numberOfLines={1} maxFontSizeMultiplier={CHROME_FONT_MAX}>{title}</Text>
       </View>
     </Pressy>
   );

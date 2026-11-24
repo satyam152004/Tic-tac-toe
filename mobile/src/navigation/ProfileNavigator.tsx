@@ -5,7 +5,6 @@ import { CoinShopEmblemsScreen } from '../screens/progression/CoinShopEmblemsScr
 import { DailyRewardsScreen } from '../screens/progression/DailyRewardsScreen';
 import { GameStatisticsScreen } from '../screens/progression/GameStatisticsScreen';
 import { FriendProfileScreen } from '../screens/social/FriendProfileScreen';
-import { LeagueTiersScreen } from '../screens/social/LeagueTiersScreen';
 import { Stack } from './stack';
 
 /** Profile, social detail and progression screens. */
@@ -17,6 +16,5 @@ export const profileScreens = () => (
     <Stack.Screen name="achievements" component={AchievementsScreen} />
     <Stack.Screen name="daily_rewards" component={DailyRewardsScreen} />
     <Stack.Screen name="coin_shop" component={CoinShopEmblemsScreen} />
-    <Stack.Screen name="league_tiers" component={LeagueTiersScreen} />
   </Stack.Group>
 );

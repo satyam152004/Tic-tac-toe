@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { Crown } from 'lucide-react-native';
+import { ChevronRight, Crown } from 'lucide-react-native';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
+import { RankedLeaguesSheet } from '../../components/social/RankedLeaguesSheet';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
 import { fonts } from '../../design-system/typography';
-import { useLeaderboard } from '../../hooks/queries';
+import { useHistory, useLeaderboard, useMe } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import { toApiError } from '../../services/api/errors';
@@ -29,6 +30,13 @@ export const LeaderboardScreen: React.FC = () => {
   const [scope, setScope] = useState<LeaderboardScope>('global');
   const q = useLeaderboard(scope, 'points');
   const rows = q.isPlaceholderData ? [] : q.data?.rows ?? [];
+  // Your ranked league is always global, whichever tab is open.
+  const globalBoard = useLeaderboard('global', 'points');
+  const profile = useMe();
+  const history = useHistory({});
+  const [leaguesOpen, setLeaguesOpen] = useState(false);
+  const last20 = (history.data?.items ?? []).filter((g) => g.result).slice(0, 20);
+  const last20Pct = last20.length > 0 ? Math.round((last20.filter((g) => g.result === 'WIN').length / last20.length) * 100) : null;
 
   const top3 = useMemo(() => rows.slice(0, 3), [rows]);
   const restRows = useMemo(() => rows.slice(3), [rows]);
@@ -38,13 +46,12 @@ export const LeaderboardScreen: React.FC = () => {
     else nav.navigate('friend_profile', { userId: r.user.id });
   };
 
-  const myRank = q.data?.me?.rank ?? null;
-  const myPoints = q.data?.me?.points ?? null;
   const weekly = scope === 'weekly';
+  const globalRank = globalBoard.data?.me?.rank ?? null;
+  const points = profile.data?.stats?.points ?? globalBoard.data?.me?.points ?? 0;
   // Period boards carry the ELO gained in the period, so they read as a delta.
   const fmtPts = (n: number | null | undefined) =>
     n == null ? '–' : weekly ? `${n >= 0 ? '+' : ''}${n.toLocaleString()}` : n.toLocaleString();
-  const scopeRankLabel = scope === 'friends' ? 'Friends Rank' : weekly ? 'Weekly Rank' : 'Your Rank';
   const nameOf = (r?: LeaderboardRow) => (r ? (r.user.displayName || r.user.username) + (r.user.id === me?.id ? ' (You)' : '') : '—');
   const initials = (r?: LeaderboardRow) => (r ? (r.user.displayName || r.user.username).slice(0, 2).toUpperCase() : '–');
 
@@ -121,12 +128,22 @@ export const LeaderboardScreen: React.FC = () => {
       scroll={false}
       padded={false}
       footer={
-        <View testID="lb-me-card" style={styles.footerBar}>
-          <Text style={styles.footerText}>
-            {scopeRankLabel} {myRank != null ? `#${myRank}` : '–'}
-          </Text>
-          <Text style={styles.footerText}>{fmtPts(myPoints)} pts</Text>
-        </View>
+        <>
+          <Pressy
+            testID="lb-me-card"
+            accessibilityRole="button"
+            accessibilityLabel={`Your Rank ${globalRank != null ? `number ${globalRank}` : 'unranked'}, ${points.toLocaleString()} points. Opens ranked leagues.`}
+            onPress={() => setLeaguesOpen(true)}
+            style={styles.footerBar}
+          >
+            <Text style={styles.footerText}>Your Rank {globalRank != null ? `#${globalRank}` : '–'}</Text>
+            <View style={styles.footerRight}>
+              <Text style={styles.footerText}>{points.toLocaleString()} pts</Text>
+              <ChevronRight size={ms(16)} color="#1D4ED8" />
+            </View>
+          </Pressy>
+          <RankedLeaguesSheet open={leaguesOpen} onClose={() => setLeaguesOpen(false)} points={points} rank={globalRank} last20Pct={last20Pct} />
+        </>
       }
     >
       {q.isLoading && rows.length === 0 ? (
@@ -218,5 +235,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  footerRight: { flexDirection: 'row', alignItems: 'center', gap: ms(6) },
   footerText: { fontSize: fs(12), flexShrink: 1, fontFamily: fonts.mono.semibold, color: '#1D4ED8' },
 });

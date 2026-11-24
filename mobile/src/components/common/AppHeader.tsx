@@ -8,7 +8,7 @@ import { layout } from '../../design-system/spacing';
 import { type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
-import { ms } from '../../design-system/responsive';
+import { CHROME_FONT_MAX, ms } from '../../design-system/responsive';
 
 export const AppHeader: React.FC<{
   title: string;
@@ -35,8 +35,8 @@ export const AppHeader: React.FC<{
         ) : null}
       </View>
       <View style={styles.mid}>
-        <Text accessibilityRole="header" numberOfLines={1} style={[type.heading, { color: c.text, textAlign: 'center' }]}>{title}</Text>
-        {subtitle ? <Text numberOfLines={1} style={[type.caption, { color: c.textSecondary, textAlign: 'center' }]}>{subtitle}</Text> : null}
+        <Text accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={CHROME_FONT_MAX} style={[type.heading, { color: c.text, textAlign: 'center' }]}>{title}</Text>
+        {subtitle ? <Text numberOfLines={1} maxFontSizeMultiplier={CHROME_FONT_MAX} style={[type.caption, { color: c.textSecondary, textAlign: 'center' }]}>{subtitle}</Text> : null}
       </View>
       <View style={styles.right}>{rightAction}</View>
     </View>

@@ -203,9 +203,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body.semibold,
   },
   scoreNumber: {
-    fontSize: fs(28),
+    fontSize: fs(22),
     fontFamily: fonts.mono.semibold,
-    lineHeight: Math.round(fs(28) * 1.25),
+    lineHeight: Math.round(fs(22) * 1.25),
   },
   scoreDivider: {
     fontSize: fs(20),

@@ -5,7 +5,7 @@ import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Pressy } from './Pressy';
 
-import { ch, fs, ms } from '../../design-system/responsive';
+import { MAX_FONT_SIZE_MULTIPLIER, ch, fs, ms } from '../../design-system/responsive';
 export interface AppInputProps extends TextInputProps {
   label?: string;
   labelRight?: React.ReactNode;
@@ -53,6 +53,8 @@ export const AppInput = forwardRef<ElementRef<typeof TextInput>, AppInputProps>(
             setFocused(false);
             onBlur?.(e);
           }}
+          allowFontScaling
+          maxFontSizeMultiplier={MAX_FONT_SIZE_MULTIPLIER}
           style={[styles.input, { color: c.text, fontFamily: fonts.body.medium }, style]}
         />
         {secureToggle ? (

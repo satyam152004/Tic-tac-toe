@@ -259,7 +259,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
               title="No matches yet"
               description="Finish an offline match and it will show up here."
               actionLabel="Play now"
-              onAction={() => goTab('PlayTab')}
+              onAction={() => goTab('HomeTab')}
             />
           }
           renderItem={({ item, index }) => {

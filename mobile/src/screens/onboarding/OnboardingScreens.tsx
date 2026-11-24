@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   playerName: { fontFamily: fonts.body.semibold, fontSize: fs(11.5) },
   vs: { fontFamily: fonts.body.semibold, fontSize: fs(11) },
 
-  title: { fontFamily: fonts.body.semibold, fontSize: fs(19), lineHeight: Math.round(fs(19) * 1.3), letterSpacing: -0.38, textAlign: 'center' },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(20), lineHeight: Math.round(fs(20) * 1.3), letterSpacing: -0.3, textAlign: 'center' },
   desc: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 8, maxWidth: ms(300), textAlign: 'center' },
   dots: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20 },
 });

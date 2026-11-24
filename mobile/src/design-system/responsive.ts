@@ -4,6 +4,19 @@ export const BASE_WIDTH = 390;
 export const MIN_FACTOR = 0.9;
 export const MAX_FACTOR = 1.2;
 
+/** Type barely follows screen width; the OS font-size setting does the real scaling. */
+export const FONT_MIN_FACTOR = 0.95;
+export const FONT_MAX_FACTOR = 1.05;
+export const MIN_FONT = 11;
+
+/**
+ * How far text may grow with the phone's Large Text setting.
+ * 2× covers iOS XXXL / Android largest, while layouts that already react to `fontScale` stay intact.
+ */
+export const MAX_FONT_SIZE_MULTIPLIER = 2;
+/** Tab labels, nav titles, and single-line buttons — grow, but not enough to overflow chrome. */
+export const CHROME_FONT_MAX = 1.35;
+
 const clamp = (
   value: number,
   lower: number,
@@ -24,26 +37,27 @@ export const factorFor = (width: number): number =>
     MAX_FACTOR,
   );
 
-const window = Dimensions.get('window');
+export const fontFactorFor = (width: number): number =>
+  clamp(
+    width / BASE_WIDTH,
+    FONT_MIN_FACTOR,
+    FONT_MAX_FACTOR,
+  );
 
-export const scaleFactor = factorFor(
-  Math.min(window.width, window.height),
-);
+const window = Dimensions.get('window');
+const shortest = Math.min(window.width, window.height);
+
+export const scaleFactor = factorFor(shortest);
+export const fontScaleFactor = fontFactorFor(shortest);
 
 /**
- * Kit text size -> readable size before screen scaling.
+ * Design size in points. Floor at 11 (Apple / Material minimum); no extra bump.
  */
-export const liftFont = (n: number): number => {
-  const bump =
-    n <= 13
-      ? 2
-      : Math.max(0, 2 - (n - 13) * 0.4);
-
-  return Math.max(12, n + bump);
-};
+export const liftFont = (n: number): number =>
+  Math.max(MIN_FONT, n);
 
 export const fs = (n: number): number =>
-  round1(liftFont(n) * scaleFactor);
+  round1(Math.max(MIN_FONT, liftFont(n) * fontScaleFactor));
 
 /**
  * Proportional scaling for layout dimensions.

@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     gap: ms(16),
   },
   scoreYou: {
-    fontSize: fs(19),
+    fontSize: fs(20),
     fontFamily: fonts.mono.semibold,
   },
   scoreDash: {
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body.medium,
   },
   scoreOpp: {
-    fontSize: fs(19),
+    fontSize: fs(20),
     fontFamily: fonts.mono.semibold,
   },
   sectionLabel: {

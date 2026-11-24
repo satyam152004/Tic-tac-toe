@@ -5,14 +5,13 @@ import type { BoardSize, Difficulty } from '../game-engine';
 export type MainTabParamList = {
   HomeTab: undefined;
   FriendsTab: undefined;
-  PlayTab: undefined;
   RankingTab: undefined;
   ProfileTab: undefined;
 };
 
 /**
  * One flat stack keeps navigation predictable (no cross-navigator params) and lets `navigate()` de-duplicate.
- * Route names are the original prototype ScreenIds. The five bottom-tab screens (home, game_mode, friends,
+ * Route names are the original prototype ScreenIds. The four bottom-tab screens (home, friends,
  * leaderboard, user_profile) live in `Main`; use `useAppNav().goTab()` or `navigateToScreen()` to reach them.
  */
 export type RootStackParamList = {
@@ -57,7 +56,6 @@ export type RootStackParamList = {
   achievements: undefined;
   daily_rewards: undefined;
   coin_shop: undefined;
-  league_tiers: undefined;
   settings: undefined;
   privacy_settings: undefined;
   theme_selection: undefined;
@@ -70,7 +68,6 @@ export type TabKey = keyof MainTabParamList;
 export const TAB_FOR_SCREEN = {
   home: 'HomeTab',
   friends: 'FriendsTab',
-  game_mode: 'PlayTab',
   leaderboard: 'RankingTab',
   user_profile: 'ProfileTab',
 } as const;

@@ -71,7 +71,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
     >
       {offline ? (
         <View style={{ padding: ms(20) }}>
-          <ErrorState offline message="Online play needs an internet connection. You can still play offline." retryLabel="Play Offline" onRetry={() => goTab('PlayTab')} />
+          <ErrorState offline message="Online play needs an internet connection. You can still play offline." retryLabel="Play Offline" onRetry={() => goTab('HomeTab')} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

@@ -6,6 +6,7 @@ import {
   TextStyle,
 } from 'react-native';
 
+import { MAX_FONT_SIZE_MULTIPLIER } from '../../design-system/responsive';
 import {
   TypeVariant,
   type,
@@ -34,6 +35,7 @@ export const AppText: React.FC<AppTextProps> = ({
   tone = 'primary',
   center = false,
   allowFontScaling = true,
+  maxFontSizeMultiplier = MAX_FONT_SIZE_MULTIPLIER,
   style,
   ...rest
 }) => {
@@ -53,6 +55,7 @@ export const AppText: React.FC<AppTextProps> = ({
     <Text
       {...rest}
       allowFontScaling={allowFontScaling}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         type[variant],
         { color },

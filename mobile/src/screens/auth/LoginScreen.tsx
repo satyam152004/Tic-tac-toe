@@ -141,7 +141,7 @@ export const LoginScreen: React.FC<RootScreenProps<'login'>> = () => {
 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 14 },
-  title: { fontFamily: fonts.body.semibold, fontSize: fs(19), lineHeight: Math.round(fs(19) * 1.3), letterSpacing: -0.38 },
+  title: { fontFamily: fonts.body.semibold, fontSize: fs(17), lineHeight: Math.round(fs(17) * 1.3), letterSpacing: -0.3 },
   sub: { fontFamily: fonts.body.regular, fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.3), marginTop: 4 },
   fields: { gap: 12 },
   link: { fontFamily: fonts.body.semibold, fontSize: fs(12) },
