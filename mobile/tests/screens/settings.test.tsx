@@ -47,7 +47,7 @@ const deleteAccount = jest.fn(async (_p?: string) => undefined);
 beforeEach(() => {
   jest.clearAllMocks();
   useAuthStore.setState({ status: 'signedIn', user: ME as never, logout, logoutAll, deleteAccount } as never);
-  useSettingsStore.setState({ theme: 'dark', soundEffects: true, music: true, vibration: true, notifications: true, language: 'en' });
+  useSettingsStore.setState({ theme: 'dark', soundEffects: true, vibration: true, notifications: true, language: 'en' });
   useToastStore.setState({ toasts: [] } as never);
   m(userApi.update).mockResolvedValue(ME);
   m(Notifications.getPermissionsAsync).mockResolvedValue({ granted: true, canAskAgain: true });
@@ -59,9 +59,6 @@ describe('SettingsScreen', () => {
     await fireEvent.press(screen.getByTestId('toggle-sound'));
     expect(useSettingsStore.getState().soundEffects).toBe(false);
     await waitFor(() => expect(userApi.update).toHaveBeenCalledWith({ sound: { effects: false } }));
-    await fireEvent.press(screen.getByTestId('toggle-music'));
-    expect(useSettingsStore.getState().music).toBe(false);
-    await waitFor(() => expect(userApi.update).toHaveBeenCalledWith({ sound: { music: false } }));
   });
 
   it('vibration is a device-only setting (no PATCH)', async () => {
@@ -275,7 +272,7 @@ describe('NotificationsScreen', () => {
     ['FRIEND_ACCEPTED', {}, 'goTab', ['FriendsTab']],
     ['GAME_INVITE', { gameId: 'g1', roomCode: 'ABC123' }, 'navigate', ['match_invitation', { gameId: 'g1', roomCode: 'ABC123', fromName: undefined }]],
     ['REMATCH_REQUEST', { gameId: 'g2' }, 'navigate', ['online_board', { gameId: 'g2' }]],
-    ['MATCH_FOUND', { gameId: 'g3' }, 'navigate', ['online_board', { gameId: 'g3' }]],
+    ['MATCH_FOUND', { gameId: 'g3' }, 'navigate', ['match_found', { gameId: 'g3', source: 'RANKED' }]],
     ['ACHIEVEMENT_UNLOCKED', {}, 'navigate', ['achievements']],
     ['LEVEL_UP', {}, 'goTab', ['ProfileTab']],
   ])('routes %s on tap and marks it read', async (type, data, fn, args) => {

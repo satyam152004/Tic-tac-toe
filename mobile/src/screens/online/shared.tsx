@@ -17,7 +17,7 @@ import { toast } from '../../store/toastStore';
 import { defaultWinLength } from '../../game-engine';
 import { fonts, type } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
-import type { BoardSize } from '../../services/api/types';
+import type { BoardSize, EntryAmount, FirstMovePref } from '../../services/api/types';
 import { toApiError } from '../../services/api/errors';
 import { socketClient, type SocketStatus } from '../../services/socket/socketClient';
 import { ch, ms } from '../../design-system/responsive';
@@ -42,8 +42,11 @@ export const OPEN_ROOMS_KEY = ['rooms', 'open'] as const;
 export type TurnTimer = 0 | 15 | 30 | 60;
 
 /** Creates a room with the grid size, turn clock and visibility chosen on the Create Room screen. */
-export async function createRoomWithOptions(boardSize: BoardSize, opts: { isPublic: boolean; turnTimeoutSec: TurnTimer }): Promise<Room> {
-  const room = await unwrap<Room>(api.post('/rooms', { boardSize, ...opts }));
+export async function createRoomWithOptions(
+  boardSize: BoardSize,
+  opts: { isPublic: boolean; turnTimeoutSec: TurnTimer; firstMove?: FirstMovePref; entryAmount?: EntryAmount },
+): Promise<Room> {
+  const room = await unwrap<Room>(api.post('/rooms', { boardSize, firstMove: 'RANDOM', entryAmount: 0, ...opts }));
   useOnlineStore.getState().setRoom(room);
   return room;
 }

@@ -1,16 +1,20 @@
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { WifiOff } from 'lucide-react-native';
+import { Bot, ChevronRight, Gift, Globe, History, Smartphone, Users, WifiOff } from 'lucide-react-native';
 import { GuestUpgradeModal } from '../../components/auth/GuestUpgradeModal';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
+import { SymbolMark } from '../../components/game/SymbolMark';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { withAlpha } from '../../design-system/colors';
 import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { useDailyReward, useLeaderboard, useMe, useNotifications, useStreaks } from '../../hooks/queries';
+import type { RootStackParamList } from '../../navigation/types';
+import { isPreStart, matchFoundSource } from '../../services/gameRoute';
+import { ChallengeList } from '../social/ChallengeList';
 import { useAppNav } from '../../navigation/useAppNav';
 import { toApiError } from '../../services/api/errors';
 import { ActiveLocalGame, localGameStorage } from '../../services/storage/localGameStorage';
@@ -21,15 +25,10 @@ import { toast } from '../../store/toastStore';
 import {
   ACCENT_SOFT,
   BellIcon,
-  BotIcon,
-  ChevronIcon,
   CoinIcon,
   FlameIcon,
-  GlobeIcon,
   MarkX,
   ProtoButton,
-  SUBTLE,
-  UsersIcon,
   WARNING,
   WARNING_BORDER,
   WARNING_SOFT,
@@ -70,6 +69,9 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 };
 
 const TABULAR = ['tabular-nums' as const];
+
+/** Decorative sample position for the idle "Ready to play" board (not interactive). */
+const PREVIEW_BOARD: Array<'X' | 'O' | null> = ['X', null, 'O', null, 'X', null, null, null, 'O'];
 
 export const HomeScreen: React.FC = () => {
   const c = useTheme();
@@ -113,7 +115,8 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const openOnline = () => {
+  // Play online and Play with friends both go to the setup screen, then Match found, then the board.
+  const openOnlineSetup = (params: RootStackParamList['match_setup']) => {
     if (offline) {
       toast.warning('You are offline', 'Connect to the internet to play online.');
       return;
@@ -122,8 +125,10 @@ export const HomeScreen: React.FC = () => {
       setUpgradeOpen(true);
       return;
     }
-    nav.navigate('online_lobby');
+    nav.navigate('match_setup', params);
   };
+  const openOnline = () => openOnlineSetup({ mode: 'ONLINE', purpose: 'QUICK' });
+  const openFriends = () => openOnlineSetup({ mode: 'ONLINE', purpose: 'FRIEND' });
 
   if (!user) {
     return (
@@ -233,57 +238,69 @@ export const HomeScreen: React.FC = () => {
               title="Return to Game"
               height={36}
               fontSize={fs(12.5)}
-              onPress={() => nav.navigate('online_board', { gameId: liveGame.id })}
+              onPress={() =>
+                isPreStart(liveGame)
+                  ? nav.navigate('match_found', { gameId: liveGame.id, source: matchFoundSource(liveGame.type) })
+                  : nav.navigate('online_board', { gameId: liveGame.id })
+              }
             />
           </View>
         ) : (
-          <View style={card}>
-            <View style={styles.cardTop}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.overline, { color: c.accent }]}>READY TO PLAY</Text>
-                <Text style={[styles.cardTitle, { color: c.text }]}>Start a quick match</Text>
-              </View>
-              <View style={styles.cardMark}><MarkX size={ms(20)} stroke={2.4} /></View>
+          <View style={[...card, styles.idle]}>
+            <View testID="home-board" style={styles.board} accessibilityLabel="Tic tac toe board preview">
+              {PREVIEW_BOARD.map((value, i) => (
+                <View key={i} style={styles.cell}>
+                  <View style={[styles.tile, { backgroundColor: withAlpha(c.text, 0.05) }]}>
+                    {value ? <SymbolMark value={value} size="md" animate={false} /> : null}
+                  </View>
+                </View>
+              ))}
             </View>
-            <ProtoButton testID="home-play" title="Quick Play" height={36} fontSize={fs(12.5)} onPress={() => nav.navigate('ai_difficulty')} />
+            <ProtoButton testID="home-play" title="Quick play" height={48} fontSize={fs(15)} onPress={() => nav.navigate('match_setup', { mode: 'VS_AI' })} />
           </View>
         )}
 
-        {/* Mode group */}
-        <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <ModeRow
-            label="Play vs AI"
-            sub="From easy to unbeatable"
-            icon={<BotIcon size={ms(20)} />}
-            iconBg={ACCENT_SOFT}
-            onPress={() => nav.navigate('ai_difficulty')}
-          />
-          <ModeRow
-            label="Play Online"
-            sub="Ranked matches & private rooms"
-            icon={<GlobeIcon size={ms(20)} />}
-            iconBg={ACCENT_SOFT}
-            divider
-            onPress={openOnline}
-          />
-          <ModeRow
-            label="Pass & Play"
-            sub="Two players, one phone"
-            icon={<UsersIcon size={ms(20)} />}
-            iconBg={SUBTLE}
-            divider
-            onPress={() => nav.navigate('board_selection', { mode: 'LOCAL_2P' })}
-          />
+        {/* Friend challenges waiting for an answer (shows nothing when there are none) */}
+        <ChallengeList />
+
+        {/* Mode tiles */}
+        <View style={styles.modeGrid}>
+          <ModeTile testID="home-play-online" label="Play online" icon={<Globe size={ms(24)} color={c.accent} />} onPress={openOnline} />
+          <ModeTile testID="home-play-friends" label="Play with friends" icon={<Users size={ms(24)} color={c.success} />} onPress={openFriends} />
+          <ModeTile testID="home-computer" label="Computer" icon={<Bot size={ms(24)} color={c.accentSecondary} />} onPress={() => nav.navigate('match_setup', { mode: 'VS_AI' })} />
+          <ModeTile testID="home-pass-play" label="Pass n play" icon={<Smartphone size={ms(24)} color={c.danger} />} onPress={() => nav.navigate('match_setup', { mode: 'LOCAL_2P' })} />
         </View>
 
-        {/* Quick pills */}
+        {/* Stats row: wins | losses | draws | streak */}
+        <View testID="home-stats" style={styles.statsRow}>
+          {[
+            { label: 'Wins', value: stats.wins },
+            { label: 'Losses', value: stats.losses },
+            { label: 'Draws', value: stats.draws },
+            { label: 'Streak', value: stats.currentStreak },
+          ].map((s, i) => (
+            <View
+              key={s.label}
+              accessibilityLabel={`${s.label} ${s.value}`}
+              style={[styles.statCell, { backgroundColor: c.bgCard, borderColor: c.border }]}
+            >
+              <Text style={[styles.statValue, { color: c.text }]}>{s.value}</Text>
+              <Text style={[styles.statLabel, { color: c.textSecondary }]}>{s.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Quick links */}
         <View style={styles.quickRow}>
           <Pressy
             accessibilityLabel="Daily Rewards"
             onPress={() => nav.navigate('daily_rewards')}
             style={[styles.quick, { backgroundColor: c.bgCard, borderColor: c.border }]}
           >
-            <Text style={[styles.quickText, { color: c.text }]}>Daily Rewards</Text>
+            <View style={styles.quickLeft}>
+              <Gift size={ms(18)} color={c.warning} />
+              <Text style={[styles.quickText, { color: c.text }]}>Daily rewards</Text>
+            </View>
             {reward.data?.canClaim ? <View testID="reward-dot" style={[styles.rewardDot, { backgroundColor: c.accent }]} /> : null}
           </Pressy>
           <Pressy
@@ -291,8 +308,11 @@ export const HomeScreen: React.FC = () => {
             onPress={() => nav.navigate('offline_history')}
             style={[styles.quick, { backgroundColor: c.bgCard, borderColor: c.border }]}
           >
-            <Text style={[styles.quickText, { color: c.text }]}>Match History</Text>
-            <ChevronIcon size={ms(16)} />
+            <View style={styles.quickLeft}>
+              <History size={ms(18)} color={c.text} />
+              <Text style={[styles.quickText, { color: c.text }]}>Match history</Text>
+            </View>
+            <ChevronRight size={ms(16)} color={c.text} />
           </Pressy>
         </View>
       </ScrollView>
@@ -310,35 +330,23 @@ export const HomeScreen: React.FC = () => {
   );
 };
 
-const ModeRow: React.FC<{
-  label: string;
-  sub: string;
-  icon: React.ReactNode;
-  iconBg: string;
-  divider?: boolean;
-  onPress: () => void;
-}> = ({ label, sub, icon, iconBg, divider, onPress }) => {
+const SHADOW = { shadowColor: '#141518', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.035, shadowRadius: 8, elevation: 1 } as const;
+
+const ModeTile: React.FC<{ label: string; icon: React.ReactNode; onPress: () => void; testID?: string }> = ({ label, icon, onPress, testID }) => {
   const c = useTheme();
   return (
     <Pressy
+      testID={testID}
       accessibilityLabel={label}
       onPress={onPress}
-      scaleTo={1}
-      style={[styles.modeRow, divider ? { borderTopWidth: 1, borderTopColor: c.border } : null]}
+      scaleTo={0.98}
+      style={[styles.modeTile, { backgroundColor: c.bgCard, borderColor: c.border }]}
     >
-      <View style={styles.modeLeft}>
-        <View style={[styles.modeIcon, { backgroundColor: iconBg }]}>{icon}</View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.modeTitle, { color: c.text }]}>{label}</Text>
-          <Text style={[styles.modeSub, { color: c.textSecondary }]}>{sub}</Text>
-        </View>
-      </View>
-      <ChevronIcon size={ms(16)} />
+      {icon}
+      <Text style={[styles.modeTileText, { color: c.text }]}>{label}</Text>
     </Pressy>
   );
 };
-
-const SHADOW = { shadowColor: '#141518', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.035, shadowRadius: 8, elevation: 1 } as const;
 
 const styles = StyleSheet.create({
   body: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 12 },
@@ -369,4 +377,16 @@ const styles = StyleSheet.create({
   quick: { flex: 1, paddingHorizontal: ms(12), paddingVertical: 8, minHeight: ch(40), borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   quickText: { fontFamily: fonts.body.semibold, fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3) },
   rewardDot: { width: ms(9), height: ms(9), borderRadius: 5 },
+  idle: { gap: 12, alignItems: 'stretch' },
+  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  statsRow: { flexDirection: 'row', gap: 8 },
+  statCell: { flex: 1, alignItems: 'center', gap: 2, borderWidth: 1, borderRadius: 12, paddingVertical: 10, ...SHADOW },
+  statValue: { fontFamily: fonts.body.semibold, fontSize: fs(15), lineHeight: Math.round(fs(15) * 1.2), fontVariant: TABULAR },
+  statLabel: { fontFamily: fonts.body.regular, fontSize: fs(10.5), lineHeight: Math.round(fs(10.5) * 1.3) },
+  board: { alignSelf: 'center', width: '100%', maxWidth: ch(220), aspectRatio: 1, flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { width: '33.3333%', height: '33.3333%', padding: ms(4) },
+  tile: { flex: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  modeTile: { width: '48%', minHeight: ch(92), borderWidth: 1, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 8, padding: ms(10), ...SHADOW },
+  modeTileText: { fontFamily: fonts.body.semibold, fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.3), textAlign: 'center' },
+  quickLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
 });

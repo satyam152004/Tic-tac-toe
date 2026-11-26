@@ -1,3 +1,6 @@
+import { type } from '../../design-system/typography';
+import type { ThemeColors } from '../../design-system/colors';
+import { withAlpha } from '../../design-system/colors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { WifiOff } from 'lucide-react-native';
@@ -17,12 +20,14 @@ import { toast } from '../../store/toastStore';
 import { useSocketStatus } from './shared';
 
 import { fs, ms } from '../../design-system/responsive';
+import { isPreStart, matchFoundSource } from '../../services/gameRoute';
 const MAX_ATTEMPTS = 5;
 const ATTEMPT_MS = 3000;
 const UNFINISHED = new Set(['IN_PROGRESS', 'READY', 'WAITING']);
 
 export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ route }) => {
   const c = useTheme();
+  const styles = makeStyles(c);
   const { nav, goHome } = useAppNav();
   const status = useSocketStatus();
   const paramGameId = route.params?.gameId;
@@ -66,7 +71,9 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
       }
       const g = await openGame(id);
       useOnlineStore.getState().setReconnecting(false);
-      nav.replace(isTerminal(g) ? 'online_result' : 'online_board', { gameId: id });
+      if (isTerminal(g)) nav.replace('online_result', { gameId: id });
+      else if (isPreStart(g)) nav.replace('match_found', { gameId: id, source: matchFoundSource(g.type) });
+      else nav.replace('online_board', { gameId: id });
     } catch {
       done.current = false;
       setRestoring(false);
@@ -161,7 +168,7 @@ export const ReconnectionScreen: React.FC<RootScreenProps<'reconnection'>> = ({ 
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: ms(20),
@@ -181,23 +188,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: ms(10),
     paddingVertical: ms(2),
     borderRadius: 999,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: withAlpha(c.warning, 0.14),
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: withAlpha(c.warning, 0.4),
   },
-  lostPillText: {
-    fontSize: fs(10.5),
-    fontFamily: fonts.body.semibold,
-    color: '#B45309',
+  lostPillText: { ...type.overline, color: c.warning,
   },
-  title: {
-    fontSize: fs(17),
-    fontFamily: fonts.body.semibold,
-  },
-  sub: {
-    fontSize: fs(12),
-    fontFamily: fonts.body.regular,
-  },
+  title: { ...type.heading, },
+  sub: { ...type.caption, },
   track: {
     width: '100%',
     height: ms(7.2),

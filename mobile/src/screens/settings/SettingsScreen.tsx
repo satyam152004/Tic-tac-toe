@@ -147,7 +147,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
   };
 
   const toggleSound = () => sync({ soundEffects: !settings.soundEffects }, { sound: { effects: !settings.soundEffects } });
-  const toggleMusic = () => sync({ music: !settings.music }, { sound: { music: !settings.music } });
   const toggleVibration = () => sync({ vibration: !settings.vibration });
   const toggleMoveConfirm = () => settings.set({ moveConfirm: !settings.moveConfirm });
 
@@ -157,7 +156,6 @@ export const SettingsScreen: React.FC<RootScreenProps<'settings'>> = () => {
         <SectionLabel>Gameplay</SectionLabel>
         <Group>
           <GroupRow label="Sound Effects" onPress={toggleSound} right={<ToggleSwitch testID="toggle-sound" label="Toggle sound effects" checked={settings.soundEffects} onChange={toggleSound} />} />
-          <GroupRow label="Background Music" onPress={toggleMusic} right={<ToggleSwitch testID="toggle-music" label="Toggle background music" checked={settings.music} onChange={toggleMusic} />} />
           <GroupRow label="Haptics" onPress={toggleVibration} right={<ToggleSwitch testID="toggle-vibration" label="Toggle vibration" checked={settings.vibration} onChange={toggleVibration} />} />
           <GroupRow label="Confirm Moves" onPress={toggleMoveConfirm} right={<ToggleSwitch testID="toggle-move-confirm" label="Toggle move confirmation" checked={settings.moveConfirm} onChange={toggleMoveConfirm} />} />
         </Group>

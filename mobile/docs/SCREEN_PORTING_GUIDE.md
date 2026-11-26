@@ -34,8 +34,7 @@ Components (`src/components`):
 - `common/AppCard` (`selected onPress padding="sm|md|lg"`), `AppHeader`, `AppIconButton`, `AppInput` (`label error hint leftIcon secureToggle`), `AppAvatar`
   (`avatarId name size="sm|md|lg|xl" status="online|in_game|offline" activeRing`), `AppModal`, `ConfirmDialog`, `Pressy`
 - `feedback/AppLoader`, `feedback/StateViews` (`EmptyState`, `ErrorState`), toasts via `toast.success/error/warning/info(title, message?)` from `src/store/toastStore`
-- `game/GameBoard` (`board size winningLine lastMoveIndex disabled compact onCellPress`, board cells are `'X'|'O'|''`), `game/PlayerCard`, `game/SymbolMark`
-- `profile/Cards`: `ScoreCard`, `GameModeCard`, `AchievementCard`, `LeaderboardItem`, `RewardCard`, `ThemeCard`
+- `game/GameBoard` (`board size winningLine lastMoveIndex disabled compact onCellPress`, board cells are `'X'|'O'|''`), `game/SymbolMark`
 - `navigation/AppTabBar` (used by the tab navigator, not by screens)
 Design tokens: `src/design-system/{colors,typography,spacing,radius,shadows,themes}.ts`. Use `type.heading`, `type.body`, `type.small`, `type.num` etc.
 Fonts are loaded by the app shell from `design-system/fonts.ts` (Plus Jakarta Sans for all text, JetBrains Mono for timers, scores and codes; regular / medium / semibold only). Use the `type` scale (or `<AppText variant>`) from `typography.ts`; do not set fontSize, fontFamily or fontWeight inline.
@@ -46,7 +45,7 @@ Tabs: `goTab('HomeTab'|'FriendsTab'|'PlayTab'|'RankingTab'|'ProfileTab')`. Use `
 Tab screens (home, game_mode, friends, leaderboard, user_profile) must be exported as normal components; `Screen tabs` for the bottom inset.
 Android back button is handled by React Navigation; for screens that must confirm before leaving (active game) use `useBackGuard` (see below).
 
-State (`src/store`, zustand): `useAuthStore` (user: `Me`, status, `useIsGuest()`), `useSettingsStore` (theme, soundEffects, music, vibration,
+State (`src/store`, zustand): `useAuthStore` (user: `Me`, status, `useIsGuest()`), `useSettingsStore` (theme, soundEffects, vibration,
 notifications, language, `set(patch)`), `useLocalGameStore` (offline game: `setup`, `configure`, `start`, `play`, `aiMove`, `undoMove`, `rematch`, `pause`,
 `unpause`, `quit`, `game`, `paused`, `lastMove`, `historyVersion`, plus `seatsOf(setup)`), `useOnlineStore` (online game/matchmaking/room state fed by the socket),
 `useToastStore`. Online intents live in `src/services/onlineActions.ts` (`startQuickMatch`, `cancelQuickMatch`, `createRoom`, `joinRoomByCode`, `setReady`,

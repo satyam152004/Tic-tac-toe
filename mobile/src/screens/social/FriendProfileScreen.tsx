@@ -1,3 +1,4 @@
+import type { ThemeColors } from '../../design-system/colors';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
@@ -22,13 +23,15 @@ import { fs, ms } from '../../design-system/responsive';
 export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = ({ route }) => {
   const { userId } = route.params;
   const c = useTheme();
+  const styles = makeStyles(c);
   const { back } = useAppNav();
   const profile = usePublicProfile(userId);
   const accepted = useFriends('accepted');
   const actions = useFriendActions();
-  const { challenge, sheet } = useChallenge();
+  const { challenge } = useChallenge();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
 
   const friend = accepted.data?.items.find((f) => f.user.id === userId);
   const history = useHistory({});
@@ -58,6 +61,17 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
   const p = profile.data;
   const name = p?.displayName || p?.username || 'Player';
   const elo = p?.stats?.points ?? 0;
+
+  const blockPlayer = async () => {
+    setConfirmBlock(false);
+    try {
+      await actions.block.mutateAsync(userId);
+      toast.success(`${name} blocked`);
+      back();
+    } catch (e) {
+      toast.error("Couldn't block this player", socialError(e));
+    }
+  };
 
   const removeFriend = async () => {
     setConfirmRemove(false);
@@ -106,11 +120,11 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
       <View style={{ gap: 14 }}>
         {/* Profile Card Header */}
         <View style={styles.head}>
-          <View style={[styles.avatar, { backgroundColor: '#141518' }]}>
+          <View style={[styles.avatar, { backgroundColor: c.text }]}>
             <Text style={styles.avatarText}>{name.slice(0, 2).toUpperCase()}</Text>
           </View>
           <Text style={[styles.name, { color: c.text, textAlign: 'center' }]}>
-            {name} • <Text style={{ color: friend?.activeGameId ? '#B45309' : p?.online ? '#15803D' : c.textSecondary }}>{friend?.activeGameId ? 'In Match' : p?.online ? 'Online' : 'Offline'}</Text>
+            {name} • <Text style={{ color: friend?.activeGameId ? c.warning : p?.online ? c.success : c.textSecondary }}>{friend?.activeGameId ? 'In Match' : p?.online ? 'Online' : 'Offline'}</Text>
           </Text>
           <Text style={[styles.elo, { color: c.textSecondary }]}>{elo.toLocaleString()} pts</Text>
         </View>
@@ -136,7 +150,7 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
                 <Text numberOfLines={1} style={[styles.duelTitle, { color: c.text, flex: 1 }]}>
                   {g.boardSize}×{g.boardSize} {typeLabel(g.type)} • {formatShortDate(g.playedAt)}
                 </Text>
-                <Text style={[styles.duelElo, { color: g.result === 'WIN' ? '#15803D' : c.textSecondary }]}>
+                <Text style={[styles.duelElo, { color: g.result === 'WIN' ? c.success : c.textSecondary }]}>
                   {g.result === 'WIN' ? 'You Won' : g.result === 'LOSS' ? `${name.split(' ')[0]} Won` : 'Draw'}
                 </Text>
               </View>
@@ -148,13 +162,22 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
           </Text>
         )}
 
+        <Pressy
+          testID="profile-block"
+          accessibilityRole="button"
+          accessibilityLabel={`Block ${name}`}
+          onPress={() => setConfirmBlock(true)}
+          style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 12 }}
+        >
+          <Text style={{ fontSize: fs(12.5), color: c.dangerText }}>Block player</Text>
+        </Pressy>
+
         <Pressy testID="profile-report" accessibilityRole="button" accessibilityLabel={`Report ${name}`} onPress={() => setReporting(true)} style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 12 }}>
           <Text style={{ fontSize: fs(12.5), color: c.textSecondary }}>Report player</Text>
         </Pressy>
       </View>
 
       <ReportPlayerModal open={reporting} userId={userId} playerName={name} onClose={() => setReporting(false)} />
-      {sheet}
 
       <ConfirmDialog
         open={confirmRemove}
@@ -166,11 +189,22 @@ export const FriendProfileScreen: React.FC<RootScreenProps<'friend_profile'>> = 
         onConfirm={removeFriend}
         onCancel={() => setConfirmRemove(false)}
       />
+
+      <ConfirmDialog
+        open={confirmBlock}
+        title={`Block ${name}?`}
+        message="They'll be removed from your friends, and neither of you can challenge the other."
+        confirmLabel="Block"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={blockPlayer}
+        onCancel={() => setConfirmBlock(false)}
+      />
     </Screen>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   head: {
     alignItems: 'center',
     gap: 4,
@@ -184,50 +218,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  avatarText: {
-    fontSize: fs(15),
-    fontFamily: fonts.mono.semibold,
-    color: '#FFFFFF',
+  avatarText: { ...type.num, color: c.bgCard,
   },
-  name: {
-    fontSize: fs(15.5),
-    fontFamily: fonts.body.semibold,
-  },
-  elo: {
-    fontSize: fs(11.5),
-    fontFamily: fonts.mono.medium,
-  },
+  name: { ...type.button, },
+  elo: { ...type.num, },
   h2hCard: {
     alignItems: 'center',
     gap: 4,
     paddingVertical: ms(14),
   },
-  h2hTag: {
-    fontSize: fs(11),
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
+  h2hTag: { ...type.overline, letterSpacing: 0.8,
   },
   h2hRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: ms(16),
   },
-  scoreYou: {
-    fontSize: fs(20),
-    fontFamily: fonts.mono.semibold,
-  },
-  scoreDash: {
-    fontSize: fs(14),
-    fontFamily: fonts.body.medium,
-  },
-  scoreOpp: {
-    fontSize: fs(20),
-    fontFamily: fonts.mono.semibold,
-  },
-  sectionLabel: {
-    fontSize: fs(10.5),
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
+  scoreYou: { ...type.numLarge, },
+  scoreDash: { ...type.bodySmall, },
+  scoreOpp: { ...type.numLarge, },
+  sectionLabel: { ...type.overline, letterSpacing: 0.8,
   },
   duelsCard: {
     borderRadius: 14,
@@ -243,18 +253,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: 8,
   },
-  duelTitle: {
-    fontSize: fs(11.5),
-    fontFamily: fonts.body.medium,
-  },
+  duelTitle: { ...type.caption, },
   duelSub: {
     fontSize: fs(12),
     marginTop: 1,
   },
-  duelElo: {
-    fontSize: fs(12),
-    fontFamily: fonts.mono.semibold,
-  },
+  duelElo: { ...type.num, },
   footer: {
     paddingHorizontal: 20,
     paddingTop: 8,

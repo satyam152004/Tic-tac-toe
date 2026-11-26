@@ -1,3 +1,4 @@
+import { withAlpha } from '../../design-system/colors';
 import React, { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +15,7 @@ import type { RootScreenProps } from '../../navigation/types';
 import { friendlyMessage } from '../../services/api/errors';
 import { gameApi } from '../../services/api/gameApi';
 import { joinRoomByCode } from '../../services/onlineActions';
+import { isPreStart, matchFoundSource } from '../../services/gameRoute';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { joinErrorMessage } from './JoinRoomScreen';
@@ -39,6 +41,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
   const resume = () => {
     if (!unfinished) return;
     if (status === 'reconnecting') nav.navigate('reconnection', { gameId: unfinished.id });
+    else if (isPreStart(unfinished)) nav.navigate('match_found', { gameId: unfinished.id, source: matchFoundSource(unfinished.type) });
     else nav.navigate('online_board', { gameId: unfinished.id });
   };
 
@@ -64,13 +67,13 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
       padded={false}
       testID="online-lobby"
       rightAction={
-        <View style={[styles.eloBadge, { backgroundColor: c.bgElevated, borderColor: '#BFDBFE' }]}>
+        <View style={[styles.eloBadge, { backgroundColor: c.bgElevated, borderColor: withAlpha(c.accent, 0.35) }]}>
           <Text style={[styles.eloBadgeText, { color: c.accent }]} numberOfLines={1}>{elo.toLocaleString()} pts</Text>
         </View>
       }
     >
       {offline ? (
-        <View style={{ padding: ms(20) }}>
+        <View style={{ flex: 1, padding: ms(20) }}>
           <ErrorState offline message="Online play needs an internet connection. You can still play offline." retryLabel="Play Offline" onRetry={() => goTab('HomeTab')} />
         </View>
       ) : (
@@ -93,7 +96,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
               </View>
               <View style={[styles.onlineDot, { backgroundColor: c.success }]} />
             </View>
-            <ActionButton tall fullWidth testID="quick-match" title="Quick Ranked Match" onPress={() => nav.navigate('matchmaking', { boardSize: 3 })} />
+            <ActionButton tall fullWidth testID="quick-match" title="Quick Ranked Match" onPress={() => nav.navigate('match_setup', { mode: 'ONLINE', purpose: 'QUICK' })} />
           </View>
 
           <View style={styles.roomActions}>
@@ -103,7 +106,7 @@ export const OnlineLobbyScreen: React.FC<RootScreenProps<'online_lobby'>> = () =
 
           {/* Open Rooms: real public rooms from GET /rooms/open */}
           <View>
-            <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>OPEN ROOMS</Text>
+            <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>OPEN ROOMS</Text>
             <View testID="open-rooms" style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
               {open.isLoading ? (
                 <View style={styles.row}>
@@ -155,18 +158,18 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: ms(20), paddingTop: ms(8), paddingBottom: ms(24), gap: ms(14) },
   flex: { flex: 1 },
   eloBadge: { paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: 999, borderWidth: 1 },
-  eloBadgeText: { fontSize: fs(11), fontFamily: fonts.mono.semibold },
+  eloBadgeText: { ...type.num, },
   card: { borderRadius: ms(14), borderWidth: 1, padding: ms(14), gap: ms(10) },
   rankedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rankedTitle: { fontSize: fs(13.5), fontFamily: fonts.body.semibold },
-  rankedSub: { fontSize: fs(11), fontFamily: fonts.body.regular },
+  rankedTitle: { ...type.labelStrong, },
+  rankedSub: { ...type.overline, },
   onlineDot: { width: ms(9.6), height: ms(9.6), borderRadius: 999 },
   roomActions: { flexDirection: 'row', gap: ms(10) },
-  sectionLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: ms(5) },
+  sectionLabel: { ...type.overline, letterSpacing: 0.5, marginBottom: ms(5) },
   group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
   row: { minHeight: ch(38), paddingVertical: ms(8), paddingHorizontal: ms(13), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ms(8) },
-  rowTitle: { fontSize: fs(12), fontFamily: fonts.body.semibold },
-  rowSub: { fontSize: fs(10), fontFamily: fonts.body.regular },
+  rowTitle: { ...type.caption, },
+  rowSub: { ...type.overline, },
   joinBtn: { minWidth: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: ms(10), paddingVertical: ms(4), borderRadius: ms(8) },
-  joinText: { fontSize: fs(11), fontFamily: fonts.body.semibold },
+  joinText: { ...type.overline, },
 });

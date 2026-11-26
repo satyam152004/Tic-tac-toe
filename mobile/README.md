@@ -53,7 +53,7 @@ src/
   design-system/       colors (6 themes), typography, spacing, radius, shadows, themes
   game-engine/         COPY of backend/src/game-engine (offline play + AI). Do not edit: `npm run sync:engine`
   services/api/        axios client (refresh single-flight, rotation) + one module per backend area
-  services/socket/     socketClient, gameSocket, matchmakingSocket, presenceSocket, sessionBridge (events -> stores)
+  services/socket/     socketClient, gameSocket, matchmakingSocket, sessionBridge (events -> stores)
   services/storage/    secureStorage (tokens), localGameStorage (SQLite)
   store/               zustand stores        hooks/  query hooks, game hooks, back guard
 tests/                 unit, game, services, screens, integration (live backend)

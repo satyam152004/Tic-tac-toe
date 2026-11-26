@@ -90,7 +90,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
     try {
       if (gameId) {
         await joinGame(gameId);
-        nav.replace('online_board', { gameId });
+        nav.replace('match_found', { gameId, source: 'FRIEND', opponentName: name });
       } else if (roomCode) {
         const room = await joinRoomByCode(roomCode);
         nav.replace('waiting_room', { roomId: room.id });
@@ -105,7 +105,7 @@ export const MatchInvitationScreen: React.FC<RootScreenProps<'match_invitation'>
     if (busy) return;
     setBusy('decline');
     try {
-      if (gameId) await gameApi.forfeit(gameId);
+      if (gameId) await gameApi.decline(gameId);
       toast.info('Invitation declined');
       close();
     } catch (e) {

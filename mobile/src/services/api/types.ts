@@ -2,6 +2,12 @@
 import type { BoardSize, Difficulty, Mark } from '../../game-engine';
 
 export type { BoardSize, Difficulty, Mark };
+
+/** Who moves first in an online match: the chooser (ME), the other player (OPPONENT) or the server (RANDOM). */
+export type FirstMovePref = 'ME' | 'OPPONENT' | 'RANDOM';
+
+/** Coins each player pays to enter a room match (the winner takes both). 0 = free. */
+export type EntryAmount = 0 | 10 | 25 | 50;
 export type ThemeId = 'dark' | 'light' | 'classic' | 'neon' | 'ocean' | 'sunset';
 
 export interface ApiSuccess<T> {
@@ -56,6 +62,8 @@ export interface Game {
   type: GameType;
   status: GameStatus;
   boardSize: BoardSize;
+  /** Coins each player pays to start (0 = free). */
+  entryAmount?: number;
   winLength: number;
   board: Array<Mark | ''>;
   currentTurn: Mark;
@@ -73,6 +81,14 @@ export interface Game {
   rematch: { requestedBy: string[]; gameId: string | null };
   previousGameId: string | null;
   serverTime: string;
+}
+
+/** A friend challenge still waiting for an answer. */
+export interface GameInvite {
+  game: Game;
+  from: PlayerCard | null;
+  to: PlayerCard | null;
+  expiresAt: string;
 }
 
 export interface MoveResult {

@@ -1,7 +1,6 @@
 import React from 'react';
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { AchievementsScreen } from '../screens/progression/AchievementsScreen';
-import { CoinShopEmblemsScreen } from '../screens/progression/CoinShopEmblemsScreen';
 import { DailyRewardsScreen } from '../screens/progression/DailyRewardsScreen';
 import { GameStatisticsScreen } from '../screens/progression/GameStatisticsScreen';
 import { FriendProfileScreen } from '../screens/social/FriendProfileScreen';
@@ -15,6 +14,5 @@ export const profileScreens = () => (
     <Stack.Screen name="game_statistics" component={GameStatisticsScreen} />
     <Stack.Screen name="achievements" component={AchievementsScreen} />
     <Stack.Screen name="daily_rewards" component={DailyRewardsScreen} />
-    <Stack.Screen name="coin_shop" component={CoinShopEmblemsScreen} />
   </Stack.Group>
 );

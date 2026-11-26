@@ -1,3 +1,4 @@
+import type { ThemeColors } from '../../design-system/colors';
 import { ch, fs } from '../../design-system/responsive';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -26,6 +27,7 @@ export function SegmentedControl<T extends string | number>({
   label?: string;
 }) {
   const c = useTheme();
+  const styles = makeStyles(c);
   const sm = size === 'sm';
   return (
     <View
@@ -60,8 +62,8 @@ export function SegmentedControl<T extends string | number>({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   track: { flexDirection: 'row', gap: 4, borderWidth: 1 },
   seg: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  active: { shadowColor: '#141518', shadowOpacity: 0.06, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  active: { shadowColor: c.text, shadowOpacity: 0.06, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
 });

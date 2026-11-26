@@ -9,4 +9,5 @@ export * from './BlockedUser.js';
 export * from './Achievement.js';
 export * from './Notification.js';
 export * from './LeaderboardEntry.js';
+export * from './CoinLedger.js';
 export * from './misc.js';

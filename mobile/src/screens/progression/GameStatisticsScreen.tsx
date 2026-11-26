@@ -192,7 +192,7 @@ export const GameStatisticsScreen: React.FC<RootScreenProps<'game_statistics'>> 
   return (
     <Screen title="Statistics" onBack={back} scroll={false} padded={false}>
       {statsErr ? (
-        <View style={{ padding: 16 }}>
+        <View style={{ flex: 1, padding: 16 }}>
           <ErrorState offline={statsErr.code === 'NETWORK_ERROR'} message={friendlyMessage(statsErr)} onRetry={() => void stats.refetch()} />
         </View>
       ) : (

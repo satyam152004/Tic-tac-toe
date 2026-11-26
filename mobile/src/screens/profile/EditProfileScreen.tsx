@@ -10,6 +10,7 @@ import { SELECTABLE_AVATARS, findAvatar, toServerAvatar } from '../../constants/
 import { fonts, type } from '../../design-system/typography';
 import { useMe, useUpdateProfile } from '../../hooks/queries';
 import { useBackGuard } from '../../hooks/useBackGuard';
+import { ConfirmDialog } from '../../components/common/AppModal';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
@@ -86,6 +87,7 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
   }
 
   return (
+    <>
     <Screen
       title="Edit Profile"
       onBack={back}
@@ -207,6 +209,8 @@ export const EditProfileScreen: React.FC<RootScreenProps<'edit_profile'>> = () =
         ) : null}
       </ScrollView>
     </Screen>
+    <ConfirmDialog {...guard.dialog} />
+    </>
   );
 };
 

@@ -1,3 +1,6 @@
+import { type } from '../../design-system/typography';
+import type { ThemeColors } from '../../design-system/colors';
+import { withAlpha } from '../../design-system/colors';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/common/Screen';
@@ -6,6 +9,7 @@ import { ErrorState } from '../../components/feedback/StateViews';
 import { ActionButton } from '../../components/game/ActionButton';
 import { fonts } from '../../design-system/typography';
 import { useBackGuard } from '../../hooks/useBackGuard';
+import { ConfirmDialog } from '../../components/common/AppModal';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
@@ -18,6 +22,7 @@ import { isOfflineError, RoomEnded, timerLabel, useRoom } from './shared';
 import { ch, fs, ms } from '../../design-system/responsive';
 export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ route }) => {
   const c = useTheme();
+  const styles = makeStyles(c);
   const { roomId } = route.params;
   const { nav, goHome } = useAppNav();
   const meId = useAuthStore((s) => s.user?.id);
@@ -40,7 +45,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
     if (room.gameId) {
       moved.current = true;
       guard.allow();
-      nav.replace('online_board', { gameId: room.gameId });
+      nav.replace('match_found', { gameId: room.gameId, source: 'ROOM' });
     } else if (!room.guest && isHost) {
       // The opponent left: back to waiting for a new one.
       moved.current = true;
@@ -62,7 +67,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
         const game = await startRoomGame(room.id);
         moved.current = true;
         guard.allow();
-        nav.replace('online_board', { gameId: game.id });
+        nav.replace('match_found', { gameId: game.id, source: 'ROOM' });
         return;
       }
       await setReady(room.id, !room.guestReady);
@@ -83,6 +88,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
   const codeDisplay = room.code.length >= 3 ? `${room.code.slice(0, 3)}-${room.code.slice(3)}` : room.code;
 
   return (
+    <>
     <Screen
       title="Room Details"
       onBack={() => (live ? nav.goBack() : goHome())}
@@ -110,21 +116,21 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
               </View>
               <Text numberOfLines={1} style={[styles.playerName, { color: c.text }]}>{hostName} (Host)</Text>
             </View>
-            <View style={[styles.badge, { backgroundColor: '#F0FDF4' }]}>
-              <Text style={[styles.badgeText, { color: '#15803D' }]}>Ready</Text>
+            <View style={[styles.badge, { backgroundColor: withAlpha(c.success, 0.14) }]}>
+              <Text style={[styles.badgeText, { color: c.success }]}>Ready</Text>
             </View>
           </View>
           <View style={styles.row}>
             <View style={styles.left}>
-              <View style={[styles.avatar, { backgroundColor: '#141518' }]}>
+              <View style={[styles.avatar, { backgroundColor: c.text }]}>
                 <Text style={styles.avatarText}>{(guestName || '?').slice(0, 2).toUpperCase()}</Text>
               </View>
-              <Text numberOfLines={1} style={[styles.playerName, { color: room.guest ? c.text : '#8E939E' }]}>
+              <Text numberOfLines={1} style={[styles.playerName, { color: room.guest ? c.text : c.textSecondary }]}>
                 {room.guest ? `${guestName} (Opponent)` : 'Waiting for opponent...'}
               </Text>
             </View>
-            <View testID="guest-status" style={[styles.badge, { backgroundColor: room.guestReady ? '#F0FDF4' : '#EFF4FF' }]}>
-              <Text style={[styles.badgeText, { color: room.guestReady ? '#15803D' : c.accent }]}>
+            <View testID="guest-status" style={[styles.badge, { backgroundColor: room.guestReady ? withAlpha(c.success, 0.14) : withAlpha(c.accent, 0.12) }]}>
+              <Text style={[styles.badgeText, { color: room.guestReady ? c.success : c.accent }]}>
                 {room.guestReady ? 'Ready' : room.guest ? 'Not ready' : 'Waiting'}
               </Text>
             </View>
@@ -132,7 +138,7 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
         </View>
 
         <View style={[styles.rules, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <Text style={[styles.rulesTag, { color: '#8E939E' }]}>RULES</Text>
+          <Text style={[styles.rulesTag, { color: c.textSecondary }]}>RULES</Text>
           <Text style={[styles.rulesMain, { color: c.text }]}>
             {room.boardSize}×{room.boardSize} • {timerLabel(ext.turnTimeoutSec ?? 60)}/turn • {ext.isPublic ? 'Public' : 'Private'}
           </Text>
@@ -142,20 +148,22 @@ export const RoomDetailsScreen: React.FC<RootScreenProps<'room_details'>> = ({ r
         </View>
       </View>
     </Screen>
+    <ConfirmDialog {...guard.dialog} />
+    </>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
   row: { minHeight: ch(38), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: ms(13), paddingVertical: ms(8), gap: ms(8) },
   left: { flexDirection: 'row', alignItems: 'center', gap: ms(8), flex: 1 },
   avatar: { width: ms(28.8), height: ms(28.8), borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: fs(10), fontFamily: fonts.body.semibold, color: '#FFFFFF' },
-  playerName: { fontSize: fs(12.5), fontFamily: fonts.body.semibold, flexShrink: 1 },
+  avatarText: { ...type.overline, color: c.bgCard },
+  playerName: { ...type.labelStrong, flexShrink: 1 },
   badge: { paddingHorizontal: ms(8), paddingVertical: ms(2), borderRadius: 999 },
-  badgeText: { fontSize: fs(10), fontFamily: fonts.body.semibold },
+  badgeText: { ...type.overline, },
   rules: { borderRadius: ms(14), borderWidth: 1, padding: ms(14), gap: ms(8) },
-  rulesTag: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5 },
-  rulesMain: { fontSize: fs(13), fontFamily: fonts.body.semibold },
-  rulesSub: { fontSize: fs(11), fontFamily: fonts.body.regular },
+  rulesTag: { ...type.overline, letterSpacing: 0.5 },
+  rulesMain: { ...type.labelStrong, },
+  rulesSub: { ...type.overline, },
 });

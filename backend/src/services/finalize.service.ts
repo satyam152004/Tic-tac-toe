@@ -4,6 +4,7 @@ import { POINTS } from '../constants/index.js';
 import { GameModel, LeaderboardEntryModel, UserModel } from '../models/index.js';
 import { addMs, dayKey, DAY_MS, monthKey, weekKey } from '../utils/time.js';
 import { evaluateAchievements } from './achievement.service.js';
+import { settleMatch } from './coin.service.js';
 import { notify } from './notification.service.js';
 import { levelForXp } from './presenter.js';
 import { realtime } from './realtime.js';
@@ -48,6 +49,12 @@ const inc = (field: string, n: number) => ({ $add: [{ $ifNull: [`$stats.${field}
  * guard: concurrent or repeated calls (retries, jobs, duplicate events) are no-ops.
  */
 export async function finalizeGame(gameId: string): Promise<{ applied: boolean }> {
+  // Pay out the entry pot first. The ledger keys make this safe to repeat, so a failed run can simply be retried.
+  const pending = (await GameModel.findOne({ _id: gameId, status: { $in: ['COMPLETED', 'DRAW'] }, finalizedAt: null }).lean()) as unknown as
+    | (Parameters<typeof settleMatch>[0])
+    | null;
+  if (pending) await settleMatch(pending);
+
   const g = (await GameModel.findOneAndUpdate(
     { _id: gameId, status: { $in: ['COMPLETED', 'DRAW'] }, finalizedAt: null },
     { $set: { finalizedAt: new Date() } },

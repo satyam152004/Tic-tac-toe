@@ -1,3 +1,4 @@
+import { withAlpha } from '../../design-system/colors';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -92,7 +93,7 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
                 ]}
               >
                 <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={[styles.avatar, { backgroundColor: '#F1F1EE' }]}>
+                  <View style={[styles.avatar, { backgroundColor: c.bgSecondary }]}>
                     <Text style={[styles.avatarText, { color: c.text }]}>{r.displayName.slice(0, 2).toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -106,13 +107,13 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
                   onPress={() => sendInvite(r.id, r.displayName)}
                   style={[
                     styles.inviteBtn,
-                    { backgroundColor: sent ? '#F0FDF4' : c.accent },
+                    { backgroundColor: sent ? withAlpha(c.success, 0.14) : c.accent },
                   ]}
                 >
                   <Text
                     style={[
                       styles.inviteBtnText,
-                      { color: sent ? '#15803D' : '#FFFFFF' },
+                      { color: sent ? c.success : c.bgCard },
                     ]}
                   >
                     {sent ? 'Sent ✓' : 'Add'}
@@ -128,10 +129,7 @@ export const AddFriendSearchSheet: React.FC<AddFriendSearchSheetProps> = ({ open
 };
 
 const styles = StyleSheet.create({
-  matchCount: {
-    fontSize: fs(11.5),
-    fontFamily: fonts.body.semibold,
-  },
+  matchCount: { ...type.overline, },
   resultsGroup: {
     maxHeight: ms(300),
     borderRadius: 14,
@@ -154,18 +152,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: fs(11),
-    fontFamily: fonts.mono.semibold,
-  },
-  name: {
-    fontSize: fs(12.5),
-    fontFamily: fonts.body.semibold,
-  },
-  meta: {
-    fontSize: fs(11),
-    fontFamily: fonts.mono.medium,
-    marginTop: 2,
+  avatarText: { ...type.num, },
+  name: { ...type.labelStrong, },
+  meta: { ...type.num, marginTop: 2,
   },
   inviteBtn: {
     paddingHorizontal: ms(16),
@@ -173,8 +162,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 10,
   },
-  inviteBtnText: {
-    fontSize: fs(12),
-    fontFamily: fonts.body.semibold,
-  },
+  inviteBtnText: { ...type.caption, },
 });

@@ -1,3 +1,6 @@
+import { withAlpha } from '../../design-system/colors';
+import { type } from '../../design-system/typography';
+import type { ThemeColors } from '../../design-system/colors';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
@@ -12,6 +15,7 @@ import { fs, ms } from '../../design-system/responsive';
 /** Presentational toast. Reads the shared toast store; the store owns the auto-dismiss timer. */
 const ToastView: React.FC = () => {
   const c = useTheme();
+  const styles = makeStyles(c);
   const insets = useSafeAreaInsets();
   const toast = useToastStore((s) => s.toast);
   const dismiss = useToastStore((s) => s.dismiss);
@@ -66,7 +70,7 @@ export const OverlayToast: React.FC = () => {
 /** Wrap a screen that is presented with `presentation: 'modal'` so toasts show above it. */
 export function withOverlayToast<P extends object>(Component: React.ComponentType<P>): React.FC<P> {
   const Wrapped: React.FC<P> = (props) => (
-    <View style={styles.fill}>
+    <View style={{ flex: 1 }}>
       <Component {...props} />
       <OverlayToast />
     </View>
@@ -75,12 +79,12 @@ export function withOverlayToast<P extends object>(Component: React.ComponentTyp
   return Wrapped;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   fill: { flex: 1 },
   wrap: { position: 'absolute', left: 16, right: 16, zIndex: 100, elevation: 100, alignItems: 'center' },
-  toast: { backgroundColor: '#141518', borderRadius: 22, paddingHorizontal: ms(16), paddingVertical: ms(10), maxWidth: '100%', ...lift },
+  toast: { backgroundColor: c.text, borderRadius: 22, paddingHorizontal: ms(16), paddingVertical: ms(10), maxWidth: '100%', ...lift },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   dot: { width: ms(8), height: ms(8), borderRadius: ms(4) },
-  title: { color: '#FFFFFF', fontSize: fs(11.5), lineHeight: Math.round(fs(11.5) * 1.3), fontFamily: fonts.body.medium },
-  message: { color: 'rgba(255,255,255,0.72)', fontSize: fs(10.5), lineHeight: Math.round(fs(10.5) * 1.3), fontFamily: fonts.body.regular },
+  title: { ...type.caption, color: c.bgCard, lineHeight: Math.round(fs(11.5) * 1.3), },
+  message: { ...type.overline, color: withAlpha(c.bgCard, 0.72), lineHeight: Math.round(fs(10.5) * 1.3), },
 });

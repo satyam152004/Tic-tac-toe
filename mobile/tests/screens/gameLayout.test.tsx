@@ -4,8 +4,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import React from 'react';
 import { Dimensions, ScaledSize, StyleSheet, Text } from 'react-native';
 import { estimateBoardArea, fitBoard, minBoardSide, BoardSize, MIN_CELL, boardMetrics } from '../../src/components/game/boardLayout';
-import { GameResultScreen } from '../../src/screens/offline/GameResultScreen';
-import { OfflineBoardScreen } from '../../src/screens/offline/OfflineBoardScreen';
+import { GameResultScreen } from '../../src/screens/game/GameResultScreen';
+import { GameBoardScreen } from '../../src/screens/game/GameBoardScreen';
 import { DEFAULT_SETUP, useLocalGameStore } from '../../src/store/localGameStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 
@@ -24,13 +24,12 @@ function setWindow(width: number, height: number, fontScale = 1) {
 
 async function mount(initial: 'offline_board' | 'game_result') {
   const screens: Record<string, React.ComponentType<any>> = {
-    offline_board: OfflineBoardScreen,
+    offline_board: GameBoardScreen,
     game_result: GameResultScreen,
     Main: Stub('Main'),
     settings: Stub('settings'),
     rematch: Stub('rematch'),
-    player_setup: Stub('player_setup'),
-    ai_difficulty: Stub('ai_difficulty'),
+    match_setup: Stub('match_setup'),
   };
   await render(
     <NavigationContainer>
@@ -206,7 +205,7 @@ describe('result screen footer', () => {
     setWindow(320, 568);
     finish();
     await mount('game_result');
-    expect(screen.getByText('Change Mode')).toBeTruthy();
+    expect(screen.getByText('Change mode')).toBeTruthy();
     for (const id of ['result-rematch']) {
       expect(flat(screen.getByTestId(id)).alignSelf).toBe('stretch');
     }

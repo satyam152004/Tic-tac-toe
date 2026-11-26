@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { paginationQuery } from '../utils/pagination.js';
-import { boardSize, difficulty, objectId, winLength } from './common.js';
+import { boardSize, difficulty, entryAmount, firstMove, objectId, winLength } from './common.js';
 
 export const createGameBody = z.discriminatedUnion('type', [
   z.object({
@@ -10,7 +10,7 @@ export const createGameBody = z.discriminatedUnion('type', [
     difficulty,
     humanMark: z.enum(['X', 'O', 'RANDOM']).default('X'),
   }),
-  z.object({ type: z.literal('FRIEND'), boardSize, winLength, opponentId: objectId }),
+  z.object({ type: z.literal('FRIEND'), boardSize, winLength, firstMove, entryAmount, opponentId: objectId }),
 ]);
 
 export const moveBody = z.object({

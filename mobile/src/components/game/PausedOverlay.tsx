@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { fonts } from '../../design-system/typography';
-import { useTheme } from '../../hooks/useTheme';
-import { AppButton } from '../common/AppButton';
+import { Text } from 'react-native';
 import { ConfirmDialog } from '../common/AppModal';
+import { Popup } from '../common/Popup';
+import { type } from '../../design-system/typography';
+import { useTheme } from '../../hooks/useTheme';
 
-import { ch, fs, MIN_TOUCH, ms } from '../../design-system/responsive';
 /**
- * In-game pause overlay. It is a plain view laid over the board (not a native Modal and not a separate route), so it is
- * a pure function of the store's `paused` flag: whatever paused the game, the player always gets a Resume button.
- * It is opaque on purpose so the position cannot be studied while the clock is stopped.
+ * In-game pause popup. Logic only here (resume, restart, sound, quit confirmation); the look comes from the shared Popup
+ * in overlay mode, so it covers the board, cannot be dismissed by tapping outside, and always offers Resume.
  */
 export const PausedOverlay: React.FC<{
   matchLabel: string;
@@ -20,28 +18,31 @@ export const PausedOverlay: React.FC<{
   onRestart: () => void;
   onSettings?: () => void;
   onExit: () => void;
-}> = ({ matchLabel, elapsedLabel, reason, onResume, onRestart, onExit }) => {
+  /** Current Sound Effects setting, and the toggle (same setting as Settings → Sound Effects). */
+  soundOn: boolean;
+  onToggleSound: () => void;
+}> = ({ matchLabel, elapsedLabel, reason, onResume, onRestart, onExit, soundOn, onToggleSound }) => {
   const c = useTheme();
   const [confirmQuit, setConfirmQuit] = useState(false);
 
   return (
-    <View testID="game-pause" style={[styles.fill, { backgroundColor: c.scrim }]} accessibilityViewIsModal importantForAccessibility="yes">
-      <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-        <View style={styles.titles}>
-          <Text accessibilityRole="header" style={[styles.title, { color: c.text }]}>Game Paused</Text>
-          <Text testID="pause-detail" style={[styles.sub, { color: c.textSecondary }]} numberOfLines={1}>
-            {matchLabel} · {elapsedLabel}
-          </Text>
-          {reason === 'interrupted' ? (
-            <Text style={[styles.note, { color: c.textSecondary }]}>The game was paused while you were away.</Text>
-          ) : null}
-        </View>
-        <View style={styles.actions}>
-          <AppButton testID="pause-resume" fullWidth size="md" title="Resume" onPress={onResume} style={styles.btn} />
-          <AppButton testID="pause-restart" fullWidth size="md" variant="secondary" title="Restart" onPress={onRestart} style={styles.btn} />
-          <AppButton testID="pause-quit" fullWidth size="md" variant="ghost" title="Quit to Home" onPress={() => setConfirmQuit(true)} style={styles.btnSm} />
-        </View>
-      </View>
+    <>
+      <Popup
+        presentation="overlay"
+        open
+        testID="game-pause"
+        title="Game Paused"
+        message={`${matchLabel} · ${elapsedLabel}`}
+        messageTestID="pause-detail"
+        actions={[
+          { testID: 'pause-resume', label: 'Resume', variant: 'primary', onPress: onResume },
+          { testID: 'pause-restart', label: 'Restart', variant: 'secondary', onPress: onRestart },
+          { testID: 'pause-sound', label: soundOn ? 'Sound Effects: On' : 'Sound Effects: Off', variant: 'secondary', onPress: onToggleSound },
+          { testID: 'pause-quit', label: 'Quit to Home', variant: 'ghost', onPress: () => setConfirmQuit(true) },
+        ]}
+      >
+        {reason === 'interrupted' ? <Text style={[type.caption, { color: c.textSecondary, textAlign: 'center' }]}>The game was paused while you were away.</Text> : null}
+      </Popup>
 
       <ConfirmDialog
         open={confirmQuit}
@@ -56,18 +57,6 @@ export const PausedOverlay: React.FC<{
           onExit();
         }}
       />
-    </View>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  fill: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 10, elevation: 10 },
-  card: { width: '100%', maxWidth: ms(320), borderRadius: 20, borderWidth: 1, padding: ms(20), gap: ms(14), alignItems: 'center' },
-  titles: { alignItems: 'center', gap: 2 },
-  title: { fontSize: fs(17), fontFamily: fonts.body.semibold },
-  sub: { fontSize: fs(12), fontFamily: fonts.mono.medium },
-  note: { fontSize: fs(12), textAlign: 'center', marginTop: 4 },
-  actions: { gap: 8, alignSelf: 'stretch' },
-  btn: { minHeight: ch(40), borderRadius: 12 },
-  btnSm: { minHeight: MIN_TOUCH, borderRadius: 12 },
-});

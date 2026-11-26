@@ -31,6 +31,8 @@ jest.mock('../../src/hooks/queries', () => ({
   useStreaks: () => ({ data: { currentStreak: 2, bestStreak: 5, recentForm: ['WIN', 'WIN', 'LOSS', 'DRAW'] }, refetch: jest.fn() }),
   useLeaderboard: () => ({ data: { rows: [], total: 40, me: { rank: 14, points: 1200, wins: 17 } }, refetch: jest.fn() }),
   useDailyReward: () => ({ data: { canClaim: true }, refetch: jest.fn() }),
+  useFriends: () => ({ data: { items: [] }, isLoading: false }),
+  useInvites: () => ({ data: { incoming: [], outgoing: [] } }),
 }));
 
 const mockLoadActive = jest.fn();
@@ -43,7 +45,7 @@ import { SplashScreen } from '../../src/screens/onboarding/SplashScreen';
 import { Onboarding1Screen, Onboarding3Screen } from '../../src/screens/onboarding/OnboardingScreens';
 import { WelcomeScreen } from '../../src/screens/onboarding/WelcomeScreen';
 import { HomeScreen } from '../../src/screens/home/HomeScreen';
-import { PlayerSetupScreen } from '../../src/screens/home/PlayerSetupScreen';
+import { MatchSetupScreen } from '../../src/screens/offline/MatchSetupScreen';
 import { GameRulesScreen } from '../../src/screens/home/GameRulesScreen';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
@@ -160,19 +162,18 @@ describe('WelcomeScreen', () => {
   });
 });
 
-describe('PlayerSetupScreen', () => {
+describe('MatchSetupScreen (Pass n play)', () => {
   it('defaults player 1 to the signed-in display name and starts a game', async () => {
-    await render(<PlayerSetupScreen {...props('player_setup', { mode: 'LOCAL_2P' })} />);
+    await render(<MatchSetupScreen {...props('match_setup', { mode: 'LOCAL_2P' })} />);
     expect(screen.getByTestId('p1-name').props.value).toBe('Aiden');
     await fireEvent.press(screen.getByTestId('setup-start'));
     const st = useLocalGameStore.getState();
     expect(st.setup).toMatchObject({ mode: 'LOCAL_2P', size: 3, p1Name: 'Aiden' });
-    expect(st.game).not.toBeNull();
-    expect(mockNav.navigate).toHaveBeenCalledWith('offline_board');
+    expect(mockNav.replace).toHaveBeenCalledWith('match_found', { source: 'PASS_N_PLAY' });
   });
 
   it('rejects empty and identical names', async () => {
-    await render(<PlayerSetupScreen {...props('player_setup', { mode: 'LOCAL_2P' })} />);
+    await render(<MatchSetupScreen {...props('match_setup', { mode: 'LOCAL_2P' })} />);
     await fireEvent.changeText(screen.getByTestId('p2-name'), 'aiden');
     await fireEvent.press(screen.getByTestId('setup-start'));
     expect(screen.getByText('Players need different names')).toBeTruthy();
@@ -182,12 +183,13 @@ describe('PlayerSetupScreen', () => {
     expect(mockNav.navigate).not.toHaveBeenCalledWith('offline_board');
   });
 
-  it('hides player 2 for VS_AI and keeps the stored difficulty', async () => {
-    useLocalGameStore.getState().configure({ difficulty: 'HARD' });
-    await render(<PlayerSetupScreen {...props('player_setup', { mode: 'VS_AI' })} />);
-    expect(screen.queryByTestId('p2-name')).toBeNull();
+  it('keeps the stored difficulty and the chosen board size when starting', async () => {
+    useLocalGameStore.getState().configure({ difficulty: 'HARD', size: 4 });
+    await render(<MatchSetupScreen {...props('match_setup', { mode: 'LOCAL_2P' })} />);
+    await fireEvent.press(screen.getByTestId('size-option-5'));
     await fireEvent.press(screen.getByTestId('setup-start'));
-    expect(useLocalGameStore.getState().setup).toMatchObject({ mode: 'VS_AI', difficulty: 'HARD' });
+    expect(useLocalGameStore.getState().setup).toMatchObject({ mode: 'LOCAL_2P', difficulty: 'HARD', size: 5 });
+    expect(mockNav.replace).toHaveBeenCalledWith('match_found', { source: 'PASS_N_PLAY' });
   });
 });
 
@@ -197,8 +199,9 @@ describe('HomeScreen', () => {
     await render(<HomeScreen />);
     expect(screen.getByText('Aiden')).toBeTruthy();
     expect(screen.getByText('420')).toBeTruthy();
-    expect(screen.queryByText('17 Wins')).toBeNull();
-    expect(screen.queryByTestId('home-stats')).toBeNull();
+    expect(screen.getByLabelText('Wins 17')).toBeTruthy();
+    expect(screen.getByLabelText('Losses 9')).toBeTruthy();
+    expect(screen.getByLabelText('Streak 2')).toBeTruthy();
     expect(screen.queryByTestId('upgrade-card')).toBeNull();
     expect(screen.getByLabelText('Notifications, 3 unread')).toBeTruthy();
   });
@@ -207,7 +210,7 @@ describe('HomeScreen', () => {
     useAuthStore.setState({ user: makeMe({ accountType: 'GUEST' }), offline: false } as never);
     mockMe = { ...mockMe, data: makeMe({ accountType: 'GUEST' }) };
     await render(<HomeScreen />);
-    await fireEvent.press(screen.getByLabelText('Play Online'));
+    await fireEvent.press(screen.getByLabelText('Play online'));
     expect(mockNav.navigate).not.toHaveBeenCalledWith('online_lobby');
     await fireEvent.press(screen.getByTestId('guest-upgrade-submit'));
     expect(mockNav.navigate).toHaveBeenCalledWith('registration');

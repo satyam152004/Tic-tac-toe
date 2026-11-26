@@ -1,7 +1,8 @@
 import { gameApi } from './api/gameApi';
+import { feedback } from './feedback';
 import { roomApi } from './api/roomApi';
 import { toApiError } from './api/errors';
-import type { BoardSize, Game, Room } from './api/types';
+import type { BoardSize, EntryAmount, FirstMovePref, Game, Room } from './api/types';
 import { useOnlineStore } from '../store/onlineStore';
 import { gameSocket } from './socket/gameSocket';
 import { matchmakingSocket, roomSocket } from './socket/matchmakingSocket';
@@ -19,6 +20,8 @@ export async function submitMove(position: number): Promise<void> {
   if (!game || s.pendingMove || game.status !== 'IN_PROGRESS') return; // blocks duplicate submissions
   s.setPending(true);
   s.setMoveError(null);
+  // Sound is immediate (before the server answers). The server's game:updated event skips our own moves, so no double cue.
+  if (game.board[position] === '') feedback.place(game.currentTurn);
   const clientMoveId = socketClient.newId();
   try {
     const res = socketClient.connected
@@ -37,11 +40,13 @@ export async function submitMove(position: number): Promise<void> {
   }
 }
 
-export async function startQuickMatch(boardSize: BoardSize): Promise<{ status: 'QUEUED' | 'MATCHED'; game?: Game }> {
+export async function startQuickMatch(boardSize: BoardSize, firstMove: FirstMovePref = 'RANDOM', entryAmount: EntryAmount = 0): Promise<{ status: 'QUEUED' | 'MATCHED'; game?: Game }> {
   store().setMatchmaking({ phase: 'searching', boardSize, startedAt: Date.now(), cancelReason: null });
   try {
     await socketClient.whenReady(6000).catch(() => undefined);
-    const r = socketClient.connected ? await matchmakingSocket.join(boardSize) : await import('./api/matchmakingApi').then((m) => m.matchmakingApi.join(boardSize));
+    const r = socketClient.connected
+      ? await matchmakingSocket.join(boardSize, undefined, firstMove, entryAmount)
+      : await import('./api/matchmakingApi').then((m) => m.matchmakingApi.join(boardSize, undefined, firstMove, entryAmount));
     if (r.status === 'MATCHED' && r.game) {
       store().applyGame(r.game);
       store().setMatchmaking({ phase: 'found', startedAt: null });

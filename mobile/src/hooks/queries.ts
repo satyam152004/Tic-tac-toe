@@ -47,6 +47,9 @@ export const useLeaderboard = (scope: LeaderboardScope, metric: LeaderboardMetri
 export const useFriends = (status: FriendListStatus = 'accepted') =>
   useQuery({ queryKey: ['friends', status], queryFn: () => friendApi.list(status), enabled: useSignedIn() });
 
+export const useInvites = () =>
+  useQuery({ queryKey: ['games', 'invites'], queryFn: gameApi.invites, enabled: useSignedIn(), refetchInterval: 30_000 });
+
 export const useBlocked = () => useQuery({ queryKey: ['friends', 'blocked'], queryFn: friendApi.blocked, enabled: useSignedIn() });
 
 export const useAchievements = () => useQuery({ queryKey: ['achievements'], queryFn: achievementApi.mine, enabled: useSignedIn() });

@@ -1,6 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BoardSize, Difficulty } from '../game-engine';
+import type { EntryAmount, FirstMovePref } from '../services/api/types';
 
 export type MainTabParamList = {
   HomeTab: undefined;
@@ -27,10 +28,12 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
 
   // Game setup + offline
-  player_setup: { mode?: 'LOCAL_2P' | 'VS_AI' } | undefined;
+  match_setup:
+    | { mode: 'LOCAL_2P' | 'VS_AI' }
+    | { mode: 'ONLINE'; purpose: 'QUICK' }
+    | { mode: 'ONLINE'; purpose: 'FRIEND' }
+    | { mode: 'ONLINE'; purpose: 'CHALLENGE'; opponentId: string; opponentName: string };
   game_rules: undefined;
-  board_selection: { mode: 'LOCAL_2P' | 'VS_AI' } | undefined;
-  ai_difficulty: undefined;
   offline_board: undefined; // the active local game lives in localGameStore
   game_result: undefined;
   rematch: undefined;
@@ -38,9 +41,12 @@ export type RootStackParamList = {
 
   // Online
   online_lobby: undefined;
-  matchmaking: { boardSize: BoardSize };
+  matchmaking: { boardSize: BoardSize; firstMove: FirstMovePref; entryAmount?: EntryAmount };
   waiting_room: { roomId: string };
   online_board: { gameId: string };
+  match_found:
+    | { gameId: string; source: 'RANKED' | 'FRIEND' | 'ROOM'; opponentName?: string }
+    | { source: 'COMPUTER' | 'PASS_N_PLAY' };
   create_room: undefined;
   join_room: { code?: string } | undefined;
   room_details: { roomId: string };
@@ -54,8 +60,7 @@ export type RootStackParamList = {
   friend_profile: { userId: string; friendshipId?: string };
   game_statistics: undefined;
   achievements: undefined;
-  daily_rewards: undefined;
-  coin_shop: undefined;
+  daily_rewards: { openShop?: boolean } | undefined;
   settings: undefined;
   privacy_settings: undefined;
   theme_selection: undefined;

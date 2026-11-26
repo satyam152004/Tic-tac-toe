@@ -74,7 +74,8 @@
     "sync:engine": "node scripts/sync-engine.mjs",
     "sounds": "node scripts/generate-sounds.mjs",
     "build:android": "expo prebuild --platform android --no-install && cd android && gradlew assembleRelease bundleRelease",
-    "build:ios": "eas build --platform ios --profile production"
+    "build:ios": "eas build --platform ios --profile production",
+    "lint": "expo lint"
   },
   "private": true
 }

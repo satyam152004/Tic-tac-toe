@@ -1,3 +1,5 @@
+import { type } from '../../design-system/typography';
+import type { ThemeColors } from '../../design-system/colors';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '../../components/game/ActionButton';
@@ -15,6 +17,7 @@ const AI_LABEL = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard', EXPERT: 'Expert
 
 export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
   const c = useTheme();
+  const styles = makeStyles(c);
   const { nav, goHome, back } = useAppNav();
   const game = useLocalGameStore((s) => s.game);
   const setup = useLocalGameStore((s) => s.setup);
@@ -97,7 +100,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
               </Text>
             </View>
 
-            <Text style={[styles.scoreDivider, { color: '#CFCFC8' }]}>–</Text>
+            <Text style={[styles.scoreDivider, { color: c.border }]}>–</Text>
 
             <View style={styles.scoreCol}>
               <Text style={[styles.playerName, { color: c.textSecondary }]}>
@@ -135,7 +138,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
               style={[
                 styles.switchTrack,
                 {
-                  backgroundColor: swapSymbols ? c.accent : '#E4E4DF',
+                  backgroundColor: swapSymbols ? c.accent : c.border,
                 },
               ]}
             >
@@ -167,7 +170,7 @@ export const RematchScreen: React.FC<RootScreenProps<'rematch'>> = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     gap: ms(14),
   },
@@ -183,10 +186,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
-  seriesOverline: {
-    fontSize: fs(10),
-    fontFamily: fonts.body.semibold,
-    letterSpacing: 0.8,
+  seriesOverline: { ...type.overline, letterSpacing: 0.8,
   },
   scoresRow: {
     flexDirection: 'row',
@@ -198,19 +198,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: ms(2),
   },
-  playerName: {
-    fontSize: fs(11.5),
-    fontFamily: fonts.body.semibold,
+  playerName: { ...type.overline, },
+  scoreNumber: { ...type.code, lineHeight: Math.round(fs(22) * 1.25),
   },
-  scoreNumber: {
-    fontSize: fs(22),
-    fontFamily: fonts.mono.semibold,
-    lineHeight: Math.round(fs(22) * 1.25),
-  },
-  scoreDivider: {
-    fontSize: fs(20),
-    fontFamily: fonts.mono.semibold,
-  },
+  scoreDivider: { ...type.numLarge, },
   groupCard: {
     borderRadius: ms(14),
     borderWidth: 1,
@@ -224,18 +215,9 @@ const styles = StyleSheet.create({
     paddingVertical: ms(8),
     minHeight: ch(38),
   },
-  rowTitle: {
-    fontFamily: fonts.body.semibold,
-    fontSize: fs(12.5),
-  },
-  rowSub: {
-    fontFamily: fonts.body.regular,
-    fontSize: fs(10.5),
-  },
-  settingsVal: {
-    fontFamily: fonts.body.semibold,
-    fontSize: fs(12),
-  },
+  rowTitle: { ...type.labelStrong, },
+  rowSub: { ...type.overline, },
+  settingsVal: { ...type.caption, },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 0,
@@ -251,7 +233,7 @@ const styles = StyleSheet.create({
     width: ms(20),
     height: ms(20),
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.bgCard,
     shadowColor: '#000000',
     shadowOpacity: 0.15,
     shadowRadius: 2,

@@ -26,7 +26,7 @@ export const AppLoader: React.FC<{ label?: string; sublabel?: string }> = ({ lab
 };
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 32, paddingHorizontal: 16 },
+  wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 32, paddingHorizontal: 16 },
   badge: { width: ms(56), height: ms(56), alignItems: 'center', justifyContent: 'center' },
   ring: { borderRadius: 16, borderWidth: 2 },
 });

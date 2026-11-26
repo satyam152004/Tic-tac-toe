@@ -1,14 +1,15 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { AppButton } from '../../components/common/AppButton';
-import { AppModal, ConfirmDialog } from '../../components/common/AppModal';
+import { ConfirmDialog } from '../../components/common/AppModal';
 import { Pressy } from '../../components/common/Pressy';
 import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { EmptyState, ErrorState } from '../../components/feedback/StateViews';
-import { BoardCell, GameBoard } from '../../components/game/GameBoard';
+import { BoardCell } from '../../components/game/GameBoard';
+import { GameReplayView } from '../../components/game/GameReplayView';
+import { withAlpha } from '../../design-system/colors';
 import { fonts } from '../../design-system/typography';
 import { Cell, evaluate } from '../../game-engine';
 import { useTheme } from '../../hooks/useTheme';
@@ -16,7 +17,7 @@ import { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { StoredMatch, localGameStorage } from '../../services/storage/localGameStorage';
 import { useLocalGameStore } from '../../store/localGameStore';
-import { formatDurationMs, formatShortDate } from '../../utils/format';
+import { formatShortDate } from '../../utils/format';
 
 import { ch, fs, ms } from '../../design-system/responsive';
 const DIFF_LABEL: Record<string, string> = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard', EXPERT: 'Expert', IMPOSSIBLE: 'Unbeatable' };
@@ -63,7 +64,6 @@ export function describeMatch(m: StoredMatch): MatchView {
 }
 
 export const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: () => void }> = ({ match, onClose }) => {
-  const c = useTheme();
   const total = match?.record.moves.length ?? 0;
   const [step, setStep] = useState(total);
 
@@ -83,47 +83,30 @@ export const LocalReplayModal: React.FC<{ match: StoredMatch | null; onClose: ()
     return { board: cells as BoardCell[], winLine: out.status === 'WIN' ? out.line : null };
   }, [match, step, total]);
 
-  if (!match) return null;
-  const sz = match.record.config.size;
-  const lastPos = step > 0 ? match.record.moves[step - 1] ?? null : null;
+  const sz = match?.record.config.size ?? 3;
+  const lastPos = match && step > 0 ? match.record.moves[step - 1] ?? null : null;
 
   return (
-    <AppModal open={!!match} title="Match Replay" onClose={onClose}>
-      <Text style={[styles.replaySubtitle, { color: c.textSecondary }]}>
-        {match.p1Name} vs {match.p2Name} · {sz}×{sz} Grid
-      </Text>
-      <GameBoard
-        compact
-        disabled
-        board={board}
-        size={sz}
-        winningLine={winLine}
-        lastMoveIndex={lastPos}
-        maxSize={260}
-      />
-      <Text style={[styles.replayStep, { color: c.textSecondary }]}>
-        {step === 0 ? 'Start' : `Move ${step} of ${total}`}
-      </Text>
-      <View style={styles.replayRow}>
-        <AppButton
-          title="Prev"
-          variant="outline"
-          size="md"
-          icon={<ChevronLeft size={ms(20)} color={c.text} />}
-          disabled={step === 0}
-          onPress={() => setStep((s) => Math.max(0, s - 1))}
-          style={{ flex: 1 }}
-        />
-        <AppButton
-          title="Next"
-          size="md"
-          icon={<ChevronRight size={ms(20)} color="#FFFFFF" />}
-          disabled={step >= total}
-          onPress={() => setStep((s) => Math.min(total, s + 1))}
-          style={{ flex: 1 }}
-        />
-      </View>
-    </AppModal>
+    <GameReplayView
+      open={!!match}
+      onClose={onClose}
+      status={
+        match
+          ? {
+              kind: 'ready',
+              subtitle: `${match.p1Name} vs ${match.p2Name} · ${sz}×${sz}`,
+              board,
+              size: sz,
+              winningLine: winLine,
+              lastMoveIndex: lastPos,
+              step,
+              total,
+              onPrev: () => setStep((s) => Math.max(0, s - 1)),
+              onNext: () => setStep((s) => Math.min(total, s + 1)),
+            }
+          : { kind: 'loading' }
+      }
+    />
   );
 };
 
@@ -232,7 +215,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
                 <Text
                   style={[
                     styles.filterPillText,
-                    { color: active ? '#FFFFFF' : c.textSecondary },
+                    { color: active ? c.onAccent : c.textSecondary },
                   ]}
                 >
                   {label}
@@ -267,8 +250,8 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
             const isWin = v.result === 'win' || v.result === 'played';
             const isLoss = v.result === 'loss';
             const badge = isWin ? 'W' : isLoss ? 'L' : 'D';
-            const badgeBg = isWin ? '#F0FDF4' : isLoss ? '#FEF2F2' : c.bgSecondary;
-            const badgeColor = isWin ? '#15803D' : isLoss ? '#B91C1C' : c.textSecondary;
+            const badgeBg = isWin ? withAlpha(c.success, 0.14) : isLoss ? c.dangerSoft : c.bgSecondary;
+            const badgeColor = isWin ? c.success : isLoss ? c.dangerText : c.textSecondary;
             const first = index === 0;
             const last = index === filteredItems.length - 1;
 
@@ -298,7 +281,7 @@ export const OfflineHistoryScreen: React.FC<RootScreenProps<'offline_history'>> 
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={1} style={[styles.opponentName, { color: c.text }]}>{v.title}</Text>
-                    <Text numberOfLines={1} style={[styles.metaText, { color: '#8E939E' }]}>
+                    <Text numberOfLines={1} style={[styles.metaText, { color: c.textSecondary }]}>
                       {item.record.moves.length} moves • {dayLabel(item.record.playedAt)}
                     </Text>
                   </View>
@@ -399,20 +382,5 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: fs(10.5),
     fontFamily: fonts.body.regular,
-  },
-  replaySubtitle: {
-    fontSize: fs(12),
-    fontFamily: fonts.body.medium,
-    textAlign: 'center',
-  },
-  replayStep: {
-    fontSize: fs(12),
-    fontFamily: fonts.mono.medium,
-    textAlign: 'center',
-  },
-  replayRow: {
-    flexDirection: 'row',
-    gap: ms(10),
-    marginTop: ms(10),
   },
 });

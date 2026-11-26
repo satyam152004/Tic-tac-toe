@@ -1,12 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Text } from 'react-native';
-import { AiDifficultyScreen } from '../../src/screens/offline/AiDifficultyScreen';
-import { BoardSelectionScreen } from '../../src/screens/offline/BoardSelectionScreen';
-import { GameResultScreen } from '../../src/screens/offline/GameResultScreen';
-import { OfflineBoardScreen } from '../../src/screens/offline/OfflineBoardScreen';
+import { MatchSetupScreen } from '../../src/screens/offline/MatchSetupScreen';
+import { MatchFoundScreen } from '../../src/screens/online/MatchFoundScreen';
+import { GameResultScreen } from '../../src/screens/game/GameResultScreen';
+import { GameBoardScreen } from '../../src/screens/game/GameBoardScreen';
 import { OfflineHistoryScreen } from '../../src/screens/offline/OfflineHistoryScreen';
 import { localGameStorage } from '../../src/services/storage/localGameStorage';
 import { DEFAULT_SETUP, useLocalGameStore } from '../../src/store/localGameStore';
@@ -20,24 +21,26 @@ const Stub = (name: string) => () => <Text testID={`stub-${name}`}>{name}</Text>
 
 async function mount(initial: string, params?: object) {
   const screens: Record<string, React.ComponentType<any>> = {
-    offline_board: OfflineBoardScreen,
-    board_selection: BoardSelectionScreen,
-    ai_difficulty: AiDifficultyScreen,
+    offline_board: GameBoardScreen,
+    match_setup: MatchSetupScreen,
+    match_found: MatchFoundScreen,
     game_result: GameResultScreen,
     offline_history: OfflineHistoryScreen,
     Main: Stub('Main'),
-    player_setup: Stub('player_setup'),
     settings: Stub('settings'),
     rematch: Stub('rematch'),
   };
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   await render(
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={initial} screenOptions={{ headerShown: false, animation: 'none' }}>
-        {Object.entries(screens).map(([name, C]) => (
-          <Stack.Screen key={name} name={name} component={C} initialParams={name === initial ? params : undefined} />
-        ))}
-      </Stack.Navigator>
-    </NavigationContainer>,
+    <QueryClientProvider client={qc}>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName={initial} screenOptions={{ headerShown: false, animation: 'none' }}>
+          {Object.entries(screens).map(([name, C]) => (
+            <Stack.Screen key={name} name={name} component={C} initialParams={name === initial ? params : undefined} />
+          ))}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </QueryClientProvider>,
   );
 }
 
@@ -76,7 +79,7 @@ describe('OfflineBoardScreen', () => {
     await mount('offline_board');
     for (const p of [0, 3, 1, 4, 2]) await fireEvent.press(await screen.findByTestId(`cell-${p}`));
     expect(await screen.findByTestId('result-title', {}, { timeout: 3000 })).toBeTruthy();
-    expect(screen.getByText('Player 1 Wins!')).toBeTruthy();
+    expect(screen.getByText('Player 1 wins!')).toBeTruthy();
   });
 
   it('manual pause shows the in-game overlay with Resume and blocks moves', async () => {
@@ -146,35 +149,16 @@ describe('OfflineBoardScreen', () => {
   });
 });
 
-describe('AiDifficultyScreen', () => {
+describe('MatchSetupScreen (computer)', () => {
   it('lists exactly the five levels and saves the selection', async () => {
-    await mount('ai_difficulty');
+    await mount('match_setup', { mode: 'VS_AI' });
     const cards = await screen.findAllByTestId(/^difficulty-/);
     expect(cards.map((c) => c.props.testID)).toEqual(['difficulty-EASY', 'difficulty-MEDIUM', 'difficulty-HARD', 'difficulty-EXPERT', 'difficulty-IMPOSSIBLE']);
     await fireEvent.press(screen.getByTestId('difficulty-HARD'));
     await fireEvent.press(screen.getByTestId('ai-difficulty-continue'));
     expect(st().setup).toMatchObject({ mode: 'VS_AI', difficulty: 'HARD' });
-    expect(st().game?.difficulty).toBe('HARD');
-    expect(await screen.findByTestId('offline-board')).toBeTruthy();
-  });
-});
-
-describe('BoardSelectionScreen', () => {
-  it('2P: saves the size and goes to player setup', async () => {
-    await mount('board_selection', { mode: 'LOCAL_2P' });
-    await fireEvent.press(await screen.findByTestId('board-option-4'));
-    await fireEvent.press(screen.getByTestId('board-selection-continue'));
-    expect(st().setup.size).toBe(4);
-    expect(await screen.findByTestId('stub-player_setup')).toBeTruthy();
-  });
-
-  it('VS_AI: starts the game on the chosen size', async () => {
-    st().configure({ mode: 'VS_AI', difficulty: 'EASY' });
-    await mount('board_selection', { mode: 'VS_AI' });
-    await fireEvent.press(await screen.findByTestId('board-option-5'));
-    await fireEvent.press(screen.getByTestId('board-selection-continue'));
-    expect(st().game?.config.size).toBe(5);
-    expect(await screen.findByTestId('offline-board')).toBeTruthy();
+    expect(await screen.findByTestId('match-found')).toBeTruthy();
+    expect(await screen.findByTestId('match-found-countdown')).toBeTruthy();
   });
 });
 
@@ -187,7 +171,7 @@ describe('GameResultScreen', () => {
       lastMatchId: 'abc',
     });
     await mount('game_result');
-    expect(await screen.findByText('You Won!')).toBeTruthy();
+    expect(await screen.findByText('You won!')).toBeTruthy();
     expect(screen.getByTestId('result-saved')).toBeTruthy();
   });
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-import { ChevronRight, PartyPopper } from 'lucide-react-native';
+import { ChevronRight, Flame, PartyPopper, ShoppingBag } from 'lucide-react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { AppCard } from '../../components/common/AppCard';
 import { Pressy } from '../../components/common/Pressy';
@@ -9,12 +9,13 @@ import { Screen } from '../../components/common/Screen';
 import { AppLoader } from '../../components/feedback/AppLoader';
 import { ErrorState } from '../../components/feedback/StateViews';
 import { fonts, type } from '../../design-system/typography';
-import { useClaimDailyReward, useDailyReward } from '../../hooks/queries';
+import { useClaimDailyReward, useDailyReward, useMe } from '../../hooks/queries';
 import { useTheme } from '../../hooks/useTheme';
 import type { RootScreenProps } from '../../navigation/types';
 import { useAppNav } from '../../navigation/useAppNav';
 import { friendlyMessage, toApiError } from '../../services/api/errors';
 import { feedback } from '../../services/feedback';
+import { EmblemShopSheet } from './EmblemShopSheet';
 import { toast } from '../../store/toastStore';
 import { formatCountdown } from '../../utils/format';
 
@@ -82,12 +83,16 @@ const Celebration: React.FC<{ coins: number; day: number; onDone: () => void }> 
   );
 };
 
-export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = () => {
+export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ({ route }) => {
   const c = useTheme();
   const { height } = useWindowDimensions();
   const isTall = height >= 780;
-  const { nav, back } = useAppNav();
+  const { back } = useAppNav();
+  // Other screens can open the emblem shop here by navigating with { openShop: true }.
+  const [shopOpen, setShopOpen] = useState(() => !!route?.params?.openShop);
   const q = useDailyReward();
+  const me = useMe();
+  const currentStreak = me.data?.stats.currentStreak ?? 0;
   const claim = useClaimDailyReward();
   const [celebrate, setCelebrate] = useState<{ day: number; coins: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -133,6 +138,9 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
 
   const day7 = status?.cycle[6] ?? null;
 
+  const totalDays = status?.cycle.length ?? 7;
+  const claimedDays = status?.cycle.filter((d) => d.status === 'claimed').length ?? 0;
+
   return (
     <Screen
       title="Daily Rewards"
@@ -166,7 +174,7 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
       }
     >
       {err ? (
-        <View style={{ padding: 16 }}>
+        <View style={{ flex: 1, padding: 16 }}>
           <ErrorState offline={err.code === 'NETWORK_ERROR'} message={friendlyMessage(err)} onRetry={() => void q.refetch()} />
         </View>
       ) : !status ? (
@@ -181,6 +189,29 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
           showsVerticalScrollIndicator={false}
         >
           {celebrate ? <Celebration coins={celebrate.coins} day={celebrate.day} onDone={() => setCelebrate(null)} /> : null}
+
+          {/* Progress: how many days of this 7-day cycle are claimed */}
+          <View testID="reward-progress" style={[styles.progressCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+            <View style={styles.progressTop}>
+              <View testID="reward-streak" style={styles.streakRow}>
+                <Flame size={ms(16)} color={c.warning} />
+                <Text testID="reward-streak-value" style={[styles.progressTitle, { color: c.text }]}>
+                  {currentStreak} {currentStreak === 1 ? 'day' : 'days'} streak
+                </Text>
+              </View>
+              <Text testID="reward-progress-count" style={[styles.progressCount, { color: c.text }]}>
+                {claimedDays} of {totalDays} days reward claimed
+              </Text>
+            </View>
+            <View style={[styles.progressTrack, { backgroundColor: c.border }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: c.accent, width: `${totalDays ? Math.round((claimedDays / totalDays) * 100) : 0}%` },
+                ]}
+              />
+            </View>
+          </View>
 
           {/* 3x2 Grid for Days 1 to 6 */}
           <View style={styles.grid}>
@@ -269,14 +300,19 @@ export const DailyRewardsScreen: React.FC<RootScreenProps<'daily_rewards'>> = ()
           <Pressy
             testID="open-coin-shop"
             accessibilityLabel="Emblems & Shop"
-            onPress={() => nav.navigate('coin_shop')}
+            onPress={() => setShopOpen(true)}
             style={[styles.miniInfo, { backgroundColor: c.bgCard, borderColor: c.border, justifyContent: 'space-between' }]}
           >
-            <Text style={[styles.chestTitle, { color: c.text }]}>Emblems & Shop</Text>
+            <View style={styles.shopLeft}>
+              <ShoppingBag size={ms(18)} color={c.warning} />
+              <Text style={[styles.chestTitle, { color: c.text }]}>Emblems & Shop</Text>
+            </View>
             <ChevronRight size={ms(18)} color="#8E939E" />
           </Pressy>
         </ScrollView>
       )}
+
+      <EmblemShopSheet open={shopOpen} onClose={() => setShopOpen(false)} />
     </Screen>
   );
 };
@@ -294,6 +330,40 @@ const styles = StyleSheet.create({
     fontSize: fs(12),
     fontFamily: fonts.mono.semibold,
     color: '#B45309',
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
+  progressCard: {
+    padding: ms(14),
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+  },
+  progressTop: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  progressTitle: {
+    fontSize: fs(12),
+    fontFamily: fonts.body.semibold,
+  },
+  progressCount: {
+    fontSize: fs(12),
+    fontFamily: fonts.mono.semibold,
+  },
+  progressTrack: {
+    height: ms(8),
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   grid: {
     flexDirection: 'row',
@@ -356,6 +426,12 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: fs(10),
     fontFamily: fonts.body.semibold,
+  },
+  shopLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
   },
   miniInfo: {
     minHeight: 48,

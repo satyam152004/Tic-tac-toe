@@ -1,3 +1,6 @@
+import { type } from '../../design-system/typography';
+import type { ThemeColors } from '../../design-system/colors';
+import { withAlpha } from '../../design-system/colors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
@@ -33,6 +36,7 @@ const initials = (name: string) => name.slice(0, 2).toUpperCase();
 export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = ({ route }) => {
   const { gameId, friendName } = route.params;
   const c = useTheme();
+  const styles = makeStyles(c);
   const { back } = useAppNav();
   const [game, setGame] = useState<Game | null>(null);
   const [cards, setCards] = useState<Cards>([]);
@@ -158,7 +162,7 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
 
         <View style={[styles.playerCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(10) }}>
-            {chip(waiter?.user, '#141518')}
+            {chip(waiter?.user, c.text)}
             <Text style={[styles.name, { color: c.text }]}>
               {nameOf(waiter, 'Opponent')} ({idleMark})
             </Text>
@@ -173,7 +177,7 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
               testID={`cheer-${ch.kind}`}
               accessibilityLabel={`Send ${ch.label}`}
               onPress={() => void cheer(ch.kind)}
-              style={[styles.cheerBtn, ch.kind === 'wow' ? { backgroundColor: '#EFF4FF', borderColor: c.accent } : { backgroundColor: c.bgCard, borderColor: c.border }]}
+              style={[styles.cheerBtn, ch.kind === 'wow' ? { backgroundColor: withAlpha(c.accent, 0.12), borderColor: c.accent } : { backgroundColor: c.bgCard, borderColor: c.border }]}
             >
               <Text style={[styles.cheerText, { color: ch.kind === 'wow' ? c.accent : c.text }]}>
                 {ch.emoji} {cheers[ch.kind]}
@@ -186,7 +190,7 @@ export const SpectateMatchScreen: React.FC<RootScreenProps<'spectate_match'>> = 
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: ms(20),
@@ -198,14 +202,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: ms(8),
     paddingVertical: ms(3),
     borderRadius: 999,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: c.dangerSoft,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: c.dangerBorder,
   },
-  liveBadgeText: {
-    fontSize: fs(10),
-    fontFamily: fonts.mono.semibold,
-    color: '#B91C1C',
+  liveBadgeText: { ...type.num, color: c.dangerText,
   },
   track: {
     height: ms(4.8),
@@ -232,24 +233,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: fs(10),
-    fontFamily: fonts.mono.semibold,
-    color: '#FFFFFF',
+  avatarText: { ...type.num, color: c.bgCard,
   },
-  name: {
-    fontSize: fs(12),
-    fontFamily: fonts.body.semibold,
+  name: { ...type.caption, },
+  sub: { ...type.num, marginTop: 1,
   },
-  sub: {
-    fontSize: fs(10),
-    fontFamily: fonts.mono.medium,
-    marginTop: 1,
-  },
-  timer: {
-    fontSize: fs(12),
-    fontFamily: fonts.mono.semibold,
-    color: '#1D4ED8',
+  timer: { ...type.num, color: c.accent,
   },
   boardWrap: {
     alignItems: 'center',
@@ -267,10 +256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cheerText: {
-    fontSize: fs(11.5),
-    fontFamily: fonts.mono.semibold,
-  },
+  cheerText: { ...type.num, },
   footer: {
     paddingHorizontal: ms(20),
     paddingTop: ms(6),

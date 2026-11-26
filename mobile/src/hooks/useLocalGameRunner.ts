@@ -10,8 +10,9 @@ export const RESULT_DELAY_MS = 700;
  *  - ticks the timer once per second while the game runs (not paused / finished)
  *  - schedules the AI reply when it is the AI's turn (cancelled on pause / unmount / state change)
  *  - calls `onFinished` shortly after the round ends so the winning line can be seen
+ * Pass `enabled = false` on screens that do not play a local game (the online board): nothing runs then.
  */
-export function useLocalGameRunner(onFinished: () => void) {
+export function useLocalGameRunner(onFinished: () => void, enabled = true) {
   const game = useLocalGameStore((s) => s.game);
   const paused = useLocalGameStore((s) => s.paused);
   const [elapsed, setElapsed] = useState(() => useLocalGameStore.getState().elapsedMs());
@@ -19,7 +20,7 @@ export function useLocalGameRunner(onFinished: () => void) {
   finishedRef.current = onFinished;
 
   const status = game?.outcome.status ?? null;
-  const running = status === 'IN_PROGRESS' && !paused;
+  const running = enabled && status === 'IN_PROGRESS' && !paused;
 
   // timer
   useEffect(() => {
@@ -30,7 +31,7 @@ export function useLocalGameRunner(onFinished: () => void) {
   }, [running, game]);
 
   // AI turn
-  const aiTurn = !!game && !paused && isAiTurn(game);
+  const aiTurn = enabled && !!game && !paused && isAiTurn(game);
   useEffect(() => {
     if (!aiTurn) return;
     // InteractionManager was removed from react-native core (0.88): a plain timer is the supported equivalent.
@@ -39,7 +40,7 @@ export function useLocalGameRunner(onFinished: () => void) {
   }, [aiTurn, game]);
 
   // round finished -> let the highlight show, then hand over
-  const finished = status !== null && status !== 'IN_PROGRESS';
+  const finished = enabled && status !== null && status !== 'IN_PROGRESS';
   useEffect(() => {
     if (!finished) return;
     const id = setTimeout(() => finishedRef.current(), RESULT_DELAY_MS);

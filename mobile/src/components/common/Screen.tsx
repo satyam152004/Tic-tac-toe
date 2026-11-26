@@ -46,7 +46,7 @@ export const Screen: React.FC<{
       {title ? <AppHeader title={title} subtitle={subtitle} onBack={onBack} rightAction={rightAction} /> : null}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
-          <ScrollView testID={testID ? `${testID}-scroll` : undefined} style={{ flex: 1 }} contentContainerStyle={[body, contentStyle]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView testID={testID ? `${testID}-scroll` : undefined} style={{ flex: 1 }} contentContainerStyle={[body, { flexGrow: 1 }, contentStyle]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {children}
           </ScrollView>
         ) : (

@@ -3,12 +3,14 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { BlockedUserModel, GameModel, MatchmakingTicketModel, TicketDoc, UserModel } from '../models/index.js';
 import { createGameDoc, assertNoActiveOnlineGame, presentGame, randomMark, resolveConfig } from '../services/game.service.js';
+import { canAfford, chargeEntry } from '../services/coin.service.js';
 import { notify } from '../services/notification.service.js';
 import { CARD_FIELDS, toCard } from '../services/presenter.js';
 import { realtime } from '../services/realtime.js';
 import { Errors } from '../utils/errors.js';
 import { addMs, DAY_MS } from '../utils/time.js';
 import { otherMark } from '../game-engine/index.js';
+import { FirstMovePref, resolveMatchMark } from '../services/firstMove.js';
 
 /**
  * Quick matchmaking backed by MongoDB.
@@ -26,11 +28,13 @@ const ticketJson = (t: TicketDoc | Record<string, unknown>) => {
   return o;
 };
 
-export async function join(userId: string, input: { boardSize: number; winLength?: number }) {
+export async function join(userId: string, input: { boardSize: number; winLength?: number; firstMove?: FirstMovePref; entryAmount?: number }) {
   const config = resolveConfig(input.boardSize, input.winLength);
   const user = await UserModel.findOne({ _id: userId, deletedAt: { $exists: false } }).select('_id').lean();
   if (!user) throw Errors.notFound('Player not found');
   await assertNoActiveOnlineGame(userId);
+  const entry = input.entryAmount ?? 0;
+  if (!(await canAfford(userId, entry))) throw Errors.conflict('Not enough coins for this entry amount.', 'INSUFFICIENT_COINS');
 
   const now = new Date();
   // Housekeeping for this user: an overdue ticket must not block a fresh join.
@@ -44,6 +48,8 @@ export async function join(userId: string, input: { boardSize: number; winLength
       userId,
       boardSize: config.size,
       winLength: config.winLength,
+      firstMove: input.firstMove ?? 'RANDOM',
+      entryAmount: entry,
       status: 'QUEUED',
       queueExpiresAt: expires,
       purgeAt: addMs(expires, DAY_MS),
@@ -76,6 +82,7 @@ export async function tryMatch(ticket: TicketDoc): Promise<ReturnType<typeof pre
       status: 'QUEUED',
       boardSize: ticket.boardSize,
       winLength: ticket.winLength,
+      entryAmount: ticket.entryAmount,
       userId: { $nin: [me, ...blockedBy, ...blocking] },
       queueExpiresAt: { $gt: now },
     },
@@ -95,8 +102,19 @@ export async function tryMatch(ticket: TicketDoc): Promise<ReturnType<typeof pre
     return null;
   }
 
-  const mark = randomMark();
+  const mark = resolveMatchMark(mine.firstMove, opponent.firstMove, randomMark);
+  const gameId = new Types.ObjectId();
+  const entry = ticket.entryAmount ?? 0;
+  try {
+    // Paid match: both entries are taken before the game exists. A failure gives the opponent back to the queue.
+    await chargeEntry([me, opponent.userId], entry, String(gameId));
+  } catch (err) {
+    await MatchmakingTicketModel.updateOne({ _id: mine._id }, { $set: { status: 'CANCELLED' } });
+    await MatchmakingTicketModel.updateOne({ _id: opponent._id, status: 'MATCHED', gameId: null }, { $set: { status: 'QUEUED' }, $unset: { matchedAt: 1 } });
+    throw err;
+  }
   const game = await createGameDoc({
+    _id: gameId,
     type: 'ONLINE_RANDOM',
     config: { size: ticket.boardSize as 3 | 4 | 5, winLength: ticket.winLength },
     humans: [
@@ -104,6 +122,7 @@ export async function tryMatch(ticket: TicketDoc): Promise<ReturnType<typeof pre
       { userId: opponent.userId, mark: otherMark(mark) },
     ],
     status: 'READY', // becomes IN_PROGRESS when both players have joined the game room
+    entryAmount: entry,
   });
   await MatchmakingTicketModel.updateMany({ _id: { $in: [mine._id, opponent._id] } }, { $set: { gameId: game._id } });
 
@@ -161,7 +180,11 @@ export async function sweep(): Promise<{ expired: number; matched: number }> {
   const queued = await MatchmakingTicketModel.find({ status: 'QUEUED' }).sort({ createdAt: 1 }).limit(100);
   for (const t of queued) {
     const fresh = await MatchmakingTicketModel.findOne({ _id: t._id, status: 'QUEUED' });
-    if (fresh && (await tryMatch(fresh))) matched++;
+    try {
+      if (fresh && (await tryMatch(fresh))) matched++;
+    } catch (err) {
+      logger.warn({ err, ticketId: String(t._id) }, 'matchmaking sweep: could not start a paid match');
+    }
   }
   return { expired, matched };
 }

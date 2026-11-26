@@ -11,22 +11,22 @@ Source of truth: backend source + generated `backend/docs/API.md` (69 endpoints)
 | 5 | welcome | screens/onboarding/WelcomeScreen | `POST /auth/guest`, Google/Apple (`/auth/google`, `/auth/apple`) |
 | 6 | home (tab) | screens/home/HomeScreen | `GET /users/me`, notifications, SQLite (resume), online store |
 | 7 | game_mode (tab) | screens/home/GameModeScreen | static navigation |
-| 8 | player_setup | screens/home/PlayerSetupScreen | local setup store |
+| 8 | match_setup (LOCAL_2P) | screens/offline/MatchSetupScreen | local setup store |
 | 9 | game_rules | screens/home/GameRulesScreen | engine win lengths |
-| 10 | offline_board | screens/offline/OfflineBoardScreen | shared engine (no network) |
-| 11 | board_selection | screens/offline/BoardSelectionScreen | engine |
-| 12 | ai_difficulty | screens/offline/AiDifficultyScreen | engine (5 levels) |
-| 14 | game_result | screens/offline/GameResultScreen | local game store / SQLite |
+| 10 | offline_board | screens/game/GameBoardScreen | shared engine (no network) |
+| 11 | (removed: Pass n play goes straight to match_setup) | - | - |
+| 12 | match_setup (VS_AI) | screens/offline/MatchSetupScreen | engine (5 levels) |
+| 14 | game_result | screens/game/GameResultScreen | local game store / SQLite |
 | 15 | rematch | screens/offline/RematchScreen | local game store |
 | 16 | offline_history | screens/offline/OfflineHistoryScreen | SQLite |
 | 17 | online_lobby | screens/online/OnlineLobbyScreen | `GET /games/active`, friends |
 | 18 | matchmaking | screens/online/MatchmakingScreen | `matchmaking:*` socket events |
 | 19 | waiting_room | screens/online/WaitingRoomScreen | `room:*` events, `/rooms/:id/*` |
-| 20 | online_board | screens/online/OnlineBoardScreen | `game:*` events (server-authoritative) |
+| 20 | online_board | screens/game/GameBoardScreen | `game:*` events (server-authoritative) |
 | 21 | create_room | screens/online/CreateRoomScreen | `POST /rooms` |
 | 22 | join_room | screens/online/JoinRoomScreen | `POST /rooms/join` |
 | 23 | room_details | screens/online/RoomDetailsScreen | rooms API + invite |
-| 24 | online_result | screens/online/OnlineResultScreen | server game result, `GET /games/:id/replay` |
+| 24 | online_result | screens/game/GameResultScreen | server game result, `GET /games/:id/replay` |
 | 25 | reconnection | screens/online/ReconnectionScreen | socket status + `GET /games/:id` |
 | 26 | match_invitation | screens/online/MatchInvitationScreen | `/games/:id/join`, `/rooms/join` |
 | 27-28 | login, registration | screens/auth | `/auth/login`, `/auth/register`, `/auth/upgrade` |

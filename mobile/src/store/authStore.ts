@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { queryClient } from '../services/queryClient';
 import { authApi } from '../services/api/authApi';
 import { setSessionExpiredHandler } from '../services/api/apiClient';
-import { toApiError } from '../services/api/errors';
+import { SESSION_DEAD_CODES, toApiError } from '../services/api/errors';
 import type { Me, ThemeId } from '../services/api/types';
 import { userApi } from '../services/api/userApi';
 import { socketClient } from '../services/socket/socketClient';
@@ -14,6 +14,10 @@ import { useSettingsStore } from './settingsStore';
 const CACHE_KEY = 'me-cache-v1';
 
 export type AuthStatus = 'booting' | 'signedOut' | 'signedIn';
+
+/** Startup retries when the server cannot be reached and there is no saved profile yet: 2s, 4s, 8s ... up to 30s. */
+let bootRetries = 0;
+const retryDelayMs = () => Math.min(30_000, 2_000 * 2 ** bootRetries);
 
 interface AuthState {
   status: AuthStatus;
@@ -62,7 +66,6 @@ async function readCachedUser(): Promise<Me | null> {
 function applyServerPreferences(me: Me): void {
   const patch: Parameters<ReturnType<typeof useSettingsStore.getState>['set']>[0] = {
     soundEffects: me.sound.effects,
-    music: me.sound.music,
     language: me.language,
     notifications: me.notificationPrefs.game || me.notificationPrefs.social,
   };
@@ -92,6 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
   };
 
   const leave = async (expired = false): Promise<void> => {
+    await tokenStorage.clear(); // a signed-out app must not keep a login it no longer shows
     socketClient.disconnect();
     queryClient.clear(); // user-specific cache must never leak to the next account
     await AsyncStorage.removeItem(CACHE_KEY).catch(() => undefined);
@@ -116,18 +120,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
       try {
         const me = await userApi.me(); // interceptor refreshes the access token first
+        bootRetries = 0;
         await enter(me, true);
       } catch (e) {
         const err = toApiError(e);
-        if (tokenStorage.current()) {
-          // Session still valid, server unreachable: open with the cached profile (offline play keeps working).
-          const cached = await readCachedUser();
-          if (err.code === 'NETWORK_ERROR' && cached) {
-            set({ status: 'signedIn', user: cached, offline: true });
-            return;
-          }
+        if (SESSION_DEAD_CODES.has(err.code)) {
+          // The server rejected the login itself (expired, revoked or reused): a real sign-out.
+          await leave(true);
+          return;
         }
-        await leave(false);
+        // Anything else (no network, server restarting, a 5xx): the login is still valid, so keep it.
+        const cached = await readCachedUser();
+        if (cached) {
+          set({ status: 'signedIn', user: cached, offline: true });
+          return;
+        }
+        // Nothing cached yet: stay on the splash and try again, instead of signing the user out.
+        setTimeout(() => void get().bootstrap(), retryDelayMs());
+        bootRetries += 1;
       }
     },
 
@@ -146,7 +156,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ user: me, offline: false });
         void cacheUser(me);
         return me;
-      } catch {
+      } catch (e) {
+        if (SESSION_DEAD_CODES.has(toApiError(e).code)) await leave(true);
         return null;
       }
     },

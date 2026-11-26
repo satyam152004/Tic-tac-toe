@@ -143,7 +143,7 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
 
         {/* Recent public rooms: real open rooms from GET /rooms/open; tapping one fills the code boxes */}
         <View>
-          <Text style={[styles.sectionLabel, { color: '#8E939E' }]}>PUBLIC ROOMS</Text>
+          <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>PUBLIC ROOMS</Text>
           <View testID="public-rooms" style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
             {open.isLoading ? (
               <View style={styles.pubRow}>
@@ -191,16 +191,16 @@ export const JoinRoomScreen: React.FC<RootScreenProps<'join_room'>> = ({ route }
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  codeLabel: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
-  pasteText: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
+  codeLabel: { ...type.overline, },
+  pasteText: { ...type.overline, },
   codeBoxes: { flexDirection: 'row', gap: ms(6) },
   box: { flex: 1, height: ch(44), borderRadius: ms(10), alignItems: 'center', justifyContent: 'center' },
-  boxChar: { fontSize: fs(16), fontFamily: fonts.mono.semibold },
+  boxChar: { ...type.num, },
   hiddenInput: { position: 'absolute', top: 24, left: 0, right: 0, bottom: 0, opacity: 0.01 },
-  sectionLabel: { fontSize: fs(10), fontFamily: fonts.body.semibold, letterSpacing: 0.5, marginBottom: ms(5) },
+  sectionLabel: { ...type.overline, letterSpacing: 0.5, marginBottom: ms(5) },
   group: { borderRadius: ms(14), borderWidth: 1, overflow: 'hidden' },
   pubRow: { minHeight: ch(38), paddingVertical: ms(10), paddingHorizontal: ms(13), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ms(8) },
-  pubCode: { fontSize: fs(12), fontFamily: fonts.mono.semibold },
-  pubSub: { fontSize: fs(10.5), fontFamily: fonts.body.regular },
-  pubAction: { fontSize: fs(11.5), fontFamily: fonts.body.semibold },
+  pubCode: { ...type.num, },
+  pubSub: { ...type.overline, },
+  pubAction: { ...type.overline, },
 });

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '../../components/game/ActionButton';
 import { Screen } from '../../components/common/Screen';
 import { ErrorState } from '../../components/feedback/StateViews';
+import { withAlpha } from '../../design-system/colors';
 import { fonts, type } from '../../design-system/typography';
 import { formatClock, useOnlineGame } from '../../hooks/useOnlineGame';
 import { useBackGuard } from '../../hooks/useBackGuard';
+import { ConfirmDialog } from '../../components/common/AppModal';
 import { useTheme } from '../../hooks/useTheme';
 import { useAppNav } from '../../navigation/useAppNav';
 import type { RootScreenProps } from '../../navigation/types';
@@ -14,14 +16,24 @@ import { gameApi } from '../../services/api/gameApi';
 import { cancelQuickMatch, startQuickMatch } from '../../services/onlineActions';
 import { useOnlineStore } from '../../store/onlineStore';
 import { isOfflineError } from './shared';
+import { isPreStart, matchFoundSource } from '../../services/gameRoute';
 
-import { ch, fs, ms } from '../../design-system/responsive';
-const FOUND_DELAY_MS = 1600;
+import { fs, ms } from '../../design-system/responsive';
+
+const initialsOf = (name?: string | null): string =>
+  (name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('') || 'P';
 
 export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ route }) => {
   const c = useTheme();
   const { nav, back } = useAppNav();
   const boardSize = route.params.boardSize;
+  const firstMove = route.params.firstMove;
+  const entryAmount = route.params.entryAmount ?? 0;
   const phase = useOnlineStore((s) => s.matchmaking.phase);
   const startedAt = useOnlineStore((s) => s.matchmaking.startedAt);
   const cancelReason = useOnlineStore((s) => s.matchmaking.cancelReason);
@@ -44,8 +56,8 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
     setError(null);
     startedRef.current = true;
     setBegun(true);
-    startQuickMatch(boardSize).catch((e) => setError(e));
-  }, [boardSize]);
+    startQuickMatch(boardSize, firstMove, entryAmount).catch((e) => setError(e));
+  }, [boardSize, firstMove, entryAmount]);
 
   useEffect(() => {
     mounted.current = true;
@@ -67,14 +79,24 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
   }, [phase, startedAt]);
 
   const gameId = begun && phase === 'found' ? game?.id : undefined;
+  // Found: the Match found screen takes over (it counts down before the board opens).
   useEffect(() => {
     if (!gameId) return;
-    const t = setTimeout(() => {
-      guard.allow();
-      nav.replace('online_board', { gameId });
-    }, FOUND_DELAY_MS);
-    return () => clearTimeout(t);
+    guard.allow();
+    nav.replace('match_found', { gameId, source: 'RANKED' });
   }, [gameId, nav, guard]);
+
+  // Outer ring pulses while searching (native driver, so it stays smooth during the match search).
+  const pulse = useRef(new Animated.Value(0)).current;
+  const found = phase === 'found';
+  useEffect(() => {
+    if (found) return;
+    const loop = Animated.loop(Animated.timing(pulse, { toValue: 1, duration: 2200, easing: Easing.out(Easing.ease), useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [found, pulse]);
+  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.3] });
+  const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] });
 
   const cancel = async () => {
     guard.allow();
@@ -86,7 +108,8 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
     try {
       const active = (await gameApi.active()).find((g) => g.status === 'IN_PROGRESS' || g.status === 'READY' || g.status === 'WAITING');
       guard.allow();
-      if (active) nav.replace('online_board', { gameId: active.id });
+      if (active && isPreStart(active)) nav.replace('match_found', { gameId: active.id, source: matchFoundSource(active.type) });
+      else if (active) nav.replace('online_board', { gameId: active.id });
       else back();
     } catch (e) {
       setError(e);
@@ -101,7 +124,7 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
   if (error) {
     const code = toApiError(error).code;
     return (
-      <Screen title="Finding Opponent" onBack={back}>
+      <Screen title="Finding match" onBack={back}>
         {code === 'ALREADY_IN_GAME' ? (
           <ErrorState title="You are already in a game" message={friendlyMessage(error)} retryLabel="Return to game" onRetry={returnToGame} />
         ) : (
@@ -113,148 +136,141 @@ export const MatchmakingScreen: React.FC<RootScreenProps<'matchmaking'>> = ({ ro
 
   if (begun && phase === 'idle' && cancelReason === 'EXPIRED') {
     return (
-      <Screen title="Finding Opponent" onBack={back}>
+      <Screen title="Finding match" onBack={back}>
         <ErrorState title="No opponent found" message="No one was found. Try again or pick another board size." retryLabel="Search Again" onRetry={retry} />
       </Screen>
     );
   }
 
-  const found = phase === 'found';
   const oppName = opponentCard?.displayName ?? 'Opponent';
+  const myName = me?.displayName ?? 'You';
+  const points = (me?.stats?.points ?? 0).toLocaleString();
 
   return (
-    <Screen
-      title="Finding Opponent"
-      testID="matchmaking"
-      footer={
-        <ActionButton
-          testID="cancel-search"
-          title="Cancel Search"
-          variant="secondary"
-          fullWidth
-          onPress={cancel}
-        />
-      }
-    >
-      <View style={styles.centerContainer}>
-        {/* Concentric radar rings matching prototype */}
-        <View style={styles.outerRadar}>
-          <View style={styles.midRadar}>
-            <View style={styles.innerTimerBadge}>
-              <Text testID="search-timer" style={styles.timerText}>
-                {formatClock(elapsed)}
-              </Text>
-            </View>
+    <>
+      <Screen
+        testID="matchmaking"
+        footer={<ActionButton testID="cancel-search" title="Cancel search" variant="danger" fullWidth onPress={cancel} />}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: c.text }]}>{found ? 'Opponent found' : 'Finding match'}</Text>
+          <Text testID="search-spec" style={[styles.subtitle, { color: c.textSecondary }]}>
+            {`Ranked, ${boardSize}×${boardSize}`}
+          </Text>
+        </View>
+
+        {/* Radar: an animated outer ring, two static rings and the player's avatar in the centre. */}
+        <View style={styles.radarWrap}>
+          {!found ? (
+            <Animated.View
+              style={[styles.ring, styles.ringOuter, { borderColor: withAlpha(c.accent, 0.35), opacity: ringOpacity, transform: [{ scale: ringScale }] }]}
+            />
+          ) : null}
+          <View style={[styles.ring, styles.ringOuter, { borderColor: withAlpha(c.accent, 0.2) }]} />
+          <View style={[styles.ring, styles.ringMid, { borderColor: withAlpha(c.accent, 0.4) }]} />
+          <View style={[styles.avatar, { backgroundColor: c.accent, borderColor: withAlpha(c.accent, 0.5) }]}>
+            <Text style={[styles.avatarText, { color: c.onAccent }]}>{initialsOf(myName)}</Text>
           </View>
         </View>
 
-        <Text style={[styles.title, { color: c.text }]}>
-          {found ? 'Opponent Found!' : 'Looking for an opponent...'}
-        </Text>
-
-        <View style={styles.specPill}>
-          <Text testID="search-spec" style={[styles.specText, { color: c.textSecondary }]}>
-            {found ? `vs ${oppName}` : `${boardSize}×${boardSize} Ranked • Rating ${(me?.stats?.points ?? 0).toLocaleString()}`}
+        <View style={styles.statusBlock}>
+          <Text style={[styles.statusTitle, { color: c.text }]}>{found ? `Matched with ${oppName}` : 'Searching for an opponent'}</Text>
+          <Text style={[styles.statusSub, { color: c.textSecondary }]}>
+            {found ? 'Starting the match...' : 'Matching you with a player near your rank'}
           </Text>
+          {!found ? (
+            <Text testID="search-timer" style={[styles.timer, { color: c.text }]}>
+              {formatClock(elapsed)}
+            </Text>
+          ) : null}
         </View>
-      </View>
-    </Screen>
+
+        {/* Players: you on the left, the opponent (or "Searching") on the right. */}
+        <View style={[styles.playersCard, { backgroundColor: c.bgCard, borderColor: c.border }]}>
+          <View style={styles.player}>
+            <View style={[styles.smallAvatar, { backgroundColor: c.accent }]}>
+              <Text style={[styles.smallAvatarText, { color: c.onAccent }]}>{initialsOf(myName)}</Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>
+                {myName}
+              </Text>
+              <Text numberOfLines={1} style={[type.small, { color: c.textSecondary }]}>
+                {`Rating ${points}`}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={[type.small, { color: c.textSecondary }]}>VS</Text>
+
+          <View style={[styles.player, styles.playerRight]}>
+            {found ? (
+              <>
+                <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end' }}>
+                  <Text numberOfLines={1} style={[type.bodyStrong, { color: c.text }]}>
+                    {oppName}
+                  </Text>
+                </View>
+                <View style={[styles.smallAvatar, { backgroundColor: c.accentSecondary }]}>
+                  <Text style={[styles.smallAvatarText, { color: c.onAccent }]}>{initialsOf(oppName)}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end' }}>
+                  <Text style={[type.bodyStrong, { color: c.text }]}>Searching</Text>
+                  <Text style={[type.small, { color: c.textSecondary }]}>...</Text>
+                </View>
+                <View style={[styles.smallAvatar, styles.unknown, { backgroundColor: c.bgElevated }]}>
+                  <Text style={[styles.unknownText, { color: c.textSecondary }]}>?</Text>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Screen>
+      <ConfirmDialog {...guard.dialog} />
+    </>
   );
 };
 
+const RADAR = ms(220);
+const AVATAR = ms(92);
+
 const styles = StyleSheet.create({
-  centerContainer: {
-    flex: 1,
+  header: { alignItems: 'center', gap: ms(4), paddingTop: ms(8) },
+  title: { ...type.title, },
+  subtitle: { ...type.small, },
+  radarWrap: { height: RADAR, alignItems: 'center', justifyContent: 'center', marginTop: ms(8) },
+  ring: { position: 'absolute', borderWidth: 1.5, borderRadius: 999 },
+  ringOuter: { width: RADAR, height: RADAR },
+  ringMid: { width: ms(160), height: ms(160) },
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: ms(20),
-    gap: ms(8),
+    borderWidth: 6,
   },
-  outerRadar: {
-    width: ms(144),
-    height: ms(144),
-    borderRadius: ms(72),
-    backgroundColor: 'rgba(239,244,255,0.55)',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  midRadar: {
-    width: ms(96),
-    height: ms(96),
-    borderRadius: ms(48),
-    backgroundColor: '#EFF4FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  innerTimerBadge: {
-    paddingHorizontal: ms(12),
-    paddingVertical: ms(6),
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#1D4ED8',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  timerText: {
-    fontSize: fs(14),
-    fontFamily: fonts.mono.semibold,
-    color: '#1D4ED8',
-  },
-  title: {
-    fontSize: fs(17),
-    fontFamily: fonts.body.semibold,
-    marginTop: ms(12),
-  },
-  specPill: {
-    paddingHorizontal: ms(12),
-    paddingVertical: ms(4),
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4E4DF',
-  },
-  specText: {
-    fontSize: fs(11),
-    fontFamily: fonts.body.semibold,
-  },
-  vsRow: {
+  avatarText: { ...type.display, },
+  statusBlock: { alignItems: 'center', gap: ms(6), marginTop: ms(4) },
+  statusTitle: { ...type.heading, },
+  statusSub: { ...type.small, textAlign: 'center' },
+  timer: { ...type.numHero, marginTop: ms(8), letterSpacing: 1 },
+  playersCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: ms(20),
+    gap: ms(10),
+    padding: ms(12),
+    borderRadius: 16,
+    borderWidth: 1,
     marginTop: ms(16),
   },
-  avatarCol: {
-    alignItems: 'center',
-    gap: ms(6),
-    width: ms(80),
-  },
-  playerName: {
-    fontSize: fs(11.5),
-    fontFamily: fonts.body.semibold,
-  },
-  vsText: {
-    fontSize: fs(13),
-    fontFamily: fonts.mono.semibold,
-  },
-  unknownBox: {
-    width: ms(44),
-    height: ch(44),
-    borderRadius: ms(22),
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unknownText: {
-    fontSize: fs(16),
-    fontFamily: fonts.mono.semibold,
-  },
+  player: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: ms(10) },
+  playerRight: { justifyContent: 'flex-end' },
+  smallAvatar: { width: ms(40), height: ms(40), borderRadius: ms(20), alignItems: 'center', justifyContent: 'center' },
+  smallAvatarText: { ...type.labelStrong, },
+  unknown: { borderWidth: 0 },
+  unknownText: { ...type.heading, },
 });

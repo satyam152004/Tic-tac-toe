@@ -10,6 +10,9 @@ export function create(c: Ctx<z.infer<typeof v.createGameBody>>) {
   return c.body.type === 'AI' ? games.createAiGame(c.userId, c.body) : games.createFriendGame(c.userId, c.body);
 }
 export const active = (c: Ctx) => games.getActiveGames(c.userId);
+export const invites = (c: Ctx) => games.listInvites(c.userId);
+export const decline = (c: Ctx<unknown, unknown, P>) => games.declineInvite(c.userId, c.params.id);
+export const cancelInvite = (c: Ctx<unknown, unknown, P>) => games.cancelInvite(c.userId, c.params.id);
 export const get = (c: Ctx<unknown, unknown, P>) => games.getGame(c.userId, c.params.id);
 export const join = (c: Ctx<unknown, unknown, P>) => games.joinGame(c.userId, c.params.id);
 export const move = (c: Ctx<z.infer<typeof v.moveBody>, unknown, P>) => games.makeMove(c.userId, c.params.id, c.body);

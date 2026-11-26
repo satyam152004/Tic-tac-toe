@@ -38,16 +38,23 @@ jest.mock('../../src/services/onlineActions', () => ({
   forfeitGame: jest.fn(async () => undefined),
   requestRematch: jest.fn(async () => 'REQUESTED'),
 }));
-jest.mock('../../src/services/api/gameApi', () => ({ gameApi: { active: jest.fn(async () => []), get: jest.fn(), forfeit: jest.fn(), replay: jest.fn(async () => ({ totalMoves: 0, frames: [] })) } }));
+jest.mock('../../src/services/api/gameApi', () => ({ gameApi: { active: jest.fn(async () => []), get: jest.fn(), forfeit: jest.fn(), replay: jest.fn(async () => ({ totalMoves: 0, frames: [] })), inviteFriend: jest.fn(async () => ({ id: 'game-9', type: 'FRIEND', status: 'WAITING', boardSize: 3, board: [], players: [] })),
+  invites: jest.fn(async () => ({ incoming: [{ game: { id: 'gi1', type: 'FRIEND', status: 'WAITING', boardSize: 3, entryAmount: 0, board: [], players: [] }, from: { id: 'u9', username: 'ann', displayName: 'Ann', avatar: 'av_1', level: 2, online: true }, to: null, expiresAt: new Date(Date.now() + 600000).toISOString() }], outgoing: [] })),
+  decline: jest.fn(async () => ({ declined: true })),
+  cancelInvite: jest.fn(async () => ({ cancelled: true })),
+ } }));
 jest.mock('../../src/services/api/userApi', () => ({ userApi: { me: jest.fn(async () => require('../mocks/onlineFixtures').meFixture()), get: jest.fn() } }));
 jest.mock('../../src/services/api/roomApi', () => ({ roomApi: { get: jest.fn(), invite: jest.fn() } }));
-jest.mock('../../src/services/api/friendApi', () => ({ friendApi: { list: jest.fn(async () => ({ items: [], total: 0 })) } }));
+jest.mock('../../src/services/api/friendApi', () => ({ friendApi: { list: jest.fn(async () => ({ items: [], total: 0 })), request: jest.fn(async () => ({ id: 'f1', status: 'PENDING' })) } }));
 
 import { JoinRoomScreen } from '../../src/screens/online/JoinRoomScreen';
 import { MatchmakingScreen } from '../../src/screens/online/MatchmakingScreen';
-import { OnlineBoardScreen } from '../../src/screens/online/OnlineBoardScreen';
+import { MatchFoundScreen } from '../../src/screens/online/MatchFoundScreen';
+import { ChallengeList } from '../../src/screens/social/ChallengeList';
+import { MatchSetupScreen } from '../../src/screens/offline/MatchSetupScreen';
+import { GameBoardScreen } from '../../src/screens/game/GameBoardScreen';
 import { OnlineLobbyScreen } from '../../src/screens/online/OnlineLobbyScreen';
-import { OnlineResultScreen } from '../../src/screens/online/OnlineResultScreen';
+import { GameResultScreen } from '../../src/screens/game/GameResultScreen';
 import { RoomDetailsScreen } from '../../src/screens/online/RoomDetailsScreen';
 import { WaitingRoomScreen } from '../../src/screens/online/WaitingRoomScreen';
 import { ApiError } from '../../src/services/api/errors';
@@ -75,23 +82,25 @@ beforeEach(() => {
   useOnlineStore.getState().setCards([oppCard]);
 });
 
-describe('OnlineBoardScreen', () => {
+describe('GameBoardScreen (online)', () => {
   const open = async (game = gameFixture()) => {
     useOnlineStore.getState().applyGame(game);
-    return wrap(<OnlineBoardScreen {...props({ gameId: 'game-1' })} />);
+    return wrap(<GameBoardScreen {...props({ gameId: 'game-1' })} />);
   };
 
   it('renders both players and the board from the server state', async () => {
     await open(gameFixture({ board: ['X', '', '', '', 'O', '', '', '', ''], moveCount: 2, currentTurn: 'X' }));
-    expect(await screen.findByText('You (X) • Your Turn')).toBeTruthy();
-    expect(screen.getByText('Opponent Pro (O) • Online')).toBeTruthy();
+    expect(await screen.findByText('Your turn')).toBeTruthy();
+    expect(screen.getByText('You')).toBeTruthy();
+    expect(screen.getByText('Opponent Pro')).toBeTruthy();
+    expect(screen.getByText(/• Online$/)).toBeTruthy();
     expect(screen.getByLabelText('Cell 1 marked X')).toBeTruthy();
     expect(screen.getByLabelText('Cell 5 marked O')).toBeTruthy();
   });
 
   it('disables the board when it is not my turn', async () => {
     await open(gameFixture({ currentTurn: 'O' }));
-    await screen.findByText('You (X) • Their turn');
+    await screen.findByText("Opponent Pro's turn");
     await fireEvent.press(screen.getByTestId('cell-0'));
     expect(a.submitMove).not.toHaveBeenCalled();
   });
@@ -170,7 +179,7 @@ describe('OnlineBoardScreen', () => {
   });
 });
 
-describe('OnlineResultScreen', () => {
+describe('GameResultScreen (online)', () => {
   const finished = (me: 'WIN' | 'LOSS' | 'DRAW', reason: 'LINE' | 'FORFEIT' | 'TIMEOUT' | 'DRAW') =>
     gameFixture({
       status: me === 'DRAW' ? 'DRAW' : 'COMPLETED',
@@ -184,26 +193,26 @@ describe('OnlineResultScreen', () => {
     });
   const open = async (g: ReturnType<typeof finished>) => {
     useOnlineStore.getState().applyGame(g);
-    return wrap(<OnlineResultScreen {...props({ gameId: 'game-1' })} />);
+    return wrap(<GameResultScreen {...props({ gameId: 'game-1' })} />);
   };
 
   it('shows the server outcome, reason and points for a win', async () => {
     await open(finished('WIN', 'FORFEIT'));
-    expect(await screen.findByText('You won')).toBeTruthy();
-    expect(screen.getByText('+25 points (1,030)')).toBeTruthy();
-    expect(screen.getByText('6 Moves')).toBeTruthy();
+    expect(await screen.findByText('You won!')).toBeTruthy();
+    expect(screen.getByText('+25')).toBeTruthy();
+    expect(screen.getByText('6')).toBeTruthy();
   });
 
   it('shows a loss from the server outcome (not from the board)', async () => {
     await open(finished('LOSS', 'TIMEOUT'));
     expect(await screen.findByText('You lost')).toBeTruthy();
-    expect(screen.getByText('-10 points (1,030)')).toBeTruthy();
+    expect(screen.getByText('-10')).toBeTruthy();
   });
 
   it('shows a draw', async () => {
     await open(finished('DRAW', 'DRAW'));
     expect(await screen.findByText("It's a draw")).toBeTruthy();
-    expect(screen.getByText('+0 points (1,030)')).toBeTruthy();
+    expect(screen.getAllByText('+0').length).toBe(2);
   });
 
   it('rematch: sends a request, then shows waiting state', async () => {
@@ -219,13 +228,13 @@ describe('OnlineResultScreen', () => {
     await act(async () => useOnlineStore.getState().setRematch({ requestedByOpponent: true }));
     expect(await screen.findByTestId('rematch')).toBeTruthy();
     await act(async () => useOnlineStore.getState().setRematchGameId('game-2'));
-    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('online_board', { gameId: 'game-2' }));
+    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('match_found', { gameId: 'game-2', source: 'RANKED' }));
   });
 
   it('loads the game from the server when it is not in the store', async () => {
     useOnlineStore.getState().reset();
     (a.openGame as jest.Mock).mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 'x'));
-    await wrap(<OnlineResultScreen {...props({ gameId: 'game-9' })} />);
+    await wrap(<GameResultScreen {...props({ gameId: 'game-9' })} />);
     expect(await screen.findByText("You're offline")).toBeTruthy();
     expect(a.openGame).toHaveBeenCalledWith('game-9');
   });
@@ -275,11 +284,12 @@ describe('JoinRoomScreen', () => {
 
 describe('MatchmakingScreen', () => {
   it('starts the search once, shows searching state and cancels', async () => {
-    await wrap(<MatchmakingScreen {...props({ boardSize: 4 })} />);
-    expect(await screen.findByText('Looking for an opponent...')).toBeTruthy();
-    expect(screen.getByTestId('search-spec').props.children).toBe('4×4 Ranked • Rating 1,030');
+    await wrap(<MatchmakingScreen {...props({ boardSize: 4, firstMove: 'RANDOM' })} />);
+    expect(await screen.findByText('Searching for an opponent')).toBeTruthy();
+    expect(screen.getByTestId('search-spec').props.children).toBe('Ranked, 4×4');
+    expect(screen.getByText('Rating 1,030')).toBeTruthy();
     expect(a.startQuickMatch).toHaveBeenCalledTimes(1);
-    expect(a.startQuickMatch).toHaveBeenCalledWith(4);
+    expect(a.startQuickMatch).toHaveBeenCalledWith(4, 'RANDOM', 0);
     await fireEvent.press(screen.getByTestId('cancel-search'));
     await waitFor(() => expect(a.cancelQuickMatch).toHaveBeenCalledTimes(1));
     expect(a.startQuickMatch).toHaveBeenCalledTimes(1);
@@ -295,9 +305,9 @@ describe('MatchmakingScreen', () => {
       useOnlineStore.getState().applyGame(gameFixture());
       useOnlineStore.getState().setMatchmaking({ phase: 'found', startedAt: null });
     });
-    expect(await screen.findByText('Opponent Found!')).toBeTruthy();
-    expect(screen.getByText('vs Opponent Pro')).toBeTruthy();
-    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('online_board', { gameId: 'game-1' }), { timeout: 4000 });
+    expect(await screen.findByText('Opponent found')).toBeTruthy();
+    expect(screen.getByText('Matched with Opponent Pro')).toBeTruthy();
+    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('match_found', { gameId: 'game-1', source: 'RANKED' }), { timeout: 4000 });
   });
 
   it('offers a retry when the queue ticket expired', async () => {
@@ -329,7 +339,7 @@ describe('WaitingRoomScreen', () => {
     await fireEvent.press(screen.getByTestId('ready-toggle'));
     expect(a.setReady).toHaveBeenCalledWith('room-1', true);
     await act(async () => useOnlineStore.getState().setRoom(room({ status: 'PLAYING', gameId: 'game-7' }) as never));
-    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('online_board', { gameId: 'game-7' }));
+    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('match_found', { gameId: 'game-7', source: 'ROOM' }));
   });
 
   it('host can start only when the guest is present and ready', async () => {
@@ -342,7 +352,7 @@ describe('WaitingRoomScreen', () => {
     await act(async () => useOnlineStore.getState().setRoom(room({ guestReady: true, status: 'READY' }) as never));
     (a.startRoomGame as jest.Mock).mockResolvedValueOnce(gameFixture({ id: 'game-5' }));
     await fireEvent.press(screen.getByTestId('start-match'));
-    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('online_board', { gameId: 'game-5' }));
+    await waitFor(() => expect(mockNav.replace).toHaveBeenCalledWith('match_found', { gameId: 'game-5', source: 'ROOM' }));
   });
 
   it('shows the room-ended state when the server expires the room', async () => {
@@ -361,7 +371,7 @@ describe('OnlineLobbyScreen', () => {
   it('navigates to quick match (3x3), create and join', async () => {
     await wrap(<OnlineLobbyScreen {...props()} />);
     await fireEvent.press(await screen.findByTestId('quick-match'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('matchmaking', { boardSize: 3 });
+    expect(mockNav.navigate).toHaveBeenCalledWith('match_setup', { mode: 'ONLINE', purpose: 'QUICK' });
     await fireEvent.press(screen.getByTestId('create-room'));
     expect(mockNav.navigate).toHaveBeenCalledWith('create_room');
     await fireEvent.press(screen.getByTestId('join-room'));
@@ -375,3 +385,139 @@ describe('OnlineLobbyScreen', () => {
     expect(screen.queryByTestId('quick-match')).toBeNull();
   });
 });
+
+describe('MatchSetupScreen (online)', () => {
+  it('quick match: board size and first mover go to the matchmaking search', async () => {
+    const route = { key: 'k', name: 'match_setup', params: { mode: 'ONLINE', purpose: 'QUICK' } };
+    await wrap(<MatchSetupScreen {...({ route, navigation: mockNav } as any)} />);
+    await fireEvent.press(screen.getByTestId('size-option-5'));
+    await fireEvent.press(screen.getByTestId('first-ME'));
+    await fireEvent.press(screen.getByTestId('online-setup-continue'));
+    expect(mockNav.replace).toHaveBeenCalledWith('matchmaking', { boardSize: 5, firstMove: 'ME', entryAmount: 0 });
+  });
+
+  it('quick match: the chosen entry price goes to the search', async () => {
+    const route = { key: 'k', name: 'match_setup', params: { mode: 'ONLINE', purpose: 'QUICK' } };
+    await wrap(<MatchSetupScreen {...({ route, navigation: mockNav } as any)} />);
+    await fireEvent.press(screen.getByTestId('entry-25'));
+    await fireEvent.press(screen.getByTestId('online-setup-continue'));
+    expect(mockNav.replace).toHaveBeenCalledWith('matchmaking', { boardSize: 3, firstMove: 'RANDOM', entryAmount: 25 });
+  });
+});
+
+describe('GameResultScreen add friend', () => {
+  const { friendApi } = jest.requireMock('../../src/services/api/friendApi') as { friendApi: { request: jest.Mock } };
+  const ranked = () =>
+    gameFixture({
+      status: 'COMPLETED',
+      moveCount: 6,
+      board: ['X', 'X', 'X', 'O', 'O', '', '', '', ''],
+      result: { winner: 'X', winnerId: ME_ID, line: [0, 1, 2], reason: 'LINE' },
+      players: [
+        { userId: ME_ID, mark: 'X', isAI: false, joined: true, outcome: 'WIN', pointsAwarded: 25 },
+        { userId: OPP_ID, mark: 'O', isAI: false, joined: true, outcome: 'LOSS', pointsAwarded: -10 },
+      ],
+    });
+
+  beforeEach(() => friendApi.request.mockClear());
+
+  it('ranked: sends a friend request to the opponent and shows it as sent', async () => {
+    useOnlineStore.getState().applyGame(ranked());
+    await wrap(<GameResultScreen {...props({ gameId: 'game-1' })} />);
+    await fireEvent.press(await screen.findByTestId('result-add-friend'));
+    expect(friendApi.request).toHaveBeenCalledWith({ userId: OPP_ID });
+    expect(await screen.findByText('Request sent')).toBeTruthy();
+  });
+
+  it('friend-room games do not offer add friend (they are already friends)', async () => {
+    useOnlineStore.getState().applyGame({ ...ranked(), type: 'FRIEND' });
+    await wrap(<GameResultScreen {...props({ gameId: 'game-1' })} />);
+    await screen.findByTestId('result-title');
+    expect(screen.queryByTestId('result-add-friend')).toBeNull();
+  });
+});
+
+describe('MatchFoundScreen', () => {
+  const route = (over: object) => ({ key: 'k', name: 'match_found', params: { gameId: 'game-1', source: 'FRIEND', opponentName: 'Ann', ...over } });
+
+  it('friend sender: empty opponent slot and waiting title until the friend accepts', async () => {
+    useOnlineStore.getState().applyGame(gameFixture({ status: 'WAITING' }));
+    await wrap(<MatchFoundScreen {...({ route: route({}), navigation: mockNav } as any)} />);
+    expect(await screen.findByTestId('match-found-empty-slot')).toBeTruthy();
+    expect(screen.getByText('Waiting for friend')).toBeTruthy();
+    expect(screen.queryByTestId('match-found-countdown')).toBeNull();
+  });
+
+  it('once both players are ready, shows the countdown and opens the board', async () => {
+    useOnlineStore.getState().applyGame(gameFixture({ status: 'READY' }));
+    await wrap(<MatchFoundScreen {...({ route: route({ source: 'RANKED' }), navigation: mockNav } as any)} />);
+    expect(await screen.findByText('Match found!')).toBeTruthy();
+    expect((await screen.findByTestId('match-found-countdown')).props.children).toBe(3);
+    expect(mockNav.replace).not.toHaveBeenCalledWith('online_board', { gameId: 'game-1' });
+  });
+});
+
+describe('MatchSetupScreen (play with friends)', () => {
+  it('shows Create room as the main button and Join room as the second button', async () => {
+    const route = { key: 'k', name: 'match_setup', params: { mode: 'ONLINE', purpose: 'FRIEND' } };
+    await wrap(<MatchSetupScreen {...({ route, navigation: mockNav } as any)} />);
+    expect(screen.getByTestId('create-room-submit')).toBeTruthy();
+    expect(screen.getByTestId('open-join-room')).toBeTruthy();
+    expect(screen.queryByTestId('pick-friend-u9')).toBeNull();
+  });
+
+  it('Join room opens the code popup on the same page and rejects a short code', async () => {
+    const route = { key: 'k', name: 'match_setup', params: { mode: 'ONLINE', purpose: 'FRIEND' } };
+    await wrap(<MatchSetupScreen {...({ route, navigation: mockNav } as any)} />);
+    await fireEvent.press(screen.getByTestId('open-join-room'));
+    await fireEvent.changeText(await screen.findByTestId('room-code-input'), 'ABC');
+    await fireEvent.press(screen.getByTestId('join-room-submit'));
+    expect(await screen.findByText('Enter the 6 character room code.')).toBeTruthy();
+    expect(mockNav.replace).not.toHaveBeenCalledWith('waiting_room', expect.anything());
+  });
+});
+
+describe('ChallengeList', () => {
+  it('shows an incoming challenge and lets the friend decline it', async () => {
+    const { gameApi } = jest.requireMock('../../src/services/api/gameApi') as { gameApi: { decline: jest.Mock } };
+    await wrap(<ChallengeList />);
+    expect(await screen.findByText('Ann challenged you')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('challenge-decline-gi1'));
+    await waitFor(() => expect(gameApi.decline).toHaveBeenCalledWith('gi1'));
+  });
+
+  it('accepts an incoming challenge and opens Match found', async () => {
+    const { joinGame } = jest.requireMock('../../src/services/onlineActions') as { joinGame: jest.Mock };
+    await wrap(<ChallengeList />);
+    await fireEvent.press(await screen.findByTestId('challenge-accept-gi1'));
+    await waitFor(() => expect(joinGame).toHaveBeenCalledWith('gi1'));
+    expect(mockNav.replace).toHaveBeenCalledWith('match_found', { gameId: 'gi1', source: 'FRIEND', opponentName: 'Ann' });
+  });
+});
+
+describe('MatchFoundScreen (offline)', () => {
+  it('Pass n play: shows the two players, counts down, then starts the local game on the offline board', async () => {
+    const { useLocalGameStore } = jest.requireActual('../../src/store/localGameStore') as typeof import('../../src/store/localGameStore');
+    useLocalGameStore.getState().configure({ mode: 'LOCAL_2P', size: 3, p1Name: 'Asha', p2Name: 'Ben', p1Mark: 'X' });
+    jest.useFakeTimers();
+    try {
+      const route = { key: 'k', name: 'match_found', params: { source: 'PASS_N_PLAY' } };
+      await act(async () => {
+        render(
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            <MatchFoundScreen {...({ route, navigation: mockNav } as any)} />
+          </QueryClientProvider>,
+        );
+      });
+      expect(screen.getByText('Asha')).toBeTruthy();
+      expect(screen.getByText('Ben')).toBeTruthy();
+      expect(screen.getByTestId('match-found-countdown').props.children).toBe(3);
+      for (let i = 0; i < 3; i++) await act(async () => jest.advanceTimersByTime(1000));
+      expect(mockNav.replace).toHaveBeenCalledWith('offline_board');
+      expect(useLocalGameStore.getState().game).not.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+

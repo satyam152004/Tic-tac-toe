@@ -24,7 +24,8 @@ function routeFromNotification(data: Record<string, unknown> | undefined): void 
   const gameId = typeof data?.gameId === 'string' ? data.gameId : undefined;
   const roomCode = typeof data?.roomCode === 'string' ? data.roomCode : undefined;
   if (type === 'GAME_INVITE' && (gameId || roomCode)) navigateTo('match_invitation', { gameId, roomCode });
-  else if ((type === 'REMATCH_REQUEST' || type === 'MATCH_FOUND') && gameId) navigateTo('online_board', { gameId });
+  else if (type === 'MATCH_FOUND' && gameId) navigateTo('match_found', { gameId, source: 'RANKED' });
+  else if (type === 'REMATCH_REQUEST' && gameId) navigateTo('online_board', { gameId });
   else if (type === 'FRIEND_REQUEST' || type === 'FRIEND_ACCEPTED') navigationRef.isReady() && navigationRef.dispatch(CommonActions.navigate('Main', { screen: 'FriendsTab' }));
   else if (type === 'ACHIEVEMENT_UNLOCKED') navigateTo('achievements');
   else navigateTo('notifications');

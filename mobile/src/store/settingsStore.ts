@@ -8,7 +8,6 @@ export type FriendRequestPolicy = 'Everyone' | 'Mutuals' | 'Off';
 export interface SettingsState {
   theme: ThemeId;
   soundEffects: boolean;
-  music: boolean;
   vibration: boolean;
   moveConfirm: boolean;
   notifications: boolean;
@@ -29,7 +28,6 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       theme: 'light',
       soundEffects: true,
-      music: true,
       vibration: true,
       moveConfirm: false,
       notifications: true,

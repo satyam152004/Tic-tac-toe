@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import React from 'react';
 import { FriendProfileScreen } from '../../src/screens/social/FriendProfileScreen';
 import { FriendsScreen } from '../../src/screens/social/FriendsScreen';
+import { MatchSetupScreen } from '../../src/screens/offline/MatchSetupScreen';
 import { LeaderboardScreen } from '../../src/screens/social/LeaderboardScreen';
 import { ReportPlayerModal } from '../../src/screens/social/ReportPlayerModal';
 import { ApiError } from '../../src/services/api/errors';
@@ -28,7 +29,7 @@ const mockNavigate = jest.fn();
 const mockGoTab = jest.fn();
 const mockBack = jest.fn();
 jest.mock('../../src/navigation/useAppNav', () => ({
-  useAppNav: () => ({ nav: { navigate: mockNavigate }, goTab: mockGoTab, back: mockBack }),
+  useAppNav: () => ({ nav: { navigate: mockNavigate, replace: mockNavigate }, goTab: mockGoTab, back: mockBack }),
 }));
 
 const lb = leaderboardApi as jest.Mocked<typeof leaderboardApi>;
@@ -173,12 +174,13 @@ describe('FriendsScreen', () => {
     await waitFor(() => expect(fr.reject).toHaveBeenCalledWith('f2'));
   });
 
-  it('long-press on a friend asks for confirmation, then removes by friendshipId', async () => {
+  it('the row menu asks for confirmation, then removes by friendshipId', async () => {
     setLists([friendItem('f1', 'u1', 'Ann', true)]);
     fr.remove.mockResolvedValue({ removed: true });
     await wrap(<FriendsScreen />);
-    const row = await screen.findByText('Ann');
-    await fireEvent(row, 'longPress');
+    await screen.findByText('Ann');
+    await fireEvent.press(screen.getByTestId('friend-menu-u1'));
+    await fireEvent.press(await screen.findByText('Remove friend'));
     expect(fr.remove).not.toHaveBeenCalled();
     await fireEvent.press(await screen.findByText('Remove'));
     await waitFor(() => expect(fr.remove).toHaveBeenCalledWith('f1'));
@@ -253,18 +255,25 @@ describe('FriendsScreen', () => {
     await waitFor(() => expect(fr.unblock).toHaveBeenCalledWith('u8'));
   });
 
-  it('challenge creates a friend game and navigates to the board', async () => {
+  it('challenge opens the online setup screen for that friend', async () => {
     setLists([friendItem('f1', 'u1', 'Ann', true)]);
-    const game = { id: 'g1', type: 'FRIEND', status: 'WAITING', boardSize: 4, winLength: 4, board: Array(16).fill(''), currentTurn: 'X', moveCount: 0, players: [] } as never;
-    games.inviteFriend.mockResolvedValue(game);
-    const spy = jest.spyOn(useOnlineStore.getState(), 'applyGame');
     await wrap(<FriendsScreen />);
     await screen.findByText('Ann');
     await fireEvent.press(screen.getByTestId('challenge-u1'));
-    await fireEvent.press(screen.getByTestId('challenge-size-4'));
-    await fireEvent.press(screen.getByTestId('challenge-send'));
-    await waitFor(() => expect(games.inviteFriend).toHaveBeenCalledWith({ opponentId: 'u1', boardSize: 4 }));
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('online_board', { gameId: 'g1' }));
+    expect(mockNavigate).toHaveBeenCalledWith('match_setup', { mode: 'ONLINE', purpose: 'CHALLENGE', opponentId: 'u1', opponentName: 'Ann' });
+  });
+
+  it('the challenge setup sends the invite with the chosen size and first mover', async () => {
+    const game = { id: 'g1', type: 'FRIEND', status: 'WAITING', boardSize: 4, winLength: 4, board: Array(16).fill(''), currentTurn: 'X', moveCount: 0, players: [] } as never;
+    games.inviteFriend.mockResolvedValue(game);
+    const spy = jest.spyOn(useOnlineStore.getState(), 'applyGame');
+    const route = { key: 'k', name: 'match_setup', params: { mode: 'ONLINE', purpose: 'CHALLENGE', opponentId: 'u1', opponentName: 'Ann' } };
+    await wrap(<MatchSetupScreen {...({ route, navigation: {} } as any)} />);
+    await fireEvent.press(screen.getByTestId('size-option-4'));
+    await fireEvent.press(screen.getByTestId('first-OPPONENT'));
+    await fireEvent.press(screen.getByTestId('online-setup-continue'));
+    await waitFor(() => expect(games.inviteFriend).toHaveBeenCalledWith({ opponentId: 'u1', boardSize: 4, firstMove: 'OPPONENT', entryAmount: 0 }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('match_found', { gameId: 'g1', source: 'FRIEND', opponentName: 'Ann' }));
     spy.mockRestore();
   });
 
@@ -321,14 +330,23 @@ describe('FriendProfileScreen', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
   });
 
+  it('friend: block asks first, then blocks the player and goes back', async () => {
+    setLists([friendItem('f1', 'u1', 'Ann')]);
+    (fr as unknown as { block: jest.Mock }).block = jest.fn(async () => ({ blocked: true }));
+    await open();
+    await fireEvent.press(await screen.findByTestId('profile-block'));
+    expect((fr as unknown as { block: jest.Mock }).block).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByText('Block'));
+    await waitFor(() => expect((fr as unknown as { block: jest.Mock }).block).toHaveBeenCalledWith('u1'));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
   it('friend: challenge creates a friend game', async () => {
     setLists([friendItem('f1', 'u1', 'Ann')]);
     games.inviteFriend.mockResolvedValue({ id: 'g1', type: 'FRIEND', status: 'WAITING', boardSize: 3, board: [], players: [] } as never);
     await open();
     await fireEvent.press(await screen.findByTestId('profile-challenge'));
-    await fireEvent.press(screen.getByTestId('challenge-send'));
-    await waitFor(() => expect(games.inviteFriend).toHaveBeenCalledWith({ opponentId: 'u1', boardSize: 3 }));
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('online_board', { gameId: 'g1' }));
+    expect(mockNavigate).toHaveBeenCalledWith('match_setup', { mode: 'ONLINE', purpose: 'CHALLENGE', opponentId: 'u1', opponentName: 'Ann' });
   });
 
   it('stranger: add friend', async () => {
@@ -378,3 +396,57 @@ describe('ReportPlayerModal', () => {
     expect(users.report).not.toHaveBeenCalled();
   });
 });
+
+describe('FriendsScreen search', () => {
+  it('filters the friends list by name and shows a no-match message', async () => {
+    fr.list.mockImplementation((async (status: string) => page(status === 'accepted' ? [friendItem('f1', 'u1', 'Ann'), friendItem('f2', 'u2', 'Bob')] : [])) as never);
+    await wrap(<FriendsScreen />);
+    await screen.findByText('Ann');
+    await fireEvent.changeText(screen.getByTestId('friends-search-input'), 'bo');
+    expect(screen.queryByText('Ann')).toBeNull();
+    expect(screen.getByText('Bob')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('friends-search-input'), 'zzz');
+    expect(screen.getByText('No matches')).toBeTruthy();
+  });
+});
+
+describe('FriendsScreen row menu', () => {
+  it('the three-dot menu blocks a friend after confirmation', async () => {
+    fr.list.mockImplementation((async (status: string) => page(status === 'accepted' ? [friendItem('f1', 'u1', 'Ann')] : [])) as never);
+    await wrap(<FriendsScreen />);
+    await screen.findByText('Ann');
+    await fireEvent.press(screen.getByTestId('friend-menu-u1'));
+    await fireEvent.press(await screen.findByText('Block player'));
+    expect((fr as unknown as { block: jest.Mock }).block).not.toHaveBeenCalled();
+    await fireEvent.press(await screen.findByText('Block'));
+    await waitFor(() => expect((fr as unknown as { block: jest.Mock }).block).toHaveBeenCalledWith('u1'));
+  });
+});
+
+describe('FriendsScreen row menu challenge', () => {
+  it('the menu Challenge opens the challenge setup for that friend', async () => {
+    fr.list.mockImplementation((async (status: string) => page(status === 'accepted' ? [friendItem('f1', 'u1', 'Ann', true)] : [])) as never);
+    await wrap(<FriendsScreen />);
+    await screen.findByText('Ann');
+    await fireEvent.press(screen.getByTestId('friend-menu-u1'));
+    await fireEvent.press(await screen.findByTestId('friend-menu-challenge'));
+    expect(mockNavigate).toHaveBeenCalledWith('match_setup', { mode: 'ONLINE', purpose: 'CHALLENGE', opponentId: 'u1', opponentName: 'Ann' });
+  });
+});
+
+describe('FriendsScreen challenge join', () => {
+  it('a friend who sent a challenge shows Join, which opens Match found', async () => {
+    fr.list.mockImplementation((async (status: string) => page(status === 'accepted' ? [friendItem('f1', 'u1', 'Ann')] : [])) as never);
+    const { gameApi } = jest.requireMock('../../src/services/api/gameApi') as { gameApi: { invites: jest.Mock; join: jest.Mock } };
+    gameApi.invites.mockResolvedValue({
+      incoming: [{ game: { id: 'gc1', type: 'FRIEND', status: 'WAITING', boardSize: 3, board: [], players: [] }, from: card('u1', 'Ann'), to: null, expiresAt: new Date(Date.now() + 600000).toISOString() }],
+      outgoing: [],
+    });
+    gameApi.join.mockResolvedValue({ id: 'gc1', type: 'FRIEND', status: 'READY', boardSize: 3, board: [], players: [] });
+    await wrap(<FriendsScreen />);
+    await screen.findByText('Ann');
+    await fireEvent.press(await screen.findByTestId('join-u1'));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('match_found', { gameId: 'gc1', source: 'FRIEND', opponentName: 'Ann' }));
+  });
+});
+

@@ -17,10 +17,12 @@ import {
   MoveError,
   otherMark,
 } from '../game-engine/index.js';
+import { FirstMovePref, markFor } from './firstMove.js';
 import { BlockedUserModel, FriendshipModel, GameAttrs, GameModel, makePairKey, MoveModel, RoomModel, UserModel } from '../models/index.js';
 import { AppError, Errors } from '../utils/errors.js';
 import { CARD_FIELDS, toCard } from './presenter.js';
 import { addMs, DAY_MS } from '../utils/time.js';
+import { canAfford, chargeEntry, refundEntry } from './coin.service.js';
 import { finalizeGame } from './finalize.service.js';
 import { notify } from './notification.service.js';
 import { realtime } from './realtime.js';
@@ -46,6 +48,7 @@ export function presentGame(g: G) {
     players: g.players.map((p) => ({ userId: p.userId ? String(p.userId) : null, mark: p.mark, isAI: p.isAI, joined: Boolean(p.joinedAt), outcome: p.outcome ?? null, pointsAwarded: p.pointsAwarded ?? 0 })),
     difficulty: g.difficulty ?? null,
     roomId: g.roomId ? String(g.roomId) : null,
+    entryAmount: g.entryAmount ?? 0,
     turnTimeoutSec: g.turnTimeoutSec,
     turnDeadline: g.turnDeadline ?? null,
     startedAt: g.startedAt ?? null,
@@ -140,6 +143,8 @@ export interface CreateGameInput {
   previousGameId?: Types.ObjectId | string;
   /** Per-turn clock override (seconds, 0 = off). Defaults to the server turn timeout for human games. */
   turnTimeoutSec?: number;
+  /** Coins each player paid to start (room matches only). */
+  entryAmount?: number;
 }
 
 /** Single place that builds game documents (AI, matchmaking, rooms, friends, rematches). */
@@ -164,6 +169,7 @@ export async function createGameDoc(input: CreateGameInput): Promise<G> {
     playerIds: input.humans.map((h) => h.userId),
     difficulty: input.difficulty,
     roomId: input.roomId,
+    entryAmount: input.entryAmount ?? 0,
     createdBy: input.createdBy ?? input.humans[0]?.userId,
     invitedUserId: input.invitedUserId ?? null,
     previousGameId: input.previousGameId ?? null,
@@ -202,20 +208,23 @@ export async function createAiGame(
   return presentGame(game);
 }
 
-export async function createFriendGame(userId: string, input: { opponentId: string; boardSize: number; winLength?: number }) {
+export async function createFriendGame(userId: string, input: { opponentId: string; boardSize: number; winLength?: number; firstMove?: FirstMovePref; entryAmount?: number }) {
   if (input.opponentId === userId) throw Errors.badRequest('You cannot invite yourself', 'SELF_INVITE');
   const config = resolveConfig(input.boardSize, input.winLength);
   const friends = await FriendshipModel.exists({ pairKey: makePairKey(userId, input.opponentId), status: 'ACCEPTED' });
   if (!friends) throw Errors.forbidden('You can only invite friends', 'NOT_FRIENDS');
   if (await areBlocked(userId, input.opponentId)) throw Errors.forbidden('You can\'t do that.', 'BLOCKED');
   await assertNoActiveOnlineGame(userId);
+  const entry = input.entryAmount ?? 0;
+  if (!(await canAfford(userId, entry))) throw Errors.conflict('Not enough coins for this entry amount.', 'INSUFFICIENT_COINS');
   const me = await UserModel.findById(userId).select('displayName').lean();
   const game = await createGameDoc({
     type: 'FRIEND',
     config,
-    humans: [{ userId, mark: randomMark() }],
+    humans: [{ userId, mark: markFor(input.firstMove ?? 'RANDOM', randomMark) }],
     status: 'WAITING',
     invitedUserId: input.opponentId,
+    entryAmount: entry,
   });
   realtime.joinUserTo(userId, `game:${game._id}`);
   await notify(input.opponentId, {
@@ -235,6 +244,10 @@ export async function joinGame(userId: string, gameId: string) {
   if (g.status === 'WAITING' && g.type === 'FRIEND' && g.invitedUserId && String(g.invitedUserId) === userId && !memberOf(g, userId)) {
     await assertNoActiveOnlineGame(userId);
     const creatorMark = g.players[0]!.mark as Mark;
+    // Paid invite: both entries are taken when the friend accepts. If the accept does not go through, they are returned.
+    const entry = g.entryAmount ?? 0;
+    const creatorId = String(g.createdBy ?? g.players[0]!.userId);
+    if (entry > 0) await chargeEntry([creatorId, userId], entry, String(g._id));
     const updated = (await GameModel.findOneAndUpdate(
       { _id: g._id, status: 'WAITING', playerIds: { $ne: userId } },
       {
@@ -243,7 +256,10 @@ export async function joinGame(userId: string, gameId: string) {
       },
       { new: true },
     ).lean()) as G | null;
+    if (!updated && entry > 0) await refundEntry([creatorId, userId], entry, String(g._id));
     if (updated) {
+      // The inviter is waiting on this game: tell them the friend has accepted (READY starts the countdown on both phones).
+      realtime.emitToGame(g._id, 'game:updated', { game: presentGame(updated as G) });
       void notify(g.createdBy!, { type: 'OPPONENT_JOINED', title: 'Friend joined', body: 'Your friend accepted your invite.', data: { gameId } });
     }
     g = await loadGame(gameId);
@@ -509,6 +525,61 @@ async function cancelUnstarted(g: G, status: 'CANCELLED' | 'EXPIRED'): Promise<G
   return updated;
 }
 
+const INVITE_TTL_MS = 10 * 60_000;
+
+/** Friend challenges still waiting for an answer: the ones sent to me, and the ones I sent. */
+export async function listInvites(userId: string) {
+  const [incomingGames, outgoingGames] = await Promise.all([
+    GameModel.find({ type: 'FRIEND', status: 'WAITING', invitedUserId: userId, playerIds: { $ne: userId } }).sort({ createdAt: -1 }).limit(50).lean() as unknown as Promise<G[]>,
+    GameModel.find({ type: 'FRIEND', status: 'WAITING', createdBy: userId }).sort({ createdAt: -1 }).limit(50).lean() as unknown as Promise<G[]>,
+  ]);
+  const ids = [...new Set([...incomingGames, ...outgoingGames].flatMap((g) => [String(g.createdBy), String(g.invitedUserId)]))];
+  const users = await UserModel.find({ _id: { $in: ids } }).select(CARD_FIELDS).lean();
+  const card = (id: unknown) => {
+    const u = users.find((x) => String(x._id) === String(id));
+    return u ? toCard(u) : null;
+  };
+  const present = (g: G) => ({
+    game: presentGame(g),
+    from: card(g.createdBy),
+    to: card(g.invitedUserId),
+    expiresAt: new Date(new Date(g.createdAt ?? Date.now()).getTime() + INVITE_TTL_MS).toISOString(),
+  });
+  return { incoming: incomingGames.map(present), outgoing: outgoingGames.map(present) };
+}
+
+/** The invitee turns a challenge down. Nothing was charged yet, so nothing needs returning. */
+export async function declineInvite(userId: string, gameId: string) {
+  const g = await loadGame(gameId);
+  if (g.type !== 'FRIEND') throw Errors.badRequest('Not a friend challenge', 'NOT_AN_INVITE');
+  if (String(g.invitedUserId) !== userId) throw Errors.forbidden('This challenge was not sent to you', 'NOT_INVITEE');
+  const done = await cancelUnstarted(g, 'CANCELLED');
+  if (!done) throw Errors.conflict('This challenge is no longer waiting.', 'INVITE_CLOSED');
+  await notify(String(g.createdBy), { type: 'GAME_INVITE_DECLINED', title: 'Challenge declined', body: 'Your friend declined the challenge.', data: { gameId } });
+  return { declined: true as const };
+}
+
+/** The inviter takes back a challenge that has not been accepted yet. */
+export async function cancelInvite(userId: string, gameId: string) {
+  const g = await loadGame(gameId);
+  if (g.type !== 'FRIEND') throw Errors.badRequest('Not a friend challenge', 'NOT_AN_INVITE');
+  if (String(g.createdBy) !== userId) throw Errors.forbidden('Only the sender can cancel this challenge', 'NOT_INVITER');
+  const done = await cancelUnstarted(g, 'CANCELLED');
+  if (!done) throw Errors.conflict('This challenge is no longer waiting.', 'INVITE_CLOSED');
+  if (g.invitedUserId) {
+    await notify(String(g.invitedUserId), { type: 'GAME_INVITE_CANCELLED', title: 'Challenge cancelled', body: 'The challenge was cancelled.', data: { gameId } });
+  }
+  return { cancelled: true as const };
+}
+
+async function notifyInviteExpired(g: G): Promise<void> {
+  const data = { gameId: String(g._id) };
+  await notify(String(g.createdBy), { type: 'GAME_INVITE_EXPIRED', title: 'Challenge expired', body: 'Nobody accepted the challenge in time.', data });
+  if (g.invitedUserId) {
+    await notify(String(g.invitedUserId), { type: 'GAME_INVITE_EXPIRED', title: 'Challenge expired', body: 'The challenge has expired.', data });
+  }
+}
+
 /** Leave a game: forfeits a running game (opponent wins) or cancels one that has not started. */
 export async function forfeit(userId: string, gameId: string) {
   const g = await loadMemberGame(userId, gameId);
@@ -611,6 +682,10 @@ export async function requestRematch(userId: string, gameId: string) {
   }
 
   const newId = new Types.ObjectId();
+  // A paid room match charges both players again for the rematch. The charge is keyed to the previous game, so repeated
+  // requests cannot charge twice.
+  const entry = g.entryAmount ?? 0;
+  if (entry > 0) await chargeEntry(g.playerIds, entry, `rematch-${String(g._id)}`);
   const claim = await GameModel.findOneAndUpdate({ _id: g._id, rematchGameId: null }, { $set: { rematchGameId: newId } }, { new: true }).lean();
   if (!claim) {
     const latest = await loadGame(gameId);
@@ -627,6 +702,7 @@ export async function requestRematch(userId: string, gameId: string) {
     roomId: g.roomId ?? undefined,
     previousGameId: g._id,
     createdBy: g.createdBy ?? undefined,
+    entryAmount: entry,
   });
   for (const h of humans) realtime.joinUserTo(h.userId, `game:${created._id}`);
   if (created.roomId) await RoomModel.updateOne({ _id: created.roomId }, { $set: { gameId: created._id, status: 'PLAYING' } });
@@ -730,7 +806,11 @@ export async function processGameTimeouts(now = new Date()): Promise<{ timedOut:
   const staleReady = (await GameModel.find({ status: 'READY', createdAt: { $lt: addMs(now, -60_000) } }).limit(200).lean()) as G[];
   for (const g of staleReady) if (await cancelUnstarted(g, 'CANCELLED')) expired++;
   const staleWaiting = (await GameModel.find({ status: 'WAITING', createdAt: { $lt: addMs(now, -10 * 60_000) } }).limit(200).lean()) as G[];
-  for (const g of staleWaiting) if (await cancelUnstarted(g, 'EXPIRED')) expired++;
+  for (const g of staleWaiting) {
+    if (!(await cancelUnstarted(g, 'EXPIRED'))) continue;
+    expired++;
+    if (g.type === 'FRIEND') await notifyInviteExpired(g);
+  }
   return { timedOut, disconnected, expired };
 }
 

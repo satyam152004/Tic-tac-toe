@@ -12,12 +12,17 @@ export const GAME_STATUSES = [
 ] as const;
 export const ACTIVE_GAME_STATUSES = ['WAITING', 'READY', 'IN_PROGRESS'] as const;
 export const ROOM_STATUSES = ['WAITING', 'FULL', 'READY', 'PLAYING', 'COMPLETED', 'EXPIRED'] as const;
+/** Coins each player pays to start a room match (0 = free). The winner takes both entries. */
+export const ROOM_ENTRY_AMOUNTS = [0, 10, 25, 50] as const;
 export const ACCOUNT_TYPES = ['GUEST', 'REGISTERED'] as const;
 export const AUTH_PROVIDERS = ['password', 'google', 'apple', 'guest'] as const;
 export const NOTIFICATION_TYPES = [
   'FRIEND_REQUEST',
   'FRIEND_ACCEPTED',
   'GAME_INVITE',
+  'GAME_INVITE_DECLINED',
+  'GAME_INVITE_CANCELLED',
+  'GAME_INVITE_EXPIRED',
   'MATCH_FOUND',
   'OPPONENT_JOINED',
   'REMATCH_REQUEST',

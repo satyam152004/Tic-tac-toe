@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Popup } from '../../components/common/Popup';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { Pressy } from '../../components/common/Pressy';
-import { fonts, type } from '../../design-system/typography';
+import { fonts } from '../../design-system/typography';
 import { useTheme } from '../../hooks/useTheme';
 import { friendlyMessage } from '../../services/api/errors';
 import { userApi, type ReportReason } from '../../services/api/userApi';
@@ -59,15 +60,7 @@ export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
   };
 
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.scrim}>
-        <View style={[styles.card, { backgroundColor: c.bgCard, borderColor: c.border }]}>
-          <View style={{ gap: 2 }}>
-            <Text style={[styles.title, { color: c.text }]}>Report {playerName}</Text>
-            <Text style={[styles.sub, { color: c.textSecondary }]}>
-              Pick a reason.
-            </Text>
-          </View>
+    <Popup open={open} title={`Report ${playerName}`} message="Pick a reason." onDismiss={onClose} testID="report-player-modal">
 
           {/* Reason options */}
           <View style={[styles.group, { backgroundColor: c.bgCard, borderColor: c.border }]}>
@@ -118,9 +111,7 @@ export const ReportPlayerModal: React.FC<ReportPlayerModalProps> = ({
               />
             </View>
           </View>
-        </View>
-      </View>
-    </Modal>
+    </Popup>
   );
 };
 

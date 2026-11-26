@@ -123,10 +123,11 @@ describe('GameStatisticsScreen', () => {
       await wrap(<GameStatisticsScreen {...props} />);
       await fireEvent.press(await screen.findByTestId('history-loc1'));
       expect(localGameStorage.findByClientId).toHaveBeenCalledWith('client-1');
-      expect(await screen.findByText('Move 5 of 5')).toBeTruthy();
+      expect(await screen.findByTestId('replay-step')).toBeTruthy();
+      expect(screen.getByText('5/5')).toBeTruthy();
       expect(gameApi.replay).not.toHaveBeenCalled();
-      await fireEvent.press(screen.getByLabelText('Prev'));
-      expect(screen.getByText('Move 4 of 5')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('replay-prev'));
+      expect(screen.getByText('4/5')).toBeTruthy();
     });
 
     it('falls back to the server replay when the phone no longer has that match', async () => {

@@ -149,7 +149,7 @@ export const LeaderboardScreen: React.FC = () => {
       {q.isLoading && rows.length === 0 ? (
         <AppLoader label="Loading rankings..." />
       ) : q.isError && rows.length === 0 ? (
-        <View style={{ padding: 20 }}>
+        <View style={{ flex: 1, padding: 20 }}>
           <ErrorState
             offline={isOffline(q.error)}
             message={isOffline(q.error) ? 'Connect to the internet to see the rankings.' : toApiError(q.error).message}

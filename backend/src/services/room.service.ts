@@ -4,8 +4,10 @@ import { BlockedUserModel, FriendshipModel, makePairKey, RoomDoc, RoomModel, Use
 import { randomRoomCode } from '../utils/crypto.js';
 import { Errors } from '../utils/errors.js';
 import { addMs, DAY_MS } from '../utils/time.js';
+import { canAfford, chargeEntry, refundEntry } from './coin.service.js';
 import { areBlocked, assertNoActiveOnlineGame, createGameDoc, forfeit, presentGame, randomMark, resolveConfig } from './game.service.js';
 import { notify } from './notification.service.js';
+import { FirstMovePref, markFor } from './firstMove.js';
 import { CARD_FIELDS, toCard } from './presenter.js';
 import { realtime } from './realtime.js';
 import { otherMark } from '../game-engine/index.js';
@@ -24,6 +26,7 @@ async function presentRoom(room: RoomDoc | (Record<string, unknown> & { _id: Typ
     id: String(r._id),
     code: r.code,
     status: r.status,
+    firstMove: r.firstMove,
     host: card(r.hostId),
     guest: card(r.guestId),
     hostId: String(r.hostId),
@@ -31,6 +34,8 @@ async function presentRoom(room: RoomDoc | (Record<string, unknown> & { _id: Typ
     boardSize: r.boardSize,
     winLength: r.winLength,
     guestReady: r.guestReady,
+    entryAmount: r.entryAmount ?? 0,
+    prize: (r.entryAmount ?? 0) * 2,
     isPublic: r.isPublic ?? false,
     turnTimeoutSec: r.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
     gameId: r.gameId ? String(r.gameId) : null,
@@ -62,10 +67,13 @@ async function broadcast(room: RoomDoc, event = 'room:updated') {
   realtime.emitToRoom(room._id, event, { room: await presentRoom(room) });
 }
 
-export async function create(userId: string, input: { boardSize: number; winLength?: number; isPublic?: boolean; turnTimeoutSec?: number }) {
+export async function create(userId: string, input: { boardSize: number; winLength?: number; firstMove?: FirstMovePref; isPublic?: boolean; turnTimeoutSec?: number; entryAmount?: number }) {
   const config = resolveConfig(input.boardSize, input.winLength);
   await assertNotInLiveRoom(userId);
   await assertNoActiveOnlineGame(userId);
+  const entryAmount = input.entryAmount ?? 0;
+  // Nothing is taken yet (coins move when the match starts), but the host must be able to pay the entry.
+  if (!(await canAfford(userId, entryAmount))) throw Errors.conflict('Not enough coins for this entry amount.', 'INSUFFICIENT_COINS');
   const now = new Date();
   const expiresAt = addMs(now, env.ROOM_TTL_MIN * 60_000);
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -75,6 +83,8 @@ export async function create(userId: string, input: { boardSize: number; winLeng
         hostId: userId,
         boardSize: config.size,
         winLength: config.winLength,
+        firstMove: input.firstMove ?? 'RANDOM',
+        entryAmount,
         status: 'WAITING',
         isPublic: input.isPublic ?? false,
         turnTimeoutSec: input.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
@@ -121,6 +131,7 @@ export async function listOpen(userId: string, limit = 20) {
       hostPoints: host.stats?.points ?? 0,
       boardSize: r.boardSize,
       winLength: r.winLength,
+      entryAmount: r.entryAmount ?? 0,
       turnTimeoutSec: r.turnTimeoutSec ?? env.TURN_TIMEOUT_SEC,
       expiresAt: r.expiresAt,
       createdAt: (r as { createdAt?: Date }).createdAt,
@@ -143,6 +154,7 @@ export async function join(userId: string, code: string) {
   if (await areBlocked(userId, probe.hostId)) throw Errors.forbidden('You cannot join this room', 'BLOCKED');
   await assertNotInLiveRoom(userId);
   await assertNoActiveOnlineGame(userId);
+  if (!(await canAfford(userId, probe.entryAmount ?? 0))) throw Errors.conflict('Not enough coins to join this room.', 'INSUFFICIENT_COINS');
 
   // Capacity is enforced atomically: only one joiner can fill the second seat.
   const room = await RoomModel.findOneAndUpdate(
@@ -186,10 +198,19 @@ export async function start(userId: string, id: string) {
   // Atomic claim READY -> PLAYING so a double tap cannot create two games.
   const claimed = await RoomModel.findOneAndUpdate({ _id: r._id, hostId: userId, status: { $in: ['READY', 'COMPLETED'] }, guestId: { $ne: null }, expiresAt: { $gt: new Date() } }, { $set: { status: 'PLAYING' } }, { new: true });
   if (!claimed) throw Errors.conflict('Both players must be in the room and ready.', 'ROOM_NOT_READY');
+  const gameId = new Types.ObjectId();
+  const entry = claimed.entryAmount ?? 0;
+  const players = [claimed.hostId, claimed.guestId!];
+  let charged = false;
   try {
-    const mark = randomMark();
+    // Paid room: both players pay the entry now. Fails (and nothing is taken) if either cannot cover it.
+    await chargeEntry(players, entry, String(gameId));
+    charged = true;
+    const mark = markFor(claimed.firstMove ?? 'RANDOM', randomMark);
     const game = await createGameDoc({
+      _id: gameId,
       type: 'PRIVATE_ROOM',
+      entryAmount: entry,
       config: { size: claimed.boardSize as 3 | 4 | 5, winLength: claimed.winLength },
       humans: [
         { userId: claimed.hostId, mark },
@@ -206,6 +227,8 @@ export async function start(userId: string, id: string) {
     await broadcast(claimed);
     return { room: await presentRoom(claimed), game: presentGame(game) };
   } catch (err) {
+    // The match never started: give back any entries already taken, then restore the room.
+    if (charged) await refundEntry(players, entry, String(gameId));
     await RoomModel.updateOne({ _id: r._id }, { $set: { status: r.status } });
     throw err;
   }

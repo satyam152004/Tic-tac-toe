@@ -29,6 +29,8 @@ const gameSchema = new Schema(
     playerIds: { type: [Schema.Types.ObjectId], default: [], index: true },
     difficulty: { type: String, enum: DIFFICULTIES },
     roomId: { type: Schema.Types.ObjectId, ref: 'Room' },
+    /** Coins each player paid to start this match (0 = free). Settled once the match ends. */
+    entryAmount: { type: Number, default: 0, min: 0 },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     /** FRIEND games: the invited friend (joins via game:join / POST /games/:id/join). */
     invitedUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },

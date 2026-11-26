@@ -1,3 +1,4 @@
+import type { ThemeColors } from '../../design-system/colors';
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { withAlpha } from '../../design-system/colors';
@@ -17,17 +18,19 @@ interface CellProps {
   glyph: number;
   winning: boolean;
   last: boolean;
+  hint: boolean;
   disabled: boolean;
   compact: boolean;
   corner: number;
   onPress: (i: number) => void;
 }
 
-const Cell = memo(function Cell({ index, value, side, glyph, winning, last, disabled, compact, corner, onPress }: CellProps) {
+const Cell = memo(function Cell({ index, value, side, glyph, winning, last, hint, disabled, compact, corner, onPress }: CellProps) {
   const c = useTheme();
+  const styles = makeStyles(c);
   const filled = value === 'X' || value === 'O';
-  const winBg = compact ? (c.bgElevated === '#EFF4FF' ? '#EFF4FF' : withAlpha(c.accent, 0.18)) : withAlpha(c.accent, 0.2);
-  const winBorder = compact ? (c.bgElevated === '#EFF4FF' ? '#BFDBFE' : withAlpha(c.accent, 0.35)) : c.accent;
+  const winBg = compact ? (c.bgElevated === withAlpha(c.accent, 0.12) ? withAlpha(c.accent, 0.12) : withAlpha(c.accent, 0.18)) : withAlpha(c.accent, 0.2);
+  const winBorder = compact ? (c.bgElevated === withAlpha(c.accent, 0.12) ? withAlpha(c.accent, 0.35) : withAlpha(c.accent, 0.35)) : c.accent;
   const cellRadius = compact ? (side < 35 ? 6 : side < 45 ? 8 : 10) : corner;
 
   return (
@@ -45,8 +48,8 @@ const Cell = memo(function Cell({ index, value, side, glyph, winning, last, disa
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: winning ? winBg : last ? c.bgElevated : c.bgSecondary,
-        borderColor: winning ? winBorder : last ? withAlpha(c.accent, 0.6) : c.border,
+        backgroundColor: winning ? winBg : hint ? withAlpha(c.accent, 0.12) : last ? c.bgElevated : c.bgSecondary,
+        borderColor: winning ? winBorder : hint ? c.accent : last ? withAlpha(c.accent, 0.6) : c.border,
         ...(winning && !compact
           ? { shadowColor: c.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 4 }
           : null),
@@ -62,6 +65,8 @@ export interface GameBoardProps {
   size: BoardSize;
   winningLine?: number[] | null;
   lastMoveIndex?: number | null;
+  /** Cell suggested by a hint (free hints in Computer and Pass n play). */
+  hintIndex?: number | null;
   disabled?: boolean;
   /** Small static preview: tighter gaps and no glow. */
   compact?: boolean;
@@ -76,8 +81,9 @@ export interface GameBoardProps {
  * Square board for 3x3, 4x4 and 5x5. Its side is `side` when the screen measured the available space, otherwise the
  * smaller of the window width (minus gutters) and `maxSize` (used by the static previews).
  */
-export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine = null, lastMoveIndex = null, disabled = false, compact = false, maxSize = 340, side, onCellPress }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine = null, lastMoveIndex = null, hintIndex = null, disabled = false, compact = false, maxSize = 340, side, onCellPress }) => {
   const c = useTheme();
+  const styles = makeStyles(c);
   const { width } = useWindowDimensions();
   const outer = side ?? Math.min(width - 40, maxSize);
   const { gap, pad, cell, glyph, corner } = boardMetrics(size, outer, compact);
@@ -112,6 +118,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine =
                 glyph={glyph}
                 winning={winSet.has(i)}
                 last={lastMoveIndex === i}
+                hint={hintIndex === i}
                 disabled={disabled}
                 compact={compact}
                 corner={corner}
@@ -125,10 +132,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ board, size, winningLine =
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   board: { alignSelf: 'center', borderWidth: 1 },
   compactShadow: {
-    shadowColor: '#141518',
+    shadowColor: c.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
